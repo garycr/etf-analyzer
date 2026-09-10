@@ -187,7 +187,7 @@
 | **Accountable** | Solo Orchestrator for decision trace; Team Lead for contract custody; implementation owners remain unassigned |
 | **Context** | Candidate.2 SHA-256 `0e223c5d4e4af1a1cd42cd9dbd8e2275f90b1904efd6eaa68555e7ad7dd376e2` passed Team Lead, Code, Test, Security, accessibility, and Architect Reviewer rechecks; REV-011 closed AR-LED-01..06 with no Critical or Major findings |
 | **Alternatives** | Approve architecture; return for remediation; reject architecture |
-| **Consequences** | Ledger-security portions of the Proposed views become accepted design input; #23-#28 remain completed; Minor follow-ups #30-#32 remain open; CT-LED-001..019 executable evidence remains mandatory |
+| **Consequences** | Ledger-security portions of the Proposed views become accepted design input; #23-#32 are completed; CT-LED-001..019 executable evidence remains mandatory |
 | **Reasoning** | The design now allocates isolated key custody, non-login function-owner authority, atomic dual-chain evidence, fail-closed publication, and anti-rollback recovery while preserving DEC-014 exact accounting semantics |
 | **Assumptions** | Local-only single-user research prototype; no brokerage path; attested model dispatch is accepted as process evidence rather than cryptographic model-identity proof |
 | **Invalidation** | Implementation cannot enforce the reviewed authority/atomicity/recovery boundaries, a Critical or Major finding emerges, or scope adds external execution or incompatible trust boundaries |

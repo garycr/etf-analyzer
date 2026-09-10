@@ -64,9 +64,11 @@ sequenceDiagram
                 alt Projection verification fails
                     Projection->>DB: Controlled projection procedure appends BlockedPublication; no projection change
                     DB-->>Projection: Atomic audit-only commit; projection remains unpublished
+                    Projection-->>UI: Announce integrity-blocked status and keyboard-operable recovery action
                 else Projection verification succeeds
                     Projection->>DB: Controlled projection procedure publishes and appends PublicationCompleted
                     DB-->>Projection: Projection + HMAC-chained outcome commit atomically
+                    Projection-->>UI: Politely announce publication completion and clear pending status
                 end
             end
         end

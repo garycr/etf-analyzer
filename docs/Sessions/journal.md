@@ -806,3 +806,29 @@
 **selector:** human
 
 ---
+
+## 2026-09-10T21:30:00Z | WORK-LED-RESIDUALS | Ring-1 | @solo-orchestrator
+
+**Type:** WORK
+**Decision:** Remediate AR-LED-R01, AR-LED-R02, and AR-LED-R05 after DP-33
+**Policy:** DEC-016 | REV-011 | Ring 1 Minor finding management
+**Authority:** Workspace Owner continuation instruction
+**Accountability:** Solo Orchestrator; Security, accessibility, Team Lead, and Architect reviewers verify closure
+**Artifacts:** Proposed deployment/security/component/observability/paper-order views; CC-001 detached manifest; contract registry and change log
+**Result:** Specialist and alternate-model architecture rechecks PASS; no Critical or Major findings; DEC-016 remains valid
+**Boundary:** Documentation/design remediation only; no implementation, baseline freeze, #9/#20 closure, ring advancement, or parallel execution
+
+---
+
+## 2026-09-10T21:40:00Z | CLOSE-LED-RESIDUALS | Ring-1 | @solo-orchestrator
+
+**Type:** REVIEW-CLOSURE
+**Decision:** Close AR-LED-R01, AR-LED-R02, and AR-LED-R05 as completed
+**Policy:** REV-011 final recheck | DEC-016 | specialist review requirements
+**Authority:** Workspace Owner continuation instruction; Architect Reviewer closure clearance
+**Accountability:** Solo Orchestrator
+**Issues:** #30 | #31 | #32
+**Result:** Security, accessibility, Team Lead, and alternate-model Architect Reviewer checks PASS; AR-LED-R01..R05 are closed and DEC-016 remains valid
+**Boundary:** No implementation, baseline freeze, #9/#20 closure, ring advancement, or parallel execution
+
+---

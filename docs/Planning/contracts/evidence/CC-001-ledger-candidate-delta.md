@@ -6,6 +6,20 @@
 **Candidate.2 SHA-256 at Team Lead custody resubmission:** `4963ee62af6b4e0002f76545184c158675edf3a532936a70e8c48cbe79d54ae3`
 **Candidate.2 SHA-256 after specialist remediation and review:** `0e223c5d4e4af1a1cd42cd9dbd8e2275f90b1904efd6eaa68555e7ad7dd376e2`
 
+The Team Lead custody-resubmission digest identifies the candidate.2 target bytes before insertion of the candidate.2 Review Record rows; it is retained only as historical custody evidence. The specialist-remediation digest is the authoritative final reviewed target.
+
+## Detached Manifest Authority
+
+This file is the detached digest manifest for the exact bytes of `docs/Planning/contracts/ledger-contract.md` at `1.0.0-candidate.2`. The authoritative final reviewed digest is the candidate.2 specialist-remediation value above. The manifest is not part of the authenticated target, so recording review and disposition metadata here does not recursively invalidate that digest.
+
+From the repository root, verification must return the authoritative value:
+
+```bash
+sha256sum docs/Planning/contracts/ledger-contract.md
+```
+
+Any byte change to the target contract invalidates candidate.2 and requires a new candidate version, change-control entry, detached digest, and custody review. Historical digest lines are append-only evidence and are not overwritten.
+
 ## Reproducible Reconstruction
 
 Candidate.1 is reconstructed in `/tmp` from the final reviewed candidate.2 by the exact reverse transformations below. Every source block must occur exactly once. The reconstructed file produces the candidate.1 hash above. Candidate.2 was directly rehashed after the specialist-remediation content and review metadata were frozen, producing the final reviewed hash above.

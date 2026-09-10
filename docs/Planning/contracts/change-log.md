@@ -49,6 +49,7 @@ Emergency changes are revert-only to the last active baseline. Forward-breaking 
 | Specialist reviews | Code, Test, Security, accessibility, final Team Lead custody, and Architect Reviewer rechecks PASS; DP-33 architecture acceptance recorded in DEC-016 |
 | Compatibility checks | CT-LED-001..012 unchanged; CT-LED-013..019 define attempt/audit-chain, role, transaction rollback, projection-publication, crash-recovery, and anti-rollback checks for Ring 2 execution |
 | Custodian disposition | PASS; candidate.2 accepted for specialist rechecks |
+| Detached final digest | `0e223c5d4e4af1a1cd42cd9dbd8e2275f90b1904efd6eaa68555e7ad7dd376e2` in `docs/Planning/contracts/evidence/CC-001-ledger-candidate-delta.md` |
 | Co-signature | Solo Orchestrator originated amendment; independent Team Lead disposition required |
 | Human approval | DEC-016 accepts the reviewed ledger-security architecture at DP-33; implementation, baseline freeze, and contract activation remain unauthorized |
 | Invalidation notice | `1.0.0-candidate.1` custody evidence remains historical; candidate.2 cannot freeze until reviews and affected-stream acknowledgements complete |

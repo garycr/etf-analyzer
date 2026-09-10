@@ -21,7 +21,7 @@ This directory is the fixed, reviewable home for contracts consumed by MAI-ST pa
 | Contract class | Fixed path | Source issue | Status |
 | --- | --- | --- | --- |
 | Domain, order, and ledger | `docs/Planning/contracts/domain-contract.md` | #14, #20, #9 | Order lifecycle `1.0.0-candidate.1` PASS and #14 complete; ledger/precision definition pending under #20/#9 |
-| Immutable FIFO ledger and reconciliation | `docs/Planning/contracts/ledger-contract.md` | #20, #9 | Ledger/precision `1.0.0-candidate.2` Team Lead, specialist, and Architect Reviewer rechecks PASS; ledger-security architecture accepted at DP-33; baseline integration and Ring 2 evidence pending |
+| Immutable FIFO ledger and reconciliation | `docs/Planning/contracts/ledger-contract.md`; detached digest `docs/Planning/contracts/evidence/CC-001-ledger-candidate-delta.md` | #20, #9 | Ledger/precision `1.0.0-candidate.2` Team Lead, specialist, and Architect Reviewer rechecks PASS; ledger-security architecture accepted at DP-33; baseline integration and Ring 2 evidence pending |
 | REST/OpenAPI | `docs/Planning/contracts/openapi-contract.yaml` | #14, #17, #22 | Awaiting Ring 1 definition |
 | PostgreSQL schema/migrations | `docs/Planning/contracts/postgresql-contract.md` | #15, #17, #20, #9 | Awaiting Ring 1 definition |
 | Outbox/events | `docs/Planning/contracts/event-catalog.md` | #14, #15, #17, #20 | Awaiting Ring 1 definition |

@@ -83,7 +83,7 @@ The following are conditions of this report and do not authorize WBS/IMS draftin
 | Technical-debt gate | REV-006 Minor 2 rejected by owner | Keep qualitative MAI-ST debt capture; do not impose formal thresholds absent a new governed decision. |
 | Stream/ADR organization | REV-006 Suggestions 1-2 rejected by owner | Ring 1 may choose organization and decision queue; this report does not mandate either. |
 
-Additional unresolved design values include concrete provider approvals, evidence/raw-data/telemetry retention, provider-secret revocation, retries/timeouts, local telemetry stack, metric taxonomy, alert thresholds, trace sampling, and test tooling. DEC-014 and CC-001 now define ledger precision/rounding, PostgreSQL role authority, HMAC key rotation, protected backup/restore, anti-rollback, and readiness behavior at Proposed design level; executable evidence remains pending.
+Additional unresolved design values include concrete provider approvals, evidence/raw-data/telemetry retention, provider-secret revocation, retries/timeouts, local telemetry stack, metric taxonomy, alert thresholds, trace sampling, and test tooling. DEC-014 and CC-001 define ledger precision/rounding, PostgreSQL role authority, HMAC key rotation, protected backup/restore, anti-rollback, and readiness behavior; the Workspace Owner accepted the ledger-security portions at DP-33 through DEC-016. Executable evidence remains pending, and unrelated view content remains Proposed.
 
 ## Quality and risk assessment
 

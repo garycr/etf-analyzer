@@ -86,7 +86,7 @@ flowchart LR
 - Diagnostic redaction and access: raw provider payload access remains restricted while operator diagnostics use allowlisted fields, least-privilege access, and tests that prove secrets and prohibited raw provider data are absent.
 - Evidence policy: analytics outputs retain immutable, versioned evidence records with hash verification, least-privilege access, configurable retention, and controlled archival/rotation; the exact duration remains a Ring 1 design decision.
 - Financial precision: DEC-014 Option A fixes `NUMERIC(28,10)` quantity/unit value, `NUMERIC(28,8)` money, and `NUMERIC(28,12)` rates/ratios with decimal round-half-even and exact no-epsilon reconciliation.
-- Workload identity: Kubernetes service accounts map one-to-one to PostgreSQL `NOINHERIT` login roles for runtime API/portfolio, migration, projection, audit collector, and key injection. Schema/table, controlled-writer, projection, migration, audit, and anchor owners are separate `NOLOGIN` roles; only the deployment identity may assume migration authority.
+- Workload identity: Kubernetes service accounts map one-to-one to PostgreSQL `NOINHERIT` login roles for runtime API/portfolio, migration, projection, audit collector, and key injection. `schema_owner`, `ledger_writer_owner`, `projection_owner`, `migration_owner`, `audit_writer_owner`, and `anchor_owner` are separate `NOLOGIN` roles; only the deployment identity may assume migration authority.
 - Signer isolation: the versioned HMAC Secret is mounted read-only only into a deployment-time key-injection job and removed after successful injection into the anchor-owner-only PostgreSQL key store. The in-database anchor procedure alone can read key material and append protected commitments/checkpoints; application, audit, and projection workloads have no secret mount or anchor-table access.
 - Readiness: ledger projection readiness stays false until migrations complete, the commitment chain verifies from a trusted checkpoint, the configured key identifier is available, and PostgreSQL and the separately protected latest-anchor checkpoint agree.
 
@@ -94,6 +94,7 @@ flowchart LR
 
 | Kubernetes identity | PostgreSQL login / owner | Allowed | Explicitly denied |
 | --- | --- | --- | --- |
+| Database schema and immutable table ownership | none / `schema_owner` (`NOLOGIN`) | Own application schemas and immutable base tables; grant only the reviewed procedure/read privileges | Login, runtime assumption, application requests, key reads, and direct external execution |
 | API and portfolio service account | `app_runtime` / none | Approved reads; execute controlled order/ledger procedures | Direct anchor execution; table DML, sequences, DDL, triggers, `COPY`, `TRUNCATE`, ownership, role administration, key/anchor access |
 | In-database controlled ledger procedure | none / `ledger_writer_owner` (`NOLOGIN`) | `SECURITY DEFINER`; write the atomic ledger unit; execute the anchor procedure as its function owner | Login, key/table reads in anchor schema, accepted-anchor update/delete, projection writes |
 | Projection worker service account | `projection_runtime` / none | Verify committed chain; execute the controlled projection procedure | Direct projection/audit/anchor DML, direct audit/anchor execution, and HMAC key access |

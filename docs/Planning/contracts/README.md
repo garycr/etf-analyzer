@@ -20,8 +20,8 @@ This directory is the fixed, reviewable home for contracts consumed by MAI-ST pa
 
 | Contract class | Fixed path | Source issue | Status |
 | --- | --- | --- | --- |
-| Domain, order, and ledger | `docs/Planning/contracts/domain-contract.md` | #14, #20, #9 | Order lifecycle `1.0.0-candidate.1` PASS and #14 complete; ledger/precision definition pending under #20/#9 |
-| Immutable FIFO ledger and reconciliation | `docs/Planning/contracts/ledger-contract.md`; detached digest `docs/Planning/contracts/evidence/CC-001-ledger-candidate-delta.md` | #20, #9 | Ledger/precision `1.0.0-candidate.2` Team Lead, specialist, and Architect Reviewer rechecks PASS; ledger-security architecture accepted at DP-33; baseline integration and Ring 2 evidence pending |
+| Domain, order, and ledger | `docs/Planning/contracts/domain-contract.md`; `docs/Planning/contracts/ledger-contract.md` | #14, #20, #9 | Order lifecycle `1.0.0-candidate.1` and ledger/precision `1.0.0-candidate.2` passed required reviews; all three source issues completed; aggregate baseline integration pending |
+| Immutable FIFO ledger and reconciliation | `docs/Planning/contracts/ledger-contract.md`; detached digest `docs/Planning/contracts/evidence/CC-001-ledger-candidate-delta.md` | #20, #9 | Complete at design-time; ledger-security architecture accepted at DP-33; Ring 2 executable evidence remains mandatory |
 | REST/OpenAPI | `docs/Planning/contracts/openapi-contract.yaml` | #14, #17, #22 | Awaiting Ring 1 definition |
 | PostgreSQL schema/migrations | `docs/Planning/contracts/postgresql-contract.md` | #15, #17, #20, #9 | Awaiting Ring 1 definition |
 | Outbox/events | `docs/Planning/contracts/event-catalog.md` | #14, #15, #17, #20 | Awaiting Ring 1 definition |
@@ -49,7 +49,7 @@ Paths marked awaiting definition are reserved but intentionally not populated wi
 | Human custody model selected | Complete | DEC-013 |
 | Alternate-model custody review | Complete | REV-009 |
 | Distinct Team Lead acknowledgement | Complete | Custody acknowledgement above; DEC-013 handover complete |
-| Domain/order/ledger contract | Building | Order lifecycle passed all reviews; ledger/precision `1.0.0-candidate.2` passed Team Lead, specialist, and architecture rechecks; ledger-security architecture is accepted; baseline integration and Ring 2 evidence remain pending |
+| Domain/order/ledger contract | Complete (design-time) | #14/#20/#9 completed; order and ledger candidates passed required reviews; aggregate baseline integration and Ring 2 executable evidence remain pending |
 | REST/OpenAPI contract | Pending | #14, #17, #22 |
 | PostgreSQL contract | Pending | #15, #17, #20, #9 |
 | Event catalog | Pending | #14, #15, #17, #20 |

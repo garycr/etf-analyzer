@@ -832,3 +832,69 @@
 **Boundary:** No implementation, baseline freeze, #9/#20 closure, ring advancement, or parallel execution
 
 ---
+
+## 2026-09-10T21:50:00Z | CLOSE-LEDGER-STREAM | Ring-1 | @solo-orchestrator
+
+**Type:** WORK-CLOSURE
+**Decision:** Close GitHub #9 and #20 as completed and mark the ledger/precision contract stream complete at design-time
+**Policy:** DEC-011 | DEC-014 | DEC-016 | contract custody governance
+**Authority:** Workspace Owner continuation instruction
+**Accountability:** Team Lead schema custodian; Solo Orchestrator for tracker synchronization
+**Evidence:** Ledger `1.0.0-candidate.2`; CT-LED-001..019; detached SHA-256 `0e223c5d4e4af1a1cd42cd9dbd8e2275f90b1904efd6eaa68555e7ad7dd376e2`; specialist and architecture PASS
+**Result:** #9 and #20 completed; immutable FIFO ledger and precision design obligations satisfied
+**Boundary:** Aggregate `v1.0.0` remains Building; Ring 2 executable evidence, baseline freeze, ring advancement, and parallel execution remain blocked
+
+---
+
+## 2026-09-10T22:10:00Z | REV-012 | Ring-1 | @solo-orchestrator
+
+**Type:** REVIEW
+**Decision:** Approve analytics evidence retention options for Workspace Owner selection after remediation
+**Policy:** Decision review | security review | GitHub #15/#11
+**Authority:** Architect Reviewer and Security Reviewer; Workspace Owner approved remediation #34-#42
+**Accountability:** Team Lead for future analytics contract custody; Solo Orchestrator for decision trace
+**Result:** Initial REVISE findings remediated; architecture PASS and security APPROVED / PASS; #34-#42 completed
+**Artifact:** docs/Planning/analytics-evidence-retention-options.md; docs/Governance/decisions/reviews/REV-012-analytics-evidence-retention-options-review.md
+**Boundary:** Policy not selected; no ADR, implementation, provider ingestion, baseline freeze, Ring 2 advancement, or parallel execution authorized
+
+---
+
+## 2026-09-10T22:20:00Z | DEC-017 | Ring-1 | @solo-orchestrator
+
+**Type:** DECISION
+**Decision:** Select Option A, `RET-A-1.0`, for analytics evidence retention
+**Policy:** O-MET-007 | GitHub #15/#11 | REV-012
+**Authority:** Workspace Owner
+**Accountability:** Team Lead for analytics contract custody; Solo Orchestrator for trace
+**Alternatives:** RET-B-1.0 | RET-C-1.0 | custom policy | defer
+**Result:** Balanced policy selected; ADR-001 created as Proposed
+**Boundary:** DP-12 ADR acceptance remains pending; no implementation, provider ingestion, baseline freeze, Ring 2 advancement, or parallel execution
+
+---
+
+## 2026-09-10T22:35:00Z | REV-013 | Ring-1 | @solo-orchestrator
+
+**Type:** REVIEW
+**Decision:** Clear ADR-001 for DP-12 after alternate-model decision-review remediation
+**Policy:** ADR acceptance | decision review | DEC-017 | REV-012
+**Authority:** Architect Reviewer dispatched as `Claude Opus 5 (copilot)`; Workspace Owner approved corrections
+**Accountability:** Team Lead for policy custody; Solo Orchestrator for trace
+**Result:** Initial two Major and seven Minor findings closed through #43-#47; confirmation PASS; RET-A-1.0 values unchanged
+**Artifact:** docs/Governance/decisions/reviews/REV-013-analytics-evidence-retention-adr-review.md
+**Boundary:** ADR-001 remains Proposed pending DP-12; no implementation, provider ingestion, baseline freeze, Ring 2 advancement, or parallel execution
+
+---
+
+## 2026-09-10T22:40:00Z | DEC-018 | Ring-1 | @solo-orchestrator
+
+**Type:** DECISION
+**decision-point:** DP-12
+**Decision:** Accept ADR-001 Analytics Evidence Retention and RET-A-1.0
+**Policy:** DEC-017 | REV-012 | REV-013 | ADR governance
+**Authority:** Workspace Owner
+**Accountability:** Team Lead for analytics contract custody; Solo Orchestrator for trace
+**Result:** ADR-001 status changed from Proposed to Accepted
+**authorization-boundary:** No implementation, provider ingestion, dependency installation, deployment, baseline freeze, Ring 2 advancement, or parallel execution
+**selector:** human
+
+---

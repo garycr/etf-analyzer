@@ -193,3 +193,47 @@
 | **Invalidation** | Implementation cannot enforce the reviewed authority/atomicity/recovery boundaries, a Critical or Major finding emerges, or scope adds external execution or incompatible trust boundaries |
 | **Status** | Accepted architecture; no ADR, implementation, ring advancement, baseline freeze, #9/#20 closure, or parallel execution authorized |
 | **Linked Artifacts** | `docs/Governance/decisions/reviews/REV-011-ledger-security-architecture-review.md`, `docs/Planning/contracts/evidence/CC-001-ledger-candidate-delta.md`, GitHub #30, #31, #32 |
+
+---
+
+### DEC-017: Select Balanced Analytics Evidence Retention
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-017 |
+| **Date** | 2026-09-10 |
+| **Category** | Data governance |
+| **Decision** | Select Option A, `RET-A-1.0`, for the analytics evidence retention policy, subject to separate ADR-001 acceptance at DP-12 |
+| **Policy** | O-MET-007 reproducibility; GitHub #15/#11; REV-012; decision review; security review |
+| **Authority** | Workspace Owner |
+| **Accountable** | Team Lead for analytics contract custody; Solo Orchestrator for decision trace |
+| **Context** | REV-012 approved three bounded options after closure of #34-#42; Option A retains Complete evidence/inputs for two years, manifests for five years, operational metadata for one year, and uses a 25 GiB envelope |
+| **Alternatives** | `RET-B-1.0` minimum footprint; `RET-C-1.0` extended history; custom policy; defer |
+| **Consequences** | ADR-001 may be proposed with Option A values; expired evidence cannot be recovered by a later extension; CT-RET-001..012 and CT-ANA-001 remain Ring 2 obligations |
+| **Reasoning** | Option A balances a meaningful research reproduction window against local storage, privacy, backup, and operational burden without inventing a seven-year requirement |
+| **Assumptions** | Local single-user non-regulated research prototype; no brokerage; provider rights remain separately governed |
+| **Invalidation** | 25 GiB sustained capacity breach, incomplete P0 reproduction due to rights, new retention obligation, recovery-target failure, or expanded trust/scope boundary |
+| **Status** | Selected; ADR-001 accepted at DP-12 in DEC-018 |
+| **Linked Artifacts** | `docs/Planning/analytics-evidence-retention-options.md`, `docs/Governance/decisions/reviews/REV-012-analytics-evidence-retention-options-review.md`, `docs/Architecture/ADRs/ADR-001-analytics-evidence-retention.md` |
+
+---
+
+### DEC-018: Accept ADR-001 Analytics Evidence Retention
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-018 |
+| **Date** | 2026-09-10 |
+| **Category** | ADR acceptance |
+| **Decision** | Accept ADR-001 and make `RET-A-1.0` the governing analytics evidence retention policy |
+| **Policy** | DP-12; DEC-017; REV-012; REV-013; ADR governance |
+| **Authority** | Workspace Owner |
+| **Accountable** | Team Lead for analytics contract custody; Solo Orchestrator for decision trace |
+| **Context** | REV-013 confirmed exact equivalence to selected RET-A-1.0 after closure of #43-#47, with no Critical or Major findings |
+| **Alternatives** | Approve ADR-001; return for remediation; reject ADR-001 |
+| **Consequences** | Analytics contract work must implement the accepted policy semantics and planned CT-RET-001..012; future changes follow ADR supersession and contract change governance |
+| **Reasoning** | The accepted balanced policy preserves two years of Complete reproducibility and five years of compact verification history within a bounded local footprint |
+| **Assumptions** | Local single-user non-regulated research prototype; provider rights remain separately governed; planning capacity estimates require Ring 2 measurement |
+| **Invalidation** | ADR-001 invalidation conditions or a superseding Workspace Owner-approved ADR |
+| **Status** | Accepted; no implementation, provider ingestion, dependency installation, deployment, baseline freeze, Ring 2 advancement, or parallel execution authorized |
+| **Linked Artifacts** | `docs/Architecture/ADRs/ADR-001-analytics-evidence-retention.md`, `docs/Governance/decisions/reviews/REV-013-analytics-evidence-retention-adr-review.md` |

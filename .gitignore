@@ -1,0 +1,40 @@
+bin/
+obj/
+dist/
+build/
+node_modules/
+packages/
+.venv/
+__pycache__/
+.idea/
+*.suo
+*.user
+*.vs/
+*.env
+.env.*
+!*.env.example
+.DS_Store
+Thumbs.db
+*.log
+logs/
+.agent-workspace/
+
+# MCP config (may contain env var references — generate from .example)
+.vscode/mcp.json
+!.vscode/mcp.json.example
+
+# Agent memory raw exports can contain sensitive interaction context.
+docs/Planning/memory/interaction-records.jsonl
+!docs/Planning/memory/interaction-records.example.jsonl
+
+# Extension-managed governance files (synced from VSIX on every activation)
+.github/agents/
+.github/skills/
+docs/Guides/
+
+# Prompts are extension-managed too, EXCEPT objective-discovery.prompt.md — the
+# entry point of the selected-workflow → objective-discovery chain. It must travel
+# with the workspace so the chain survives a clone without the extension installed.
+# Use `dir/*` (NOT `dir/`) so git descends into the folder and the negation applies.
+.github/prompts/*
+!.github/prompts/objective-discovery.prompt.md

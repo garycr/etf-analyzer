@@ -1,0 +1,29 @@
+{
+  "name": "agent-workspace",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04@sha256:81380e4c9c14e8a629ff39029639e4b7893e67400246fa7782a0fe7dc193a02a",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/azure-cli:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/node:1": {},
+    "ghcr.io/devcontainers/features/powershell:1": {}
+  },
+  "postCreateCommand": "echo \"Workspace ready\"",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "editor.formatOnSave": true,
+        "markdown.editor.commandUris": false,
+        "github.copilot.chat.agentDebugLog.enabled": true,
+        "github.copilot.chat.agentDebugLog.fileLogging.enabled": true
+      },
+      "extensions": [
+        "GitHub.vscode-pull-request-github",
+        "ms-vscode.powershell",
+        "stcohen-microsoft.agent-workspace-template",
+        "buildwithlayer.plaid-integration-expert-cdnxo"
+      ]
+    }
+  }
+}

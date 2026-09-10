@@ -1,0 +1,15 @@
+# Governance files are managed by the Agent Workspace extension.
+# These attributes prevent merge conflicts if files are accidentally committed.
+.github/agents/** merge=ours linguist-generated
+.github/skills/** merge=ours linguist-generated
+.github/prompts/** merge=ours linguist-generated
+docs/Guides/** merge=ours linguist-generated
+
+# Exception: the objective-discovery prompt is tracked (it travels with the
+# workspace), so treat it as a normal text file with real diffs and 3-way merge.
+.github/prompts/objective-discovery.prompt.md text !merge -linguist-generated
+
+# XP-004/XP-005: Ensure shell scripts use LF and text files are normalized
+*.sh text eol=lf
+*.ps1 text eol=lf
+* text=auto

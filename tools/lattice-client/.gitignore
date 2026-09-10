@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+# Compiled output belongs in dist/ (tsconfig outDir). Guard against an ad-hoc
+# `tsc` run emitting alongside sources, which would shadow the .ts files under
+# Vite/vitest and break module identity.
+src/**/*.js
+src/**/*.d.ts
+src/**/*.js.map
+# Stray compiled config emitted by an ad-hoc tsc run.
+/vitest.config.js

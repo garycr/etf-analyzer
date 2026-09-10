@@ -1,0 +1,526 @@
+openapi: 3.0.3
+info:
+  title: Lattice Workspace Connector
+  version: 3.0.0
+  description: Governed contract reference for generated workspaces that query eligible Lattice claims and status.
+servers:
+  - url: https://lattice.example.invalid
+    description: Placeholder only. Customer/project overrides must provide the tenant-approved endpoint.
+components:
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: Proposal only. Agent Workspace must not assume server support until verified. Mutating clients may send this stable key only after server-side support is implemented and tested.
+      schema:
+        type: string
+        pattern: '^lik_[a-f0-9]{32}$'
+  securitySchemes:
+    latticeBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: Entra ID access token
+  schemas:
+    QueryRequest:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 50
+        tenantId:
+          type: string
+          minLength: 1
+        subscriptionId:
+          type: string
+          minLength: 1
+        lens:
+          type: string
+          enum: [shared, personal]
+    ObjectiveLessonsRequest:
+      type: object
+      required: [objective]
+      properties:
+        objective:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 50
+        tenantId:
+          type: string
+          minLength: 1
+        subscriptionId:
+          type: string
+          minLength: 1
+    ChatRequest:
+      type: object
+      required: [message, tenantId, userId, dlpDecision]
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        tenantId:
+          type: string
+          minLength: 1
+        userId:
+          type: string
+          minLength: 1
+        dlpDecision:
+          $ref: '#/components/schemas/DlpDecision'
+    FileIngestRequest:
+      type: object
+      required: [file, sourceId]
+      properties:
+        file:
+          type: string
+          format: binary
+        sourceId:
+          type: string
+          minLength: 1
+        sourceLabel:
+          type: string
+          maxLength: 120
+        importBatchId:
+          type: string
+          pattern: '^imp-[a-zA-Z0-9]{1,16}-[a-zA-Z0-9]{1,16}$'
+    SourceCreateRequest:
+      type: object
+      required: [sourceKind, sourceMode, bindingHash]
+      properties:
+        sourceKind:
+          type: string
+          enum: [file-upload]
+        sourceMode:
+          type: string
+          enum: [once]
+        bindingHash:
+          type: string
+          pattern: '^[A-Za-z0-9_-]{1,160}$'
+        requestedDisplayLabel:
+          type: string
+          maxLength: 80
+    SourceCreateEnvelope:
+      type: object
+      required: [source]
+      properties:
+        source:
+          type: object
+          required: [sourceId, sourceKind, sourceMode, sourceState, captureEligible]
+          properties:
+            sourceId:
+              type: string
+            sourceKind:
+              type: string
+            sourceMode:
+              type: string
+            sourceState:
+              type: string
+            captureEligible:
+              type: boolean
+    DlpDecision:
+      type: object
+      additionalProperties: false
+      description: One-use approval evidence bound to an artifact and requesting authority. expiresAt must be later than checkedAt.
+      required: [schemaVersion, approvalId, queueId, artifactPath, artifactSha256, artifactSizeBytes, contentType, operation, policyVersion, principalHash, requesterCategory, routingIntent, checkedAt, expiresAt, nonce, consumed]
+      properties:
+        schemaVersion:
+          type: string
+          enum: ['1.0.0']
+        approvalId:
+          type: string
+          pattern: '^lap_[a-f0-9]{32}$'
+        queueId:
+          type: string
+          pattern: '^lq_[a-f0-9]{64}$'
+        artifactPath:
+          type: string
+          minLength: 1
+          maxLength: 260
+          pattern: '^(?!/)(?![A-Za-z]:)(?!.*\\)(?!.*(^|/)\.\.?(/|$))(?!\.agent-workspace/)(?!\.git/)[^<>:"|?*]+$'
+        artifactSha256:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+        artifactSizeBytes:
+          type: integer
+          minimum: 0
+          maximum: 104857600
+        contentType:
+          type: string
+          minLength: 1
+          maxLength: 120
+          pattern: '^[a-z0-9][a-z0-9.+-]*/[a-z0-9][a-z0-9.+-]*$'
+        operation:
+          type: string
+          enum: [objective-lessons, query-request, selected-file-ingest, source-event, memory-package, watched-repository, watched-folder, cloud-relay]
+        policyVersion:
+          type: string
+          minLength: 1
+          maxLength: 80
+          pattern: '^[A-Za-z0-9._-]+$'
+        principalHash:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+        requesterCategory:
+          type: string
+          enum: [human-owner, workspace-agent, reviewer-agent, system-extension, governance-workflow, external-service]
+        routingIntent:
+          type: string
+          enum: [local-review, safe-stop, cloud-relay, human-approval]
+        checkedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+          description: Must be later than checkedAt.
+        nonce:
+          type: string
+          pattern: '^ln_[a-f0-9]{32}$'
+        consumed:
+          type: boolean
+          enum: [false]
+    ObjectiveProfile:
+      type: object
+      required: [industries, geographies, problem, keywords]
+      properties:
+        customer:
+          type: string
+        industries:
+          type: array
+          items:
+            type: string
+        geographies:
+          type: array
+          items:
+            type: string
+        problem:
+          type: string
+        keywords:
+          type: array
+          items:
+            type: string
+    ObjectiveLessonCitation:
+      type: object
+      required: [sourceId, claimId, claimText, relevanceScore, matchedFacets]
+      properties:
+        sourceId:
+          type: string
+        claimId:
+          type: string
+        claimText:
+          type: string
+          maxLength: 2000
+          description: Untrusted recall-only claim text. The caller must evaluate and verify it before acting.
+        entityType:
+          type: string
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        relevanceScore:
+          type: number
+          minimum: 0
+        matchedFacets:
+          type: array
+          items:
+            type: string
+            enum: [customer, industry, geography, problem, keyword]
+    EvidenceEnvelope:
+      type: object
+      required: [citations]
+      properties:
+        citations:
+          type: array
+          items:
+            $ref: '#/components/schemas/ObjectiveLessonCitation'
+        objectiveProfile:
+          $ref: '#/components/schemas/ObjectiveProfile'
+        auditId:
+          type: string
+        correlationId:
+          type: string
+    QueryResultsEnvelope:
+      type: object
+      required: [query, results, count]
+      properties:
+        query:
+          type: string
+        lens:
+          type: string
+          enum: [shared, personal]
+        results:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        count:
+          type: integer
+          minimum: 0
+        timestamp:
+          type: string
+          format: date-time
+    OperationStatusEnvelope:
+      type: object
+      required: [operationId, status, automaticMutationRetrySupported]
+      x-agent-workspace-proposal: true
+      description: Proposal only. Automatic mutation retry remains disabled until this proposal is implemented and tested server-side.
+      properties:
+        operationId:
+          type: string
+          minLength: 1
+          maxLength: 160
+        status:
+          type: string
+          enum: [unknown, accepted, running, succeeded, failed, reconciliation-required]
+        receiptId:
+          type: string
+          maxLength: 160
+        automaticMutationRetrySupported:
+          type: boolean
+security:
+  - latticeBearer: []
+paths:
+  /api/init:
+    post:
+      operationId: initializeLatticeSession
+      summary: Initialize the signed-in caller session without creating an ingest source.
+      security:
+        - latticeBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Signed-in caller session initialized.
+        "401":
+          description: Missing or invalid Lattice bearer token.
+  /api/query:
+    post:
+      operationId: queryLatticeClaims
+      summary: Query eligible Lattice claims under the current user identity.
+      security:
+        - latticeBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryRequest'
+      responses:
+        "200":
+          description: Permission-trimmed claim search results.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResultsEnvelope'
+        "401":
+          description: Missing or invalid Lattice bearer token.
+        "403":
+          description: User is not authorized for the requested tenant or source scope.
+  /api/chat:
+    post:
+      operationId: chatWithLattice
+      summary: Stream a grounded response with citations from eligible claims.
+      security:
+        - latticeBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+      responses:
+        "200":
+          description: Server-sent response stream.
+        "400":
+          description: DLP decision missing, blocked, or stale.
+        "401":
+          description: Missing or invalid Lattice bearer token.
+  /api/lessons/objective:
+    post:
+      operationId: receiveObjectiveLessons
+      summary: Derive objective context and retrieve ranked, source-diverse, recall-only claims with claim text.
+      security:
+        - latticeBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ObjectiveLessonsRequest'
+      responses:
+        "200":
+          description: Ranked recall-only claims including bounded claim text, relevance evidence, and the derived objective profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvidenceEnvelope'
+        "401":
+          description: Missing or invalid Lattice bearer token.
+        "403":
+          description: Objective prompt was blocked or caller is not authorized.
+  /api/claims:
+    get:
+      operationId: listLatticeClaims
+      summary: List user-eligible claim buckets.
+      security:
+        - latticeBearer: []
+      responses:
+        "200":
+          description: Created, imported, and shared claim buckets.
+        "401":
+          description: Missing or invalid Lattice bearer token.
+  /api/chat/sources:
+    get:
+      operationId: listLatticeChatSources
+      summary: List caller-visible sources available for chat grounding.
+      security:
+        - latticeBearer: []
+      responses:
+        "200":
+          description: Caller-visible chat source summaries.
+        "401":
+          description: Missing or invalid Lattice bearer token.
+  /api/cloud-relay/status:
+    get:
+      operationId: getCloudRelayStatus
+      summary: Return current Cloud Relay status for the user and tenant.
+      security:
+        - latticeBearer: []
+      responses:
+        "200":
+          description: Relay status envelope.
+        "401":
+          description: Missing or invalid Lattice bearer token.
+  /api/ingest/file:
+    post:
+      operationId: ingestSelectedFileForClaims
+      summary: Submit a selected file for governed claim extraction.
+      x-agent-workspace-proposal: true
+      description: Proposal only. Agent Workspace may include Idempotency-Key, but automatic mutation retry remains disabled until this proposal is implemented and tested server-side.
+      security:
+        - latticeBearer: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FileIngestRequest'
+      responses:
+        "200":
+          description: File accepted, chunked, and queued for governed claim extraction.
+        "400":
+          description: Invalid multipart body or source identifier.
+        "404":
+          description: The supplied source identifier is not registered for the caller.
+        "401":
+          description: Missing or invalid Lattice bearer token.
+  /api/sources:
+    get:
+      operationId: listLatticeSources
+      summary: List source-registry entries visible to the signed-in caller.
+      security:
+        - latticeBearer: []
+      responses:
+        "200":
+          description: Caller-visible source summaries.
+        "401":
+          description: Missing or invalid Lattice bearer token.
+    post:
+      operationId: createLatticeUploadSource
+      summary: Create an active one-shot source for a selected file upload.
+      x-agent-workspace-proposal: true
+      description: Proposal only. Agent Workspace may include Idempotency-Key, but automatic mutation retry remains disabled until this proposal is implemented and tested server-side.
+      security:
+        - latticeBearer: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SourceCreateRequest'
+      responses:
+        "201":
+          description: Active upload source created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SourceCreateEnvelope'
+        "400":
+          description: Invalid source registration request.
+        "401":
+          description: Missing or invalid Lattice bearer token.
+  /api/sources/{sourceId}/events:
+    post:
+      operationId: registerLatticeSourceEvent
+      summary: Register a lifecycle event for an existing caller-visible source.
+      security:
+        - latticeBearer: []
+      parameters:
+        - name: sourceId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Source lifecycle event registered.
+        "400":
+          description: Invalid source identifier or lifecycle event.
+        "401":
+          description: Missing or invalid Lattice bearer token.
+        "404":
+          description: Source is unavailable to the signed-in caller.
+  /api/operations/{operationId}/status:
+    get:
+      operationId: getLatticeOperationStatus
+      summary: Proposal-only lookup for a previously submitted mutating operation.
+      description: Proposal only. Agent Workspace must not assume server support until verified. Automatic mutation retry remains disabled until this proposal is implemented and tested server-side.
+      x-agent-workspace-proposal: true
+      security:
+        - latticeBearer: []
+      parameters:
+        - name: operationId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 160
+      responses:
+        "200":
+          description: Proposal-only operation status response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationStatusEnvelope'
+        "404":
+          description: Operation is unknown or no status contract is available.
+        "501":
+          description: Operation-status proposal is not supported by this server.

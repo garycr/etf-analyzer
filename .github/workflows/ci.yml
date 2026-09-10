@@ -1,0 +1,67 @@
+# CI Pipeline — Agent Workspace
+#
+# Runs on every push and PR to main.
+# Tier 1: build + test + lint
+# Tier 2+: add security scanning
+# Tier 3: add approval gates (configured in branch protection)
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint --if-present
+
+      - name: Build
+        run: npm run build --if-present
+
+      - name: Test
+        run: npm test --if-present
+
+  # Tier 2+: Dependency audit
+  security-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
+
+      - name: Secret pattern scan
+        run: |
+          ! git grep -nE '(gh[pousr]_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|Account[K]ey=|SharedAccess[K]ey=|Client[S]ecret=)' -- ':!package-lock.json'
+
+      - name: SAST guardrail scan
+        run: |
+          ! git grep -nE '(exec\(|spawn\(|execSync\(|eval\(|new Function\(|curl .*[|] *sh|Invoke-Expression)' -- src ':!src/**/*.test.ts'

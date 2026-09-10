@@ -1,0 +1,29 @@
+// MCP Server Configuration — EXAMPLE
+// Copy to mcp.json and configure environment variables.
+// NEVER put API keys directly in mcp.json — use ${env:VAR} references.
+//
+// For Azure Key Vault integration, load secrets into env vars at startup:
+//   export RAI_MCP_KEY=$(az keyvault secret show --vault-name myVault --name rai-key --query value -o tsv)
+//   export RAI_MCP_URL=https://your-rai-mcp-server.azurewebsites.net/api/mcp
+//
+// Or use Azure Developer CLI (azd):
+//   azd env get-values > .env && source .env
+
+{
+  "mcpServers": {
+    "governance": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        ".github/scripts/governance-mcp-server.js"
+      ]
+    },
+    "rai-mcp": {
+      "type": "http",
+      "url": "${env:RAI_MCP_URL}",
+      "headers": {
+        "x-functions-key": "${env:RAI_MCP_KEY}"
+      }
+    }
+  }
+}

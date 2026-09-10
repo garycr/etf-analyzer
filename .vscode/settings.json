@@ -1,0 +1,4 @@
+{
+    "agentWorkspace.autonomyMode": "human-in-the-loop",
+    "agentWorkspace.governanceIntensity": "light"
+}

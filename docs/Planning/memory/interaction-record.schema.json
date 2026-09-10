@@ -1,0 +1,211 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-workspace-template.local/schemas/interaction-record.schema.json",
+  "title": "Agent Memory Interaction Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "subject_id",
+    "session_id",
+    "agent_id",
+    "timestamp",
+    "plan",
+    "action",
+    "state",
+    "outcome"
+  ],
+  "properties": {
+    "subject_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "agent_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "locale": {
+      "type": "string",
+      "minLength": 2
+    },
+    "plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "request",
+        "task_type",
+        "constraints"
+      ],
+      "properties": {
+        "request": {
+          "type": "string",
+          "minLength": 1
+        },
+        "task_type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "constraints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "success_criteria": {
+          "type": "string"
+        }
+      }
+    },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "final_response",
+        "approach",
+        "artifacts"
+      ],
+      "properties": {
+        "final_response": {
+          "type": "string",
+          "minLength": 1
+        },
+        "approach": {
+          "type": "string",
+          "minLength": 1
+        },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "capabilities_used": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        }
+      }
+    },
+    "state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "context"
+      ],
+      "properties": {
+        "context": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "value",
+              "durable"
+            ],
+            "properties": {
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "durable": {
+                "type": "boolean"
+              }
+            }
+          },
+          "default": []
+        }
+      }
+    },
+    "outcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "correction",
+        "reinforcement",
+        "error_recovery"
+      ],
+      "properties": {
+        "correction": {
+          "type": "boolean"
+        },
+        "reinforcement": {
+          "type": "boolean"
+        },
+        "error_recovery": {
+          "type": "boolean"
+        },
+        "corrected_or_confirmed_approach": {
+          "type": "string"
+        },
+        "what_went_wrong": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "claim_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "source_file": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_record_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_record_type": {
+          "enum": [
+            "summary",
+            "fact",
+            "lesson",
+            "interaction-record"
+          ]
+        },
+        "entity_type": {
+          "enum": [
+            "decision",
+            "task",
+            "risk",
+            "architecture",
+            "insight",
+            "lesson",
+            "context",
+            "preference",
+            "constraint"
+          ]
+        },
+        "topics": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "default": []
+        },
+        "entities": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "default": []
+        }
+      }
+    }
+  }
+}

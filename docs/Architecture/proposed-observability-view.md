@@ -2,7 +2,7 @@
 
 ## Status
 
-Status: Proposed - research-only/no-broker; pending architecture review and human approval; not an accepted ADR
+Status: Ledger-security design accepted at DP-33; remaining content Proposed; research-only/no-broker; not an accepted ADR
 
 ## Purpose
 
@@ -14,6 +14,7 @@ This view defines local observability responsibilities for jobs, APIs, data qual
 flowchart LR
     API[Web API]
     Portfolio[Portfolio service]
+    AuditCollector[Audit collector]
     Ingest[Ingestion jobs]
     Analytics[Analytics and backtest jobs]
     Migrate[Migration job]
@@ -34,6 +35,9 @@ flowchart LR
     Portfolio --> Logs
     Portfolio --> Metrics
     Portfolio --> Traces
+    AuditCollector --> Logs
+    AuditCollector --> Metrics
+    AuditCollector --> Traces
     Ingest --> Logs
     Ingest --> Metrics
     Ingest --> Traces
@@ -42,6 +46,9 @@ flowchart LR
     Analytics --> Traces
     Migrate --> Health
     DB --> Health
+    DB --> Logs
+    DB --> Metrics
+    DB --> Traces
     API --> Health
     Logs --> Correlate
     Metrics --> Correlate
@@ -60,6 +67,7 @@ Every API request and bounded job emits redacted logs, metrics, and trace contex
 | --- | --- | --- |
 | Structured logs | UTC timestamp, severity, service, operation, request/job ID, provider identifier, status, attempt, row counts, DQ outcome, sanitized error class, duration, evidence ID/hash. | Credentials, authorization headers, query secrets, raw provider payloads, prohibited provider data, free-form financial records, brokerage artifacts. |
 | Metrics | Request/job counts and duration, failures, retries, suppression/quarantine, queue/outbox depth and age, rows accepted/rejected, readiness state, migration state, DB connectivity, reconciliation difference, evidence-hash mismatch. | High-cardinality secrets, raw symbols where avoidable, payload fragments, or user-entered content. |
+| Ledger integrity | Commitment sequence, key identifier class, verification outcome, unresolved-intent age/count, blocked-publication count, restore verification status, and sanitized failure class. | HMAC key bytes, canonical financial payloads, raw digests that expose sensitive identifiers, or caller-supplied error text. |
 | Traces | Local request-to-service-to-job/outbox-to-database spans; provider calls represented by endpoint class and provider identifier; evidence correlation. | Request/response bodies, credentials, raw SQL values, raw provider records. |
 | Health | Separate liveness and readiness; migration-aware readiness includes required DB connectivity, completed schema migration, policy/config validity, and local dependency checks. | A successful health response must not imply provider rights, dataset freshness, or analytical validity. |
 | Diagnostics | Allowlisted configuration metadata, versions, statuses, timestamps, correlation IDs, counts, hashes, and sanitized failure reasons. | API keys, passwords, prohibited raw provider data, credentials, and any brokerage artifact. |
@@ -78,11 +86,12 @@ Targets are local prototype targets and Proposed until Ring 1 defines measuremen
 ## Canonical operational evidence
 
 - Repeated analytics/backtests with identical snapshot, code hash, parameters, environment, and seed produce matching configuration/result hashes.
-- Reconciliation difference is zero, or explicitly explained as within configured decimal precision, across cash, lots, positions, realized P&L, valuations, and cached projections.
+- Reconciliation uses exact canonical equality after DEC-014 quantization across cash, lots, positions, basis, realized and unrealized P&L, valuations, and cached projections; every difference is zero and no epsilon is permitted.
+- Distinct redacted signals identify transaction/effect digest mismatch, allocation/audit digest mismatch, chain break, unknown/retired key identifier, HMAC failure, missing/stale protected anchor, checkpoint lag, anti-rollback failure, and blocked projection publication.
 - Stale, partial, quarantined, or incompatible data produces a visible blocking status and suppression metric rather than a valid signal.
 - A clean bootstrap proves migrations apply once, fixture data loads only in explicit bootstrap mode, pods become ready, and the localhost browser slice works.
-- Backup/restore evidence must demonstrate restoration of PostgreSQL schemas, immutable evidence, job/outbox state, and ledger integrity; method, RPO/RTO, and cadence remain Ring 1 obligations because HA/DR is out of scope.
-- Accessibility status is observable through test evidence for keyboard navigation, visible focus, semantic labels/headings, non-color cues, persistent research disclaimer, 1280x720 usability, and distinct trade/source/retrieval/completion timestamps.
+- Backup/restore evidence demonstrates a coherent restore of PostgreSQL, commitments, rotation evidence, protected checkpoints, key identifiers, and recoverable encrypted key versions. The local prototype target is RPO 24 hours and RTO 4 hours; readiness remains false until anti-rollback comparison and full retained-chain verification pass.
+- Accessibility status is observable through test evidence for keyboard navigation, visible focus, semantic labels/headings, non-color cues, persistent research disclaimer, 1280x720 usability, distinct trade/source/retrieval/completion timestamps, and programmatically exposed pending, blocked-publication, recovery-in-progress, and recovery-completed states with plain remediation text.
 
 ## Correlation and redaction rules
 
@@ -100,6 +109,6 @@ Correlation identifiers are generated locally and propagated through REST/OpenAP
 
 ## Residual observability decisions
 
-Ring 1 must select the local telemetry implementation, metric names/units, histogram buckets, retention/rotation, dashboard layout, alert thresholds, trace sampling, backup/restore method, and accountable role names. These decisions may not relax the canonical latency, readiness, redaction, outage, reproducibility, accessibility, or reconciliation gates.
+Ring 1 must select the local telemetry implementation, metric names/units, histogram buckets, retention/rotation, dashboard layout, alert thresholds, trace sampling, backup tooling, and accountable named operators. These decisions may not relax DEC-014 equality, anchor-procedure/key isolation, anchor continuity, canonical latency, readiness, redaction, outage, reproducibility, accessibility, or reconciliation gates.
 
 ---

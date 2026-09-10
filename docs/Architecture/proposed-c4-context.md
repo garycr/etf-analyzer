@@ -2,7 +2,7 @@
 
 ## Status
 
-Status: Proposed - research-only/no-broker; pending architecture review and human approval; not an accepted ADR
+Status: Ledger-security design accepted at DP-33; remaining content Proposed; research-only/no-broker; not an accepted ADR
 
 ## Purpose
 
@@ -54,7 +54,7 @@ Brokerage, real orders, credential transmission, and public ingress are explicit
 
 ## Scope and NFR boundaries
 
-The canonical targets remain: non-analytical API p95 under 1 second, dashboard first meaningful content under 2 seconds, core workflows usable at 1280x720 and tablet sizes, keyboard and non-color status accessibility, zero unexplained accounting difference within configured precision, reproducible evidence hashes, migration-aware readiness, and fully redacted diagnostics. HA/DR, Azure, public hosting, multi-tenancy, mobile, streaming/intraday feeds, paid data, and real execution are non-goals.
+The canonical targets remain: non-analytical API p95 under 1 second, dashboard first meaningful content under 2 seconds, core workflows usable at 1280x720 and tablet sizes, keyboard and non-color status accessibility, exact canonical accounting equality after DEC-014 quantization with no epsilon, reproducible evidence hashes, migration-aware readiness, and fully redacted diagnostics. HA/DR, Azure, public hosting, multi-tenancy, mobile, streaming/intraday feeds, paid data, and real execution are non-goals.
 
 ## Related views
 

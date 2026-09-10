@@ -21,6 +21,7 @@ This directory is the fixed, reviewable home for contracts consumed by MAI-ST pa
 | Contract class | Fixed path | Source issue | Status |
 | --- | --- | --- | --- |
 | Domain, order, and ledger | `docs/Planning/contracts/domain-contract.md` | #14, #20, #9 | Order lifecycle `1.0.0-candidate.1` PASS and #14 complete; ledger/precision definition pending under #20/#9 |
+| Immutable FIFO ledger and reconciliation | `docs/Planning/contracts/ledger-contract.md` | #20, #9 | Ledger/precision `1.0.0-candidate.2` Team Lead, specialist, and Architect Reviewer rechecks PASS; ledger-security architecture accepted at DP-33; baseline integration and Ring 2 evidence pending |
 | REST/OpenAPI | `docs/Planning/contracts/openapi-contract.yaml` | #14, #17, #22 | Awaiting Ring 1 definition |
 | PostgreSQL schema/migrations | `docs/Planning/contracts/postgresql-contract.md` | #15, #17, #20, #9 | Awaiting Ring 1 definition |
 | Outbox/events | `docs/Planning/contracts/event-catalog.md` | #14, #15, #17, #20 | Awaiting Ring 1 definition |
@@ -48,12 +49,12 @@ Paths marked awaiting definition are reserved but intentionally not populated wi
 | Human custody model selected | Complete | DEC-013 |
 | Alternate-model custody review | Complete | REV-009 |
 | Distinct Team Lead acknowledgement | Complete | Custody acknowledgement above; DEC-013 handover complete |
-| Domain/order/ledger contract | Building | Order lifecycle `1.0.0-candidate.1` passed all reviews and DEC-011 assertion; ledger/precision remain pending under #20/#9 |
+| Domain/order/ledger contract | Building | Order lifecycle passed all reviews; ledger/precision `1.0.0-candidate.2` passed Team Lead, specialist, and architecture rechecks; ledger-security architecture is accepted; baseline integration and Ring 2 evidence remain pending |
 | REST/OpenAPI contract | Pending | #14, #17, #22 |
 | PostgreSQL contract | Pending | #15, #17, #20, #9 |
 | Event catalog | Pending | #14, #15, #17, #20 |
 | Analytics snapshot/evidence contract | Pending | #15, #11 |
-| Planned compatibility test IDs linked to test strategy | Pending | CT-API-001, CT-DB-001, CT-DB-002, CT-EVT-001, CT-LED-001, CT-ANA-001 |
+| Planned compatibility test IDs linked to test strategy | Pending | CT-API-001, CT-DB-001, CT-DB-002, CT-EVT-001, CT-LED-001..019, CT-ANA-001 |
 | DEC-011 floor conformance | Pending | Required per contract and aggregate baseline |
 | Affected stream acknowledgements | Pending | Required after complete candidate publication |
 | Workspace Owner block release | Pending | Separate human decision after evidence review |

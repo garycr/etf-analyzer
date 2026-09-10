@@ -1,13 +1,13 @@
 # Proposed Paper Order State
 
 ## Status
-Status: Proposed - pending architecture review and human approval; not an accepted ADR
+Status: Ledger-security design accepted at DP-33; remaining content Proposed; not an accepted ADR
 
 ## Purpose and scope
 This state model defines the proposed lifecycle for a paper order in the research-only ETF prototype. It captures the required progression from Draft to Submitted only after explicit user confirmation, followed by accepted, partial, filled, rejected, canceled, and expired states as described in the Objective PDF. The model keeps the user in control and does not permit a brokerage path or real-order transmission.
 
 ## Accessible description
-The system begins in Draft state when a user initiates a paper order from a displayed signal. The state remains Draft until the user specifically confirms the order. After confirmation, the order may be submitted and then evaluated by the portfolio rules. Accepted, partial, filled, rejected, canceled, and expired outcomes are all local states with ledger and audit consequences. The model is explained via the state names and transitions in the text; no color or icon is used to communicate status. Financial precision is enforced at the ledger boundary via bounded PostgreSQL numeric types, canonical per-field precision and scale, and a single documented rounding mode, while exact values and rounding mode remain proposed Ring 1 ADR decisions.
+The system begins in Draft state when a user initiates a paper order from a displayed signal. The state remains Draft until the user specifically confirms the order. After confirmation, the order may be submitted and then evaluated by the portfolio rules. Accepted, partial, filled, rejected, canceled, and expired outcomes are all local states with ledger and audit consequences. The model is explained via the state names and transitions in the text; no color or icon is used to communicate status. DEC-014 governs ledger precision with field-specific bounded numeric types, decimal round-half-even, and exact canonical no-epsilon reconciliation.
 
 ```mermaid
 stateDiagram-v2
@@ -28,7 +28,7 @@ stateDiagram-v2
 
     note right of Submitted
         Only explicit user confirmation triggers submission.
-        Financial precision requires bounded PostgreSQL numeric types, canonical per-field precision/scale, and a single documented rounding mode; exact values remain a proposed Ring 1 ADR decision.
+        DEC-014 field scales and decimal round-half-even apply; reconciliation is exact with no epsilon.
         No broker or real-order endpoint is part of this state path.
     end note
 ```
@@ -36,7 +36,7 @@ stateDiagram-v2
 Required transition set: initial state to Draft; Draft to Submitted; Submitted to Accepted or Rejected; Accepted to Partial, Filled, Canceled, or Expired; Partial to Filled or Canceled; Filled, Rejected, Canceled, and Expired to the terminal state.
 
 ## Proposed architecture requirements
-- Financial precision: the paper-order ledger and reconciliation path require bounded PostgreSQL numeric types, canonical per-field precision and scale, one documented rounding mode, and reconciliation test vectors; exact values and rounding mode remain a proposed Ring 1 ADR decision.
+- Financial precision: DEC-014 fixes `NUMERIC(28,10)` quantity/unit value, `NUMERIC(28,8)` money, and `NUMERIC(28,12)` rates/ratios with decimal round-half-even and exact canonical no-epsilon reconciliation.
 - Research-only state semantics: the state model remains local-only and non-brokered; accepted, partial, filled, rejected, canceled, and expired states are local ledger and audit outcomes without real-order transmission or execution.
 
 ## Traceability
@@ -44,7 +44,7 @@ Required transition set: initial state to Draft; Draft to Submitted; Submitted t
 | --- | --- | --- | --- |
 | [Objective feature](../../specs/features/Objective-ETF-Trade-Recommendation-Prototype-Requirements.feature) | Rule: Scope and non-goals | The prototype is local-only and excludes execution and streaming features | Research-only and no real execution semantics |
 | [Objective feature](../../specs/features/Objective-ETF-Trade-Recommendation-Prototype-Requirements.feature) | Rule: Representative acceptance criteria | An unconfirmed paper order remains draft | Draft lifecycle before confirmation |
-| [Objective feature](../../specs/features/Objective-ETF-Trade-Recommendation-Prototype-Requirements.feature) | Rule: Representative acceptance criteria | The portfolio ledger rebuilds exactly within configured decimal precision | Reconciliation and post-fill valuation |
+| [Objective feature](../../specs/features/Objective-ETF-Trade-Recommendation-Prototype-Requirements.feature) | Rule: Representative acceptance criteria | The portfolio ledger rebuilds with exact canonical equality after DEC-014 quantization; no epsilon | Reconciliation and post-fill valuation |
 | [Objective feature](../../specs/features/Objective-ETF-Trade-Recommendation-Prototype-Requirements.feature) | Rule: UX, performance, and provider controls | The UI remains accessible and meets the required gates | Non-color state communication and confirmation rules |
 
 ## Source references

@@ -2,7 +2,7 @@
 
 ## Status
 
-Status: Proposed - research-only/no-broker; pending architecture review and human approval; not an accepted ADR
+Status: Ledger-security design accepted at DP-33; remaining content Proposed; research-only/no-broker; not an accepted ADR
 
 ## Purpose
 
@@ -18,12 +18,16 @@ flowchart TB
     subgraph LocalCluster[WSL Ubuntu - kind Kubernetes - Helm]
         API[Web API\nTypeScript - REST/OpenAPI]
         Portfolio[Portfolio service\nTypeScript]
+        Projection[Projection worker\nverify chain + publish derived views]
+        AuditCollector[Audit collector\nattempt intent + outcomes]
         Ingest[Ingestion worker\nPython]
         Analytics[Analytics and backtest worker\nPython]
         Jobs[Job and outbox coordinator\nKubernetes Jobs/CronJobs]
         Rights[Provider rights control\nAPI/ingestion component + PostgreSQL policy state]
         Telemetry[Logical local telemetry pipeline\nimplementation undecided\nlogs, metrics, traces, health]
-        DB[(PostgreSQL\nbounded schemas and immutable evidence)]
+        DB[(PostgreSQL\nbounded application schemas and immutable evidence)]
+        Anchor[Integrity anchor procedure\nprotected key + SECURITY DEFINER]
+        AnchorDB[(Protected anchor schema\ncommitment chain and accepted checkpoint)]
     end
 
     Providers[Approved external provider systems only\nsix market and four economic families assessed]
@@ -31,6 +35,13 @@ flowchart TB
     User --> Browser
     Browser -->|localhost REST/OpenAPI| API
     API --> Portfolio
+    API -->|attempt intent| AuditCollector
+    Portfolio -->|controlled ledger transaction| DB
+    DB -->|same transaction| Anchor
+    Anchor -->|append commitment + checkpoint| AnchorDB
+    Projection -->|verify then publish| DB
+    Projection -->|checkpoint verification| AnchorDB
+    AuditCollector --> DB
     API -->|enqueue and query| Jobs
     Jobs --> Ingest
     Jobs --> Analytics
@@ -56,11 +67,13 @@ flowchart TB
 | Browser workbench | Accessible local UI for watchlists, research evidence, jobs, backtests, and explicit paper decisions. | Calls the API over localhost REST/OpenAPI; receives no provider credentials. |
 | Web API | Validates local requests, exposes OpenAPI contracts, and queries/enqueues work. | TypeScript; communicates with local services, jobs, and PostgreSQL only. |
 | Portfolio service | Owns the eight-state local paper-order contract and accounting boundary. | TypeScript; writes immutable transactions and reversing corrections, applies FIFO, and requires exact reconciliation. See the state and sequence views. |
+| Projection worker | Verifies the committed chain and publishes derived portfolio projections. | Dedicated service account; approved verification reads and controlled projection-publication procedure only. |
+| Audit collector | Makes command attempts and non-business outcomes crash-visible. | Commits immutable intent before processing; appends rejection, denial, timeout, and recovery outcomes by intent ID. |
 | Ingestion worker | Executes resumable market/economic ingestion after rights and egress gates. | Python; stores raw/normalized provenance, five-part identity plus job idempotency, vintages, and DQ outcomes. |
 | Analytics/backtest worker | Executes deterministic rules and P0 backtests against point-in-time snapshots. | Python; records configuration/result hashes and blocks stale, partial, quarantined, or incompatible inputs. |
 | Job/outbox coordinator | Provides queued/running/failed/suppressed status, retries, correlation, and durable event handoff. | Kubernetes Jobs/CronJobs plus PostgreSQL outbox; provider outage is an explicit failed job, never zero-row success. |
 | Provider rights control | Internal policy component backed by configuration and PostgreSQL policy state; not a separately deployed service. | Allows only current Approved sources and fails closed for Pending, Rejected, expired, or missing status/configuration. |
-| PostgreSQL | Local bounded schemas for catalog, market, economics, analytics, portfolio, operations, audit, and evidence. | Bounded numeric types; unique/check constraints; migrations; immutable evidence and transaction history. |
+| PostgreSQL | Local bounded, separately owned schemas for catalog, market, economics, analytics, portfolio, operations, audit, evidence, protected keys, and anchors. | Controlled ledger procedure invokes the anchor-owner HMAC procedure in the same transaction; deny-by-default role grants prevent writer key/anchor access. |
 | Logical local telemetry pipeline | Collects structured logs, metrics, traces, health/readiness, and redacted evidence links; the concrete implementation remains a Ring 1 decision. | Local-only endpoints and storage; no raw provider payloads or secrets. |
 
 No container or external relationship exists for brokerage, real orders, credential transmission, public ingress, or unapproved provider access.
@@ -71,7 +84,7 @@ No container or external relationship exists for brokerage, real orders, credent
 - Fixtures are explicitly selected bootstrap, test, or offline datasets. They are not provider failover. A live provider outage or retry exhaustion fails the job and blocks dependent analytics.
 - Market identity is `(instrument, trading date, provider, adjustment policy, revision)` plus idempotency token/job identity. Economic values use release timestamps and the vintage available at or before evaluation time.
 - Job/outbox state correlates ingestion, analytics, evidence, audit, and diagnostics without turning events into brokerage commands.
-- The portfolio ledger is the source of truth: transactions are immutable, corrections reverse prior entries, lots are FIFO, and cached projections must reconcile exactly to the ledger within configured decimal precision.
+- The portfolio ledger is the source of truth: transactions are immutable, corrections reverse prior entries, lots are FIFO, and cached projections must match the ledger with exact canonical equality after DEC-014 quantization; no epsilon is permitted.
 
 ## Deployment and scaling posture
 
@@ -90,6 +103,6 @@ All containers run locally under Helm on kind/Kubernetes inside WSL Ubuntu. The 
 
 ## Trade-offs and Ring 1 constraints
 
-The split keeps Python close to data/analytics libraries and TypeScript close to API/UI/domain orchestration, at the cost of cross-language contract discipline. Before MAI-ST parallel work, one accountable schema custodian must freeze and version the domain, OpenAPI, database, and outbox contracts. Exact precision/scale, rounding mode, evidence retention, Approved provider statuses, retry limits, and worker sizing remain Ring 1 decisions; no value is accepted by this Proposed view.
+The split keeps Python close to data/analytics libraries and TypeScript close to API/UI/domain orchestration, at the cost of cross-language contract discipline. Before MAI-ST parallel work, one accountable schema custodian must freeze and version the domain, OpenAPI, database, and outbox contracts. DEC-014 fixes precision/scale and decimal round-half-even. Evidence retention, Approved provider statuses, retry limits, worker sizing, and implementation proof remain Ring 1/Ring 2 obligations; this Proposed view does not accept an ADR or release parallel work.
 
 ---

@@ -1,13 +1,13 @@
 # Proposed Component View
 
 ## Status
-Status: Proposed - pending architecture review and human approval; not an accepted ADR
+Status: Ledger-security design accepted at DP-33; remaining content Proposed; not an accepted ADR
 
 ## Purpose and scope
-This view describes the proposed target architecture for the ETF research prototype as a local-first, single-user browser workbench. It focuses on the validated functional boundaries in the Objective PDF and its legacy migration evidence: a browser UI that calls a local web API, a portfolio service for paper-only accounting, an ingestion worker, an analytics worker, a shared PostgreSQL store with bounded schemas, provider and economic adapters, job/outbox coordination, and observability. It intentionally excludes brokerage connectors, real-order endpoints, and any credential transmission path.
+This view describes the proposed target architecture for the ETF research prototype as a local-first, single-user browser workbench. It focuses on the validated functional boundaries in the Objective PDF and its legacy migration evidence: a browser UI that calls a local web API, a portfolio service for paper-only accounting, an integrity-anchor procedure, an ingestion worker, an analytics worker, PostgreSQL with separately owned ledger and anchor schemas, provider and economic adapters, job/outbox coordination, and observability. It intentionally excludes brokerage connectors, real-order endpoints, and any credential transmission path.
 
 ## Accessible description
-The system boundary is divided into a browser client, a local web API layer, application services, worker processes, shared storage, and external provider adapters. The browser exchanges only local, read-only or user-confirmed paper actions with the API. The portfolio service owns the append-only ledger and the paper-order lifecycle. The ingestion worker validates symbols, applies provider rights checks, stores raw and normalized observations, and suppresses downstream signal generation when data quality fails. The analytics worker reads the point-in-time snapshot and applies deterministic rule contracts. The shared PostgreSQL instance stores bounded market, economic, analytics, and operational data, while observability components record job state, failures, and evidence hashes. The diagram uses labels and explicit boundaries rather than color to communicate flow. Approved outbound traffic is constrained by a default-deny pod egress policy with an allowlist for rights-approved market and economic provider endpoints, required DNS resolution, PostgreSQL and local telemetry, and required local services; broker and unapproved destinations are blocked, and the policy fails closed when rights or allowlist configuration is absent. Credentials remain only in local Kubernetes Secrets, are mounted only to the scoped adapter workload, are excluded from Git, images, logs, diagnostics, and client bundles, and are subject to CI and infrastructure leak-redaction checks. Diagnostic access is separated from raw provider payload storage so that operators view only allowlisted metadata and hashes while raw payloads remain restricted.
+The system boundary is divided into a browser client, a local web API layer, application services, worker processes, separately authorized data schemas, and external provider adapters. The browser exchanges only local, read-only or user-confirmed paper actions with the API. The portfolio service owns the paper-order lifecycle and can execute controlled ledger procedures but has no table privileges. Inside PostgreSQL, the controlled ledger procedure invokes an anchor-owner `SECURITY DEFINER` procedure in the same transaction; that procedure reads a protected versioned key, computes HMAC-SHA-256, and appends the commitment and latest-anchor checkpoint. The portfolio, ledger writer, and projection writer cannot read the key or anchor tables. A projection worker verifies the committed chain before publishing derived projections. An audit collector commits immutable attempt-intent evidence before business processing and appends outcomes afterward, so crashes leave detectable unresolved attempts. PostgreSQL stores bounded market, economic, analytics, ledger, protected-anchor, and operational data under distinct ownership roles, while observability records failures, integrity verification, and evidence hashes.
 
 ```mermaid
 flowchart TB
@@ -18,14 +18,18 @@ flowchart TB
     subgraph AppBoundary[Local application services]
         API[Web API\nread/write local requests]
         Portfolio[Portfolio Service\nappend-only ledger and order state]
+        Projection[Projection Worker\nverify chain + publish derived views]
+        AuditCollector[Audit Collector\nattempt intent + outcomes + DB denials]
         Ingest[Ingestion Worker\nwatchlist validation and capture]
         Analytics[Analytics Worker\nrule execution and backtests]
         Jobs[Job / Outbox\nstatus, retries, provenance]
         Obs[Observability\nlogs, metrics, health, traces]
     end
 
-    subgraph DataBoundary[Shared PostgreSQL with bounded schemas]
-        PG[(PostgreSQL\nmarket, economics, analytics, operations, audit)]
+    subgraph DataBoundary[PostgreSQL with separated ownership]
+        PG[(Application schemas\nmarket, economics, analytics, ledger, audit)]
+        Anchor[Integrity Anchor Procedure\nSECURITY DEFINER + protected key]
+        AnchorStore[(Protected anchor schema\nappend-only commitments + latest accepted anchor)]
     end
 
     subgraph ProviderBoundary[Provider and economic adapters]
@@ -41,6 +45,13 @@ flowchart TB
 
     UI --> API
     API --> Portfolio
+    API -->|record attempt intent| AuditCollector
+    Portfolio -->|execute controlled ledger procedure| PG
+    PG -->|same transaction| Anchor
+    Anchor -->|append commitment + checkpoint| AnchorStore
+    Projection -->|verify committed chain| AnchorStore
+    Projection -->|publish derived projections| PG
+    AuditCollector --> PG
     API --> Ingest
     API --> Analytics
     Ingest --> Provider
@@ -63,6 +74,7 @@ flowchart TB
     Provider --> Diag
     Econ --> Diag
     PG --> Obs
+    AnchorStore --> Obs
     Excluded -.-> API
 ```
 
@@ -72,7 +84,10 @@ flowchart TB
 - Secret lifecycle: credentials remain only in local Kubernetes Secrets, are mounted or injected only into the scoped adapter workload, are excluded from Git, images, logs, diagnostics, and client bundles, and are covered by CI and infrastructure redaction / leak checks.
 - Diagnostic redaction and access: raw provider payload access remains restricted, while operational diagnostics use explicit allowlisted fields, least-privilege operator access, and tests proving that secrets and prohibited raw provider data are absent.
 - Evidence policy: immutable, versioned evidence records carry hash verification, least-privilege access, configurable retention, and controlled archival/rotation; the exact duration remains a Ring 1 design decision.
-- Financial precision: the portfolio and paper-order model require bounded PostgreSQL numeric types, canonical per-field precision and scale, one documented rounding mode, and reconciliation test vectors; the exact values and rounding mode remain a proposed Ring 1 ADR decision.
+- Financial precision: DEC-014 Option A is authoritative: `NUMERIC(28,10)` quantity/unit value, `NUMERIC(28,8)` money, and `NUMERIC(28,12)` rates/ratios with decimal round-half-even and exact canonical equality; no epsilon is permitted. Implementation libraries and executable vectors remain Ring 2 obligations.
+- Ledger authority: runtime workloads receive only approved reads and controlled-procedure execution. Schema/table, migration, controlled-writer, projection-writer, and anchor roles are distinct; owner roles are `NOLOGIN`, inheritance and `PUBLIC` access are revoked, and runtime has no direct DML, sequence, `COPY`, `TRUNCATE`, trigger, DDL, ownership, or role-administration privilege.
+- Integrity anchoring: only the anchor-owner `SECURITY DEFINER` procedure reads the protected versioned key and appends the commitment/checkpoint. The controlled ledger procedure may invoke it inside the same transaction but cannot read key or anchor tables. Projection publication is a separate projection-worker transaction after committed-chain verification.
+- Durable attempt audit: the audit collector commits an immutable attempt-intent record before invoking business processing. Success completion audit is atomic with ledger commit; rejection, permission-denial, crash-timeout, and recovery outcomes append immutable records referencing the intent. Unresolved intents are visible and reconciled by a bounded collector job.
 
 ## Traceability
 | Feature file | Rule title | Scenario title | Coverage |

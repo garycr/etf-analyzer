@@ -14,6 +14,7 @@
 | DEC-011 | 2026-09-10 | Planning | Retain MAI-ST and canonical floors after selected-strategy review | Workspace Owner | Solo Orchestrator | Active |
 | DEC-012 | 2026-09-10 | Governance | Approve Ring 0 Conditional PASS and open Ring 1 planning | Workspace Owner | Solo Orchestrator | Active |
 | DEC-013 | 2026-09-10 | Governance | Appoint distinct Team Lead as schema contract custodian with governed escalation | Workspace Owner | Team Lead | Active |
+| DEC-014 | 2026-09-10 | Architecture | Select field-specific balanced financial precision and half-even rounding | Workspace Owner | Team Lead | Active |
 
 ---
 
@@ -126,3 +127,69 @@
 | **Invalidation** | Role independence cannot be maintained, custody recheck fails at the Ring 1 to Ring 2 gate, the baseline cannot satisfy DEC-011 floors, or the Workspace Owner supersedes the decision |
 | **Status** | Active; accountability handover complete; baseline freeze pending |
 | **Linked Artifacts** | `docs/Planning/schema-contract-governance-options.md`, `docs/Planning/contracts/README.md`, `docs/Planning/contracts/change-log.md`, `docs/Governance/decisions/reviews/REV-009-schema-contract-custody-review.md`, issue #21 |
+
+---
+
+### DEC-014: Financial Precision and Rounding Policy
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-014 |
+| **Date** | 2026-09-10 |
+| **Category** | Architecture |
+| **Decision** | Select Option A: `NUMERIC(28,10)` for quantity and unit price/cost/NAV, `NUMERIC(28,8)` for monetary values, and `NUMERIC(28,12)` for rates/returns/ratios/weights, using decimal round-half-even at declared derived-result boundaries |
+| **Policy** | DEC-006 bounded canonical financial precision; DEC-011 immutable/reversing FIFO and exact reconciliation; O-CST-007; O-MET-004 |
+| **Authority** | Workspace Owner |
+| **Accountable** | Team Lead as schema contract custodian |
+| **Context** | GitHub #9/#20 require fixed values before the immutable FIFO ledger and executable reconciliation vectors can be completed; REV-010 approved three bounded options after arithmetic remediation |
+| **Alternatives** | Option B uniform `NUMERIC(38,18)` half-even; Option C compact field-specific half-up; revised policy; blocked decision |
+| **Consequences** | External excess-scale values fail closed; derived arithmetic uses exact integer coefficients and deterministic half-even quantization; reversals negate stored canonical effects; reconciliation requires exact canonical equality with no epsilon |
+| **Reasoning** | Field-specific semantics and substantial bounded headroom preserve research fidelity and neutral tie handling without Option B's uniform high scale or Option C's lower fidelity and directional half-up bias |
+| **Assumptions** | Single-currency local research prototype; no FX, tax, leverage, margin, shorting, or external execution; reviewed workload bounds remain sufficient |
+| **Invalidation** | Required values exceed field scales or coupled workload bounds, multi-currency/external execution enters scope, or a domain mandate requires a different rounding rule |
+| **Status** | Active for #9/#20 contract elaboration; baseline freeze and implementation pending |
+| **Linked Artifacts** | `docs/Planning/financial-precision-options.md`, `docs/Governance/decisions/reviews/REV-010-financial-precision-options-review.md`, GitHub #9, GitHub #20 |
+
+---
+
+### DEC-015: Ledger Security Architecture Remediation Authorization
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-015 |
+| **Date** | 2026-09-10 |
+| **Category** | Governance |
+| **Decision** | Approve AR-LED-01 through AR-LED-06 and GitHub #23-#28 for Ring 1 remediation of the Proposed ledger security architecture |
+| **Policy** | REV-011; mandatory architecture review; alternate-model Decision Review; Ring 1 finding management |
+| **Authority** | Workspace Owner |
+| **Accountable** | Team Lead for custody; architecture and security reviewers for independent closure verification |
+| **Context** | REV-011 found six Major gaps between the final-custody ledger contract and Proposed architecture covering HMAC control, PostgreSQL authority, atomic append/audit, fail-closed rebuild, recovery continuity, and DEC-014 alignment |
+| **Alternatives** | Approve all findings; approve a subset; defer remediation; reject the HMAC-anchor direction and redesign |
+| **Consequences** | Proposed architecture updates may proceed; every finding remains open until independent verification; implementation and architecture approval remain blocked |
+| **Reasoning** | The findings close implementability, integrity, least-privilege, recovery, and policy-consistency gaps without changing the approved ledger accounting semantics |
+| **Assumptions** | The remediation preserves local-only deployment, no-broker scope, DEC-014 precision, and the existing final ledger specification custody boundary |
+| **Invalidation** | A reviewed design cannot provide independent key/anchor authority, atomic append plus durable failed-attempt evidence, recoverable chain continuity, or exact no-epsilon reconciliation |
+| **Status** | Completed; AR-LED-01..06 closed and resulting ledger-security architecture accepted by DEC-016 |
+| **Linked Artifacts** | `docs/Governance/decisions/reviews/REV-011-ledger-security-architecture-review.md`, GitHub #23, #24, #25, #26, #27, #28 |
+
+---
+
+### DEC-016: Ledger Security Architecture Acceptance
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-016 |
+| **Date** | 2026-09-10 |
+| **Category** | Architecture |
+| **Decision** | Accept the reviewed ledger signer, key, anchor, PostgreSQL authority, immutable audit, projection-publication, and recovery architecture at DP-33 |
+| **Policy** | DP-33 architecture acceptance; REV-011 final recheck; DEC-014; DEC-015; architecture review; decision review |
+| **Authority** | Workspace Owner |
+| **Accountable** | Solo Orchestrator for decision trace; Team Lead for contract custody; implementation owners remain unassigned |
+| **Context** | Candidate.2 SHA-256 `0e223c5d4e4af1a1cd42cd9dbd8e2275f90b1904efd6eaa68555e7ad7dd376e2` passed Team Lead, Code, Test, Security, accessibility, and Architect Reviewer rechecks; REV-011 closed AR-LED-01..06 with no Critical or Major findings |
+| **Alternatives** | Approve architecture; return for remediation; reject architecture |
+| **Consequences** | Ledger-security portions of the Proposed views become accepted design input; #23-#28 remain completed; Minor follow-ups #30-#32 remain open; CT-LED-001..019 executable evidence remains mandatory |
+| **Reasoning** | The design now allocates isolated key custody, non-login function-owner authority, atomic dual-chain evidence, fail-closed publication, and anti-rollback recovery while preserving DEC-014 exact accounting semantics |
+| **Assumptions** | Local-only single-user research prototype; no brokerage path; attested model dispatch is accepted as process evidence rather than cryptographic model-identity proof |
+| **Invalidation** | Implementation cannot enforce the reviewed authority/atomicity/recovery boundaries, a Critical or Major finding emerges, or scope adds external execution or incompatible trust boundaries |
+| **Status** | Accepted architecture; no ADR, implementation, ring advancement, baseline freeze, #9/#20 closure, or parallel execution authorized |
+| **Linked Artifacts** | `docs/Governance/decisions/reviews/REV-011-ledger-security-architecture-review.md`, `docs/Planning/contracts/evidence/CC-001-ledger-candidate-delta.md`, GitHub #30, #31, #32 |

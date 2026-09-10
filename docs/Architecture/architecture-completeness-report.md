@@ -83,7 +83,7 @@ The following are conditions of this report and do not authorize WBS/IMS draftin
 | Technical-debt gate | REV-006 Minor 2 rejected by owner | Keep qualitative MAI-ST debt capture; do not impose formal thresholds absent a new governed decision. |
 | Stream/ADR organization | REV-006 Suggestions 1-2 rejected by owner | Ring 1 may choose organization and decision queue; this report does not mandate either. |
 
-Additional unresolved design values include concrete provider approvals, per-field decimal precision/scale, rounding mode, evidence/raw-data/telemetry retention, PostgreSQL roles, secret rotation/revocation, retries/timeouts, local telemetry stack, metric taxonomy, alert thresholds, trace sampling, backup/restore method, and test tooling. All remain Proposed.
+Additional unresolved design values include concrete provider approvals, evidence/raw-data/telemetry retention, provider-secret revocation, retries/timeouts, local telemetry stack, metric taxonomy, alert thresholds, trace sampling, and test tooling. DEC-014 and CC-001 now define ledger precision/rounding, PostgreSQL role authority, HMAC key rotation, protected backup/restore, anti-rollback, and readiness behavior at Proposed design level; executable evidence remains pending.
 
 ## Quality and risk assessment
 
@@ -91,7 +91,7 @@ Additional unresolved design values include concrete provider approvals, per-fie
 | --- | --- | --- |
 | Structural integrity | Conditional pass | Eleven views cover required abstraction/model classes with explicit cross-links and bounded ownership. |
 | Security | Conditional pass | Trust boundaries and controls are complete at proposal level; provider statuses and executable policy tests remain unresolved. |
-| Reliability | Conditional pass | Fail-visible jobs, DQ blocking, deterministic evidence, and reconciliation are modeled; backup/restore and test vectors remain Ring 1. |
+| Reliability | Conditional pass | Fail-visible jobs, DQ blocking, deterministic evidence, reconciliation, protected backup/restore, anti-rollback, and CT-LED-001..019 are modeled; executable evidence remains pending. |
 | Performance | Conditional pass | Canonical local targets and Golden Signals are preserved; measurement design and workload bounds remain Ring 1. |
 | Operational excellence | Conditional pass | Logs/metrics/traces/readiness/correlation are modeled; concrete stack, retention, dashboards, and alert thresholds are open. |
 | Cost | Pass for Ring 0 scope | Local WSL/kind/PostgreSQL avoids cloud cost and matches the selected MAI-ST posture; implementation estimates are outside this task. |

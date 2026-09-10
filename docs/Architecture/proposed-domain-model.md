@@ -1,7 +1,7 @@
 # Proposed Domain Model
 
 ## Status
-Status: Proposed - pending architecture review and human approval; not an accepted ADR
+Status: Ledger-security design accepted at DP-33; remaining content Proposed; not an accepted ADR
 
 ## Purpose and scope
 This domain model captures the proposed bounded subgraphs for the ETF prototype. It organizes core entities around catalog, market and provenance data, economic vintages, analytics and evidence, backtest execution, portfolio append-only ledger behavior, operational controls, and audit trails. The model matches the objective requirement for a local single-user research system and excludes brokerage, execution, and credential semantics.
@@ -44,13 +44,17 @@ flowchart LR
         BacktestRun[Backtest run\nseed, benchmark, assumptions]
         Ledger[Append-only ledger\ntransactions, cash, lots]
         Position[Position / valuation\nrebuild from ledger]
-        Reconcile[Reconciliation\nbounded numeric types, per-field precision/scale, rounding mode]
+        Reconcile[Reconciliation\nDEC-014 canonical equality\nno epsilon]
+        Commitment[Portfolio commitment\nledger sequence + three evidence hashes\nprevious commitment + key identifier]
+        Verification[Integrity verification result\nchain, HMAC, anchor, snapshot]
+        Publication[Projection publication gate\nblocked until verified]
     end
 
     subgraph Ops[Operations and audit]
         JobStatus[Job status\nqueued, running, failed, suppressed]
         Audit[Audit log\nuser action, confirmation, evidence]
         Diagnostic[Redacted diagnostic export\nallowlisted metadata and hashes only\nraw provider payload access restricted]
+        ProtectedAnchor[Protected latest anchor\nseparate owner\nappend-only checkpoint]
     end
 
     Excluded[Excluded boundary\nNo brokerage connector\nNo real-order endpoint\nNo credential transmission path]
@@ -72,7 +76,12 @@ flowchart LR
     Snapshot --> BacktestRun
     BacktestRun --> Ledger
     Ledger --> Position
+    Ledger --> Commitment
+    Commitment --> Verification
+    ProtectedAnchor --> Verification
     Position --> Reconcile
+    Reconcile --> Verification
+    Verification --> Publication
     JobStatus --> Audit
     Diagnostic --> Audit
     DQ --> JobStatus
@@ -84,7 +93,8 @@ flowchart LR
 - Ingestion identity and idempotency: the authoritative business identity is (instrument, trading date, provider, adjustment policy, revision), with an idempotency token/job identity for safe reprocessing; the design requires DB unique and check constraints plus migration checks on empty and populated datasets rather than treating legacy (Symbol, Date) semantics as proof of uniqueness.
 - Evidence policy: analytics and domain evidence must be immutable and versioned, with hash verification, least-privilege access, configurable retention, and controlled archival/rotation; exact retention duration remains a Ring 1 design decision.
 - Diagnostic redaction and access: raw provider payload access remains restricted from operators, while diagnostics can show only allowlisted metadata and hashes, with tests proving secrets and prohibited raw provider data are absent.
-- Financial precision: the portfolio and paper-order model require bounded PostgreSQL numeric types, canonical per-field precision and scale, one documented rounding mode, and reconciliation test vectors; exact values and rounding mode remain a proposed Ring 1 ADR decision.
+- Financial precision: DEC-014 Option A fixes `NUMERIC(28,10)` quantity/unit value, `NUMERIC(28,8)` money, and `NUMERIC(28,12)` rates/ratios with decimal round-half-even; reconciliation requires exact canonical equality and zero difference with no epsilon.
+- Integrity publication: each portfolio commitment binds transaction/effect, allocation, and audit hashes to the prior sequence commitment and key identifier. Rebuild verifies bounded pages from a trusted checkpoint; missing/unknown keys, chain breaks, HMAC mismatch, or anchor mismatch produce `LEDGER_INTEGRITY_FAILED` and keep projections unpublished.
 
 ## Traceability
 | Feature file | Rule title | Scenario title | Coverage |
@@ -92,7 +102,7 @@ flowchart LR
 | [Objective feature](../../specs/features/Objective-ETF-Trade-Recommendation-Prototype-Requirements.feature) | Rule: Watchlists, market data, and backfill | A user maintains a watchlist and resumable backfill without creating execution semantics | Watchlist, provenance, DQ, and no-order semantics |
 | [Objective feature](../../specs/features/Objective-ETF-Trade-Recommendation-Prototype-Requirements.feature) | Rule: Economic data and provider policy | Official economic adapters and provider controls are required and revalidated | Economic vintages and validity rules |
 | [Objective feature](../../specs/features/Objective-ETF-Trade-Recommendation-Prototype-Requirements.feature) | Rule: Representative acceptance criteria | Vintage cutoff preserves point-in-time truth | Immutable snapshot and vintage cutoff |
-| [Objective feature](../../specs/features/Objective-ETF-Trade-Recommendation-Prototype-Requirements.feature) | Rule: Representative acceptance criteria | The portfolio ledger rebuilds exactly within configured decimal precision | Portfolio ledger and reconciliation |
+| [Objective feature](../../specs/features/Objective-ETF-Trade-Recommendation-Prototype-Requirements.feature) | Rule: Representative acceptance criteria | The portfolio ledger rebuilds with exact canonical equality after DEC-014 quantization; no epsilon | Portfolio ledger and reconciliation |
 | [Legacy persistence feature](../../specs/features/Legacy-Code-price-persistence.feature) | Symbol and date identity | The legacy schema shows a primary key on Id but does not prove a unique business key by symbol and date | Identity and model assumptions to validate in new design |
 
 ## Source references
@@ -106,7 +116,7 @@ flowchart LR
 ## Risks and assumptions
 - The model assumes a single-user local deployment and a bounded schema structure rather than a shared enterprise data model.
 - Economic vintages are assumed to require explicit release-time and transformation metadata to meet point-in-time truth requirements.
-- Portfolio reconciliation is assumed to be deterministic and precise within configured decimal tolerance; mismatches are treated as operational issues, not silent corrections.
+- Portfolio reconciliation is deterministic after DEC-014 quantization and requires exact canonical equality; no epsilon is allowed and every mismatch blocks publication rather than triggering silent correction.
 - Legacy database field names and table semantics are not treated as authoritative target-state identity requirements without validation.
 
 ---

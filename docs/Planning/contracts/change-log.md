@@ -34,4 +34,21 @@ Emergency changes are revert-only to the last active baseline. Forward-breaking 
 
 ## Entries
 
-No contract changes have been accepted. Candidate baseline `v1.0.0` is still being defined by its owning Ring 1 issues.
+### CC-001 - Ledger Architecture Alignment Amendment
+
+| Field | Value |
+| --- | --- |
+| Change ID | CC-001 |
+| Date | 2026-09-10 |
+| Originator | Solo Orchestrator implementing approved DEC-015 remediation |
+| Target baseline | `v1.0.0-candidate.2` |
+| Affected contracts/streams | `ledger-contract.md`; PostgreSQL, audit, projection, security, and operations consumers |
+| Classification | Additive minor candidate amendment; confirmed by Team Lead custody review |
+| Classification evidence | Clarifies authority, transactionality, audit lifecycle, and publication timing without changing accounting outputs or existing command identities |
+| DEC-011 floor assertion | Pass expected: immutable FIFO, reversing correction, exact reconciliation, no-broker, and deterministic evidence floors are preserved |
+| Specialist reviews | Code, Test, Security, accessibility, final Team Lead custody, and Architect Reviewer rechecks PASS; DP-33 architecture acceptance recorded in DEC-016 |
+| Compatibility checks | CT-LED-001..012 unchanged; CT-LED-013..019 define attempt/audit-chain, role, transaction rollback, projection-publication, crash-recovery, and anti-rollback checks for Ring 2 execution |
+| Custodian disposition | PASS; candidate.2 accepted for specialist rechecks |
+| Co-signature | Solo Orchestrator originated amendment; independent Team Lead disposition required |
+| Human approval | DEC-016 accepts the reviewed ledger-security architecture at DP-33; implementation, baseline freeze, and contract activation remain unauthorized |
+| Invalidation notice | `1.0.0-candidate.1` custody evidence remains historical; candidate.2 cannot freeze until reviews and affected-stream acknowledgements complete |

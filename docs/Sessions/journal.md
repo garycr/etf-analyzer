@@ -678,3 +678,131 @@
 **Boundary:** #20/#9 ledger and precision remain pending; `v1.0.0` is not frozen or active; parallel execution remains blocked
 
 ---
+
+## 2026-09-10T17:05:00-05:00 | REV-010 | Ring-1 | @architect-reviewer
+
+**Type:** REVIEW
+**review-type:** financial-precision-architecture-decision
+**review-outcome:** APPROVED
+**initial-findings:** Four Major and one Minor; all remediated and rechecked
+**arithmetic-audit:** PASS
+**recommendation:** Option A is defensible; all three options remain viable under documented bounds
+**decision-readiness:** Ready for Workspace Owner selection
+**reviewed-artifact:** docs/Planning/financial-precision-options.md
+**report:** docs/Governance/decisions/reviews/REV-010-financial-precision-options-review.md
+**boundary:** No option or ADR accepted; #9/#20, baseline freeze, implementation, and parallel execution remain blocked pending human selection
+
+---
+
+## 2026-09-10T17:20:00-05:00 | DEC-014 | Ring-1 | @solo-orchestrator
+
+**Type:** DECISION
+**Decision:** Select Option A field-specific balanced precision with decimal round-half-even
+**Policy:** DEC-006 | DEC-011 | O-CST-007 | O-MET-004
+**Authority:** Workspace Owner
+**Accountable:** Team Lead as schema contract custodian
+**Review:** REV-010 APPROVED; independent arithmetic audit PASS
+**selected-option:** `NUMERIC(28,10)` quantity/price | `NUMERIC(28,8)` money | `NUMERIC(28,12)` rates/ratios | half-even
+**rejected-options:** Option B uniform high precision | Option C compact currency-centric | revised policy | blocked decision
+**authorization-boundary:** Precision policy accepted for #9/#20 elaboration only; no ADR acceptance, baseline freeze, implementation, deployment, or parallel-work release
+**selector:** human
+
+---
+
+## 2026-09-10T20:10:00Z | DEC-015 | Ring-1 | @solo-orchestrator
+
+**Type:** DECISION
+**Decision:** Approve AR-LED-01 through AR-LED-06 for Ring 1 remediation
+**Policy:** REV-011 | architecture-review | decision-review
+**Authority:** Workspace Owner
+**Accountable:** Team Lead; Architect Reviewer; Security Reviewer
+**approved-issues:** #23 | #24 | #25 | #26 | #27 | #28
+**authorization-boundary:** Proposed architecture remediation only; no ADR acceptance, architecture approval, implementation, ring advancement, baseline freeze, issue #9/#20 closure, or parallel-work release
+**independent-review:** Verifiably alternate-model Architect Reviewer recheck remains required
+**selector:** human
+
+---
+
+## 2026-09-10T21:00:00Z | CC-001-CUSTODY | Ring-1 | @team-lead
+
+**Type:** CONTRACT-CANDIDATE-REVIEW
+**Decision:** Retain `1.0.0-candidate.2` custody at SHA-256 `0e223c5d4e4af1a1cd42cd9dbd8e2275f90b1904efd6eaa68555e7ad7dd376e2`
+**Policy:** DEC-011 | DEC-013 | CC-001 additive-minor classification
+**Authority:** Team Lead schema custodian
+**Accountability:** Team Lead for contract custody; Solo Orchestrator for evidence assembly
+**Result:** PASS; candidate.1 reconstruction and DEC-011 floor verified
+**Boundary:** No baseline freeze, implementation, or architecture acceptance
+
+---
+
+## 2026-09-10T21:01:00Z | CC-001-CODE | Ring-1 | @code-reviewer
+
+**Type:** REVIEW
+**Decision:** Approve candidate.2 code-contract consistency
+**Policy:** Code review | CC-001 | DEC-011
+**Authority:** Code Reviewer
+**Accountability:** Team Lead schema custodian
+**Result:** PASS; exact outcomes, function-owner authority, projection atomicity, and unchanged accounting semantics verified
+
+---
+
+## 2026-09-10T21:02:00Z | CC-001-TEST | Ring-1 | @test-reviewer
+
+**Type:** REVIEW
+**Decision:** Approve candidate.2 test design
+**Policy:** Test quality | CT-LED-013..019
+**Authority:** Test Reviewer
+**Accountability:** Ring 2 implementation must provide executable proof
+**Result:** PASS (design-time); audit, dual-chain, authorization, publication, crash, and anti-rollback vectors complete
+
+---
+
+## 2026-09-10T21:03:00Z | CC-001-SECURITY | Ring-1 | @security-reviewer
+
+**Type:** REVIEW
+**Decision:** Approve candidate.2 security-contract consistency
+**Policy:** Security review | CC-001 | DEC-015
+**Authority:** Security Reviewer dispatched as `GPT-5.6 Sol (copilot)`
+**Accountability:** Ring 2 implementation must provide executable control evidence
+**Result:** APPROVED / PASS; no Critical, Major, or Minor findings
+
+---
+
+## 2026-09-10T21:04:00Z | CC-001-ACCESSIBILITY | Ring-1 | @responsible-ai
+
+**Type:** REVIEW
+**Decision:** Approve candidate.2 accessibility state design
+**Policy:** WCAG 2.1 AA | workspace accessibility rules
+**Authority:** Responsible AI reviewer
+**Accountability:** Ring 3 IV&V must verify runtime behavior
+**Result:** PASS; programmatic states, AT/non-color cues, plain remediation, and redaction verified
+
+---
+
+## 2026-09-10T21:05:00Z | REV-011-RECHECK | Ring-1 | @architect-reviewer
+
+**Type:** REVIEW-RECHECK
+**Decision:** Close AR-LED-01 through AR-LED-06 and authorize DP-33 presentation
+**Policy:** Architecture review | decision review | DEC-015
+**Authority:** Architect Reviewer dispatched as `Claude Opus 5 (copilot)`
+**Accountability:** Workspace Owner decides architecture acceptance at DP-33
+**Result:** PASS; WAF 3.8/5, ISO 25010 3.5/5, no Critical or Major findings
+**Residuals:** AR-LED-R01..R05 Minor; Ring 1 follow-up work
+**Boundary:** Architecture remains Proposed; no implementation, ring advancement, baseline freeze, or parallel execution
+
+---
+
+## 2026-09-10T21:10:00Z | DEC-016 | Ring-1 | @solo-orchestrator
+
+**Type:** DECISION
+**decision-point:** DP-33
+**Decision:** Accept the reviewed ledger signer/key/anchor/role/audit/publication/recovery architecture
+**Policy:** REV-011 final PASS | architecture review | decision review | DEC-014 | DEC-015
+**Authority:** Workspace Owner
+**Accountability:** Solo Orchestrator for trace; Team Lead for contract custody
+**Evidence:** Candidate.2 SHA-256 `0e223c5d4e4af1a1cd42cd9dbd8e2275f90b1904efd6eaa68555e7ad7dd376e2`; WAF 3.8/5; ISO 25010 3.5/5; no Critical/Major findings
+**Residuals:** #30 | #31 | #32 remain open Minor Ring 1 tasks
+**authorization-boundary:** No ADR, implementation, ring advancement, baseline freeze, #9/#20 closure, or parallel execution
+**selector:** human
+
+---

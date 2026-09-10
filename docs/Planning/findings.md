@@ -48,7 +48,7 @@ The Proposed baseline contains C4 Context, Container, and Component views; deplo
 | --- | --- | --- | --- | --- |
 | S-001 | Provider rights statuses are not yet approved | High | Live integrations must remain disabled | #17 and #3 |
 | S-002 | Precision/scale and rounding values are unresolved | High | Ledger implementation cannot be finalized | #9 and #20 |
-| S-003 | Schema custodian and frozen contract are not appointed | High | MAI-ST parallel streams cannot start safely | #21 |
+| S-003 | Schema custodian is appointed; complete baseline `v1.0.0` is not yet frozen | High | MAI-ST parallel streams cannot start until remaining contracts are complete, acknowledged, reviewed, and separately released | #21; #20; #9; #15; #17; #22 |
 | S-004 | Evidence/telemetry retention and backup method are unresolved | Medium | Operational evidence design remains conditional | #11 and #22 |
 | S-005 | Mermaid renderer/version is not pinned | Low | Visual render portability is unproven | #12 |
 

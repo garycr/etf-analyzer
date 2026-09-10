@@ -23,23 +23,30 @@ sequenceDiagram
     User->>UI: Views research signal and evidence
     UI-->>User: Display signal only; no auto-order mutation
     User->>UI: Chooses Create paper order
-    UI->>API: Submit paper-order draft for review
-    API->>Portfolio: Validate signal, cash, lot constraints, and state
-    alt Not valid or no confirmation
-        Portfolio-->>API: Reject or keep Draft state
-        API-->>UI: Show blocked validation or remain Draft
-        UI-->>User: No fill or ledger mutation
-    else User confirms
-        User->>UI: Explicit confirm paper action
-        UI->>API: Confirm order
-        API->>Portfolio: Accept order and prepare local simulation
+    UI->>API: Create local paper-order draft
+    API->>Portfolio: Record Draft with no fill or ledger mutation
+    Portfolio-->>API: Draft created
+    API-->>UI: Show Draft and request explicit confirmation
+    alt Confirmation absent
+        UI-->>User: Remain Draft; no fill or ledger mutation
+    else User explicitly confirms
+        User->>UI: Confirm paper action
+        UI->>API: Confirm Draft
+        API->>Portfolio: Transition Draft to Submitted and validate local state
+        alt Validation fails or state blocks order
+            Portfolio->>Audit: Record redacted rejection evidence
+            Portfolio-->>API: Submitted to Rejected; no fill or ledger mutation
+            API-->>UI: Show Rejected with recoverable reason
+        else Validation passes
+            Portfolio->>Portfolio: Transition Submitted to Accepted
         Portfolio->>Portfolio: Simulate fill using local rules and assumptions
         Portfolio->>Ledger: Append transaction, cash, lots, and position events with bounded numeric precision
         Portfolio->>Reconcile: Rebuild positions and projected valuations with configured rounding and test vectors
         Reconcile-->>Portfolio: Reconciliation result within tolerance
         Portfolio->>Audit: Record user confirmation and ledger evidence
-        Portfolio-->>API: Order accepted with final state
-        API-->>UI: Show accepted, filled, partial, or rejected state
+            Portfolio-->>API: Return Accepted, Partial, or Filled local state
+            API-->>UI: Show current local state
+        end
     end
 
     note over Portfolio,Audit: No brokerage connector, no live-buy/sell API, no order transmission path, and no raw-provider diagnostics without redaction are part of this flow.

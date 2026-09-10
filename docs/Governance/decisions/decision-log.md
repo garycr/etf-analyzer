@@ -13,6 +13,7 @@
 | DEC-010 | 2026-09-10 | Planning | Select MAI-ST at DP-4 for conditional Ring 1 elaboration | Workspace Owner | Solo Orchestrator | Active |
 | DEC-011 | 2026-09-10 | Planning | Retain MAI-ST and canonical floors after selected-strategy review | Workspace Owner | Solo Orchestrator | Active |
 | DEC-012 | 2026-09-10 | Governance | Approve Ring 0 Conditional PASS and open Ring 1 planning | Workspace Owner | Solo Orchestrator | Active |
+| DEC-013 | 2026-09-10 | Governance | Appoint distinct Team Lead as schema contract custodian with governed escalation | Workspace Owner | Team Lead | Active |
 
 ---
 
@@ -103,3 +104,25 @@
 | **Invalidation** | A Ring 0 evidence defect is discovered, mandatory conditions are removed without governed approval, or the Workspace Owner reopens the gate |
 | **Status** | Active |
 | **Linked Artifacts** | `docs/artifacts/gate-evidence/ring-0-gate-checklist.md`, `docs/artifacts/12-Retrospective/ring-0-lessons-learned.md`, `docs/Architecture/architecture-completeness-report.md`, `docs/Planning/findings.md` |
+
+---
+
+### DEC-013: Schema Contract Custody
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-013 |
+| **Date** | 2026-09-10 |
+| **Category** | Governance |
+| **Decision** | Appoint a distinct dispatched Team Lead as custodian for the versioned domain, OpenAPI, PostgreSQL, outbox/event, and analytics evidence contracts, with escalation through the Solo Orchestrator to the Workspace Owner |
+| **Policy** | Issue #21; DEC-011 canonical floors; consequential decision and alternate-model Decision Review; Tier 1 active-role constraints |
+| **Authority** | Workspace Owner |
+| **Accountable** | Team Lead; custody acknowledged in the contract registry on 2026-09-10 |
+| **Context** | MAI-ST parallel execution requires one accountable contract custodian; REV-009 identified role-separation, ownership, classification, CI, continuity, and invalidation controls that the Workspace Owner dispositioned |
+| **Alternatives** | Solo Orchestrator custody; Team Lead-only custody; Workspace Owner custody; blocked appointment |
+| **Consequences** | Fixed artifact paths, no-self-approval, default-to-breaking classification, per-change DEC-011 assertions, specialist review lanes, named compatibility checks, continuity rules, and versioned invalidation govern the baseline; parallel work remains blocked until baseline `v1.0.0` is complete and separately released |
+| **Reasoning** | A distinct Team Lead supplies integration custody without combining originator, reviewer, and human breaking-change authority, while preserving the selected speed-oriented strategy after contracts are frozen |
+| **Assumptions** | The Team Lead remains available as a distinct active Tier 1 agent; all contract-owning issues produce complete reviewed artifacts before freeze |
+| **Invalidation** | Role independence cannot be maintained, custody recheck fails at the Ring 1 to Ring 2 gate, the baseline cannot satisfy DEC-011 floors, or the Workspace Owner supersedes the decision |
+| **Status** | Active; accountability handover complete; baseline freeze pending |
+| **Linked Artifacts** | `docs/Planning/schema-contract-governance-options.md`, `docs/Planning/contracts/README.md`, `docs/Planning/contracts/change-log.md`, `docs/Governance/decisions/reviews/REV-009-schema-contract-custody-review.md`, issue #21 |

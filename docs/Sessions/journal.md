@@ -400,6 +400,33 @@
 
 ---
 
+## 2026-09-10T14:05:00-05:00 | REV-009 | Ring-1 | @test-reviewer
+
+**Type:** REVIEW
+**review-type:** test-specification-recheck
+**reviewing-agent:** Test Reviewer (Claude Opus 4.8, alternate model)
+**scope:** Design-time read-only recheck of specs/features/Paper-Order-Lifecycle.feature and docs/Planning/contracts/domain-contract.md; verify closure of prior Minor findings F-1/F-2/F-3, Ring 2 deterministic-fixture conditions, orchestration-collapse deferral to REST/OpenAPI, and no coverage regression
+**finding-count:** 1
+**critical-count:** 0
+**major-count:** 0
+**minor-count:** 0
+**informational-count:** 1
+**review-outcome:** pass
+**F-1-status:** closed — CT-ORD-007 "unlisted source/target" outline asserts literal ORDER_INVALID_TRANSITION for nonterminal sources only; terminal sources routed to ORDER_TERMINAL_STATE via CT-ORD-008
+**F-2-status:** closed — CT-ORD-009 "Correlation is trace-only" scenario replays equivalent content with a different correlationId, returns original result, produces no idempotency conflict and no mutation
+**F-3-status:** closed — CT-ORD-001 annotated as the OT-01 guard-failure case; missing-guard outline covers OT-02..OT-10, completing the guard-failure family
+**ring-2-fixtures:** recorded — injected clock for OT-08 expiry; fixed concrete quantities for OT-05/OT-06/OT-09; coverage gates required; CT-LED-001 deferred to #20/#9
+**orchestration-collapse:** deferred to REST/OpenAPI contract (Open Dependencies); domain invariant of independent constituent guard/atomicity/effect/evidence retained, so issue #14 is not weakened
+**coverage-regression:** none — CT-ORD-001..012 all present; negative space = 23 nonterminal + 7 Initial-only + 32 terminal = 62 complements, matching the contract's exact-62 assertion
+**informational-finding:** INFO-1 — orchestration-collapse deferral target is described by role ("The REST/OpenAPI contract") but not linked to issue #17 by number; traceability-only, non-blocking
+**seven-dimension-scores:** Determinism 5; Behavioral Focus 5; Failure Specificity 5; Refactoring Resistance 5; Input Coverage 5; Isolation 5; Maintainability 5
+**composite:** 5.0 (Excellent) — rose from prior conditional state where Failure Specificity and Input Coverage sat at 4 pending F-1/F-2/F-3
+**signoff:** Test Reviewer checklist item (CT-ORD-001..012 coverage of every allowed source/target and representative invalid paths) may be recorded unconditionally for the specification; executable evidence remains a separate Ring 2 obligation
+**reviewed-artifact:** specs/features/Paper-Order-Lifecycle.feature; docs/Planning/contracts/domain-contract.md
+**note:** Read-only design-time audit; no scenarios executed and no reviewed artifact edited
+
+---
+
 ## 2026-09-10T13:33:35-05:00 | RSN-004 | Ring-0 | @model-selector
 
 **Type:** REASONING
@@ -534,5 +561,120 @@
 **Mandatory inputs:** Issues #14, #15, #17, #20, #21, #22 and existing #3-#5, #9-#12
 **First constraint:** Appoint the schema custodian and freeze versioned domain/OpenAPI/PostgreSQL/outbox contracts before MAI-ST parallel execution
 **Boundary:** Planning and review only until subsequent human gates authorize further action
+
+---
+
+## 2026-09-10T13:55:24-05:00 | RSN-005 | Ring-1 | @solo-orchestrator
+
+**Type:** REASONING
+**Trigger:** Issue #21 requires one schema custodian before MAI-ST parallel planning can proceed
+**Question:** Which active authority model should own domain, OpenAPI, PostgreSQL, and outbox contract integrity?
+**Constraints:** One accountable custodian | Active Tier 1 roster | Human approval for breaking changes and ADRs | Proposed-only architecture | Parallel work blocked until freeze evidence
+**Alternatives:** Solo Orchestrator custody | Team Lead custody | Workspace Owner custody | Team Lead custody with governed escalation
+**Advisory recommendation:** Team Lead custody with domain-owner consultation, Solo Orchestrator verification, and Workspace Owner approval of breaking changes
+**Decision status:** Awaiting human selection and alternate-model decision review
+**Artifact:** docs/Planning/schema-contract-governance-options.md
+
+---
+
+## 2026-09-10T13:55:24-05:00 | DEC-013 | Ring-1 | @solo-orchestrator
+
+**Type:** DECISION
+**Decision:** Select Team Lead custody with governed escalation for the schema contract baseline, subject to alternate-model architecture review
+**Policy:** Consequential Decision Test; Decision Review; issue #21 acceptance criteria
+**Authority:** Workspace Owner
+**Accountable:** Solo Orchestrator until the reviewed appointment is finalized
+**Review:** Pending alternate-model Architect Reviewer
+**Reasoning:** Uses an active Tier 1 integration role while separating domain correctness, governance verification, and human authority for breaking changes
+**selected-option:** Team Lead custody with domain-owner consultation, Solo Orchestrator verification, and Workspace Owner approval of breaking changes
+**rejected-options:** Solo Orchestrator custody | Team Lead-only custody | Workspace Owner custody | Custom assignment
+**authorization-boundary:** Proposed appointment only; parallel execution remains blocked and no ADR is accepted
+**selector:** human
+
+---
+
+## 2026-09-10T13:55:24-05:00 | REV-009 | Ring-1 | @architect-reviewer
+
+**Type:** REVIEW
+**review-type:** schema-contract-custody-architecture-decision
+**reviewing-agent:** Architect Reviewer (Claude Opus 5, alternate model)
+**finding-count:** 19
+**critical-count:** 1
+**major-count:** 7
+**minor-count:** 7
+**suggestion-count:** 4
+**review-outcome:** improvements-identified
+**remediation:** Confirm distinct Team Lead operation and Tier 1 escalation; disposition and remediate custody, ownership, classification, CI evidence, floor conformance, continuity, invalidation, and supporting controls before appointment finalization
+**reviewed-artifact:** docs/Planning/schema-contract-governance-options.md
+**report:** docs/Governance/decisions/reviews/REV-009-schema-contract-custody-review.md
+**block:** No custodian appointed and no parallel work authorized
+
+---
+
+## 2026-09-10T14:25:00-05:00 | DISP-REV-009 | Ring-1 | @solo-orchestrator
+
+**Type:** REVIEW-DISPOSITION
+**Review:** REV-009
+**Authority:** Workspace Owner
+**Decision:** Confirm distinct dispatched Team Lead operation; accept all required factual controls and preferences except the optional custody/versioning ADR
+**Conflict resolution:** Initial AR-M2, AR-M3, and AR-M5 rejections were superseded by explicit acceptance of no-self-approval, disputed/unclassifiable-defaults-to-breaking, and per-change DEC-011 assertions
+**Accepted:** AR-C1 | AR-M1 through AR-M7 | AR-N1 through AR-N7 | AR-S1 through AR-S3
+**Deferred:** AR-S4 ADR only
+**Accountability:** Solo Orchestrator owns remediation and validation; Team Lead assumes custody only after explicit acknowledgement
+**Boundary:** Appointment governance may complete; baseline freeze and parallel-work release remain blocked
+
+---
+
+## 2026-09-10T14:25:00-05:00 | DEC-013-FINAL | Ring-1 | @solo-orchestrator
+
+**Type:** DECISION-FINALIZATION
+**Decision:** Appoint the distinct dispatched Team Lead as schema contract custodian under the remediated governed-escalation protocol
+**Policy:** Issue #21 | DEC-011 | REV-009 disposition | Tier 1 active-role constraints
+**Authority:** Workspace Owner
+**Accountable:** Solo Orchestrator until Team Lead acknowledgement; Team Lead thereafter
+**Handover event:** DEC-013 is canonical and the distinct Team Lead acknowledges custody in `docs/Planning/contracts/README.md`
+**Consequences:** Fixed paths and control protocol are active; candidate baseline `v1.0.0` remains Building
+**authorization-boundary:** No architecture acceptance, ADR acceptance, contract freeze, parallel execution, implementation, or deployment authorization
+
+---
+
+## 2026-09-10T14:35:00-05:00 | HANDOFF-003 | Ring-1 | @team-lead
+
+**Type:** HANDOFF-ACKNOWLEDGEMENT
+**From:** Solo Orchestrator
+**To:** Distinct dispatched Team Lead
+**Decision:** Acknowledge schema contract custody under DEC-013 and all remediated REV-009 controls
+**Result:** ACKNOWLEDGED; no blocking defect
+**Accountability:** Team Lead assumes contract custody; Solo Orchestrator remains governance verifier
+**Boundary:** Candidate baseline `v1.0.0` remains Building and parallel work remains blocked pending separate Workspace Owner release
+
+---
+
+## 2026-09-10T14:45:00-05:00 | REV-009-RECHECK | Ring-1 | @architect-reviewer
+
+**Type:** REVIEW-RECHECK
+**review-type:** schema-contract-custody-remediation
+**review-outcome:** APPROVED
+**closed-findings:** AR-C1 | AR-M1 through AR-M7 | AR-N1 through AR-N7 | AR-S1 through AR-S3
+**deferred-nonblocking:** AR-S4 optional ADR
+**decision:** DEC-013 Team Lead appointment can remain finalized
+**remaining-defects:** None in appointment governance
+**boundary:** Baseline `v1.0.0` remains Building; issue #21, contract freeze, and parallel-work release remain blocked
+**report:** docs/Governance/decisions/reviews/REV-009-schema-contract-custody-review.md
+
+---
+
+## 2026-09-10T16:10:00-05:00 | CONTRACT-ORDER-001 | Ring-1 | @team-lead
+
+**Type:** CONTRACT-CANDIDATE-REVIEW
+**Contract:** docs/Planning/contracts/domain-contract.md `1.0.0-candidate.1`
+**Source issue:** GitHub #14
+**Team Lead:** PASS after remediation of negative coverage and sequence ordering
+**Code Reviewer:** APPROVED after command, idempotency, concurrency, evidence, and complement remediation
+**Test Reviewer:** PASS; design-time quality 5.0/5; no executable evidence claimed
+**UI/UX Designer:** PASS for lifecycle label/non-color floor; full WCAG UI evidence remains Ring 2
+**DEC-011:** Applicable floors preserved; no provider, vintage, reproducibility, accounting, or NFR completion overclaim
+**Disposition:** Issue #14 acceptance criteria complete; order lifecycle candidate accepted within the Building baseline
+**Boundary:** #20/#9 ledger and precision remain pending; `v1.0.0` is not frozen or active; parallel execution remains blocked
 
 ---

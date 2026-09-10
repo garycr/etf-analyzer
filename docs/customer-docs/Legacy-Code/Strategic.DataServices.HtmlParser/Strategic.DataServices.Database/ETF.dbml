@@ -1,0 +1,53 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Database Name="ETF" Class="ETFDataContext" xmlns="http://schemas.microsoft.com/linqtosql/dbml/2007">
+  <Connection Mode="AppSettings" ConnectionString="Data Source=STRATINV-GARYCR\SQLEXPRESS;Initial Catalog=ETF;Integrated Security=True" SettingsObjectName="Strategic.DataServices.Database.Properties.Settings" SettingsPropertyName="ETFConnectionString" Provider="System.Data.SqlClient" />
+  <Table Name="dbo.Prices" Member="Prices">
+    <Type Name="Price">
+      <Column Name="Id" Type="System.Int32" DbType="Int NOT NULL IDENTITY" IsPrimaryKey="true" IsDbGenerated="true" CanBeNull="false" />
+      <Column Name="Symbol" Type="System.String" DbType="NVarChar(5) NOT NULL" CanBeNull="false" />
+      <Column Name="Date" Type="System.DateTime" DbType="DateTime NOT NULL" CanBeNull="false" />
+      <Column Name="[Open]" Member="Open" Type="System.Decimal" DbType="Decimal(18,4) NOT NULL" CanBeNull="false" />
+      <Column Name="High" Type="System.Decimal" DbType="Decimal(18,4) NOT NULL" CanBeNull="false" />
+      <Column Name="Low" Type="System.Decimal" DbType="Decimal(18,4) NOT NULL" CanBeNull="false" />
+      <Column Name="[Close]" Member="Close" Type="System.Decimal" DbType="Decimal(18,4) NOT NULL" CanBeNull="false" />
+      <Column Name="Volume" Type="System.Int64" DbType="BigInt NOT NULL" CanBeNull="false" />
+      <Column Name="AdjustedClose" Type="System.Decimal" DbType="Decimal(18,4)" CanBeNull="true" />
+      <Association Name="Price_Price" Member="Price2" OtherKey="Id" Type="Price" Cardinality="One" />
+      <Association Name="Price_Price" Member="Price1" ThisKey="Id" Type="Price" IsForeignKey="true" />
+    </Type>
+    <InsertFunction FunctionId="FunctionId1">
+      <Argument Parameter="priceId" Member="Id" />
+      <Argument Parameter="symbol" Member="Symbol" />
+      <Argument Parameter="date" Member="Date" />
+      <Argument Parameter="open" Member="Open" />
+      <Argument Parameter="high" Member="High" />
+      <Argument Parameter="low" Member="Low" />
+      <Argument Parameter="close" Member="Close" />
+      <Argument Parameter="volume" Member="Volume" />
+      <Argument Parameter="adjustedClose" Member="AdjustedClose" />
+    </InsertFunction>
+    <UpdateFunction FunctionId="FunctionId1">
+      <Argument Parameter="priceId" Member="Id" />
+      <Argument Parameter="symbol" Member="Symbol" />
+      <Argument Parameter="date" Member="Date" />
+      <Argument Parameter="open" Member="Open" />
+      <Argument Parameter="high" Member="High" />
+      <Argument Parameter="low" Member="Low" />
+      <Argument Parameter="close" Member="Close" />
+      <Argument Parameter="volume" Member="Volume" />
+      <Argument Parameter="adjustedClose" Member="AdjustedClose" />
+    </UpdateFunction>
+  </Table>
+  <Function Id="FunctionId1" Name="dbo.UpSert_ETFPrices" Method="UpSert_ETFPrices">
+    <Parameter Name="PriceId" Parameter="priceId" Type="System.Int32" DbType="Int" Direction="InOut" />
+    <Parameter Name="Symbol" Parameter="symbol" Type="System.String" DbType="NVarChar(5)" />
+    <Parameter Name="Date" Parameter="date" Type="System.DateTime" DbType="DateTime" />
+    <Parameter Name="Open" Parameter="open" Type="System.Decimal" DbType="Decimal" />
+    <Parameter Name="High" Parameter="high" Type="System.Decimal" DbType="Decimal" />
+    <Parameter Name="Low" Parameter="low" Type="System.Decimal" DbType="Decimal" />
+    <Parameter Name="Close" Parameter="close" Type="System.Decimal" DbType="Decimal" />
+    <Parameter Name="Volume" Parameter="volume" Type="System.Int64" DbType="BigInt" />
+    <Parameter Name="AdjustedClose" Parameter="adjustedClose" Type="System.Decimal" DbType="Decimal" />
+    <Return Type="System.Int32" />
+  </Function>
+</Database>

@@ -1,0 +1,46 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Symbols>
+  <symbol>AGG</symbol>
+  <symbol>BRK-B</symbol>
+  <symbol>CEF</symbol>
+  <symbol>CME</symbol>  
+  <symbol>DTD</symbol>
+  <symbol>DTH</symbol>  
+  <symbol>EEM</symbol>
+  <symbol>EFA</symbol>
+  <symbol>EWA</symbol>
+  <symbol>EWC</symbol>
+  <symbol>EWJ</symbol>
+  <symbol>EZU</symbol>
+  <symbol>FNI</symbol>
+  <symbol>GLD</symbol>
+  <symbol>GSP</symbol>
+  <symbol>GVI</symbol>
+  <symbol>GWX</symbol>
+  <symbol>HHH</symbol>
+  <symbol>ICE</symbol>
+  <symbol>ICF</symbol>
+  <symbol>IWM</symbol>
+  <symbol>IYT</symbol>
+  <symbol>MBB</symbol>
+  <symbol>NDAQ</symbol>
+  <symbol>NYX</symbol>
+  <symbol>QQQQ</symbol>
+  <symbol>REM</symbol>
+  <symbol>RSP</symbol>
+  <symbol>RTH</symbol>
+  <symbol>SHV</symbol>
+  <symbol>SHY</symbol>
+  <symbol>SPY</symbol>
+  <symbol>SWM</symbol>
+  <symbol>TIP</symbol>
+  <symbol>TLT</symbol>
+  <symbol>TTH</symbol>
+  <symbol>XHB</symbol>  
+  <symbol>XLK</symbol>
+  <symbol>XLB</symbol>
+  <symbol>XLE</symbol>
+  <symbol>XLF</symbol>
+  <symbol>XLU</symbol>
+  <symbol>XLV</symbol>
+</Symbols>

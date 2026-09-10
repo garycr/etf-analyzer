@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ordesignerObjectsDiagram dslVersion="1.0.0.0" absoluteBounds="0, 0, 11, 8.5" name="ETF">
+  <DataContextMoniker Name="/ETFDataContext" />
+  <nestedChildShapes>
+    <classShape Id="f08bce91-26a1-48c1-8d46-b49549df8b90" absoluteBounds="1.75, 0.625, 2, 2.5401025390625">
+      <DataClassMoniker Name="/ETFDataContext/Price" />
+      <nestedChildShapes>
+        <elementListCompartment Id="1e7f691e-34cc-4842-bc19-754fbf89a620" absoluteBounds="1.7650000000000001, 1.085, 1.9700000000000002, 1.9801025390625" name="DataPropertiesCompartment" titleTextColor="Black" itemTextColor="Black" />
+      </nestedChildShapes>
+    </classShape>
+    <associationConnector edgePoints="[(2.45923076923077 : 3.1651025390625); (2.45923076923077 : 3.4151025390625); (3.05461538461538 : 3.4151025390625); (3.05461538461538 : 3.1651025390625)]" fixedFrom="NotFixed" fixedTo="NotFixed">
+      <AssociationMoniker Name="/ETFDataContext/Price/Price_Price" />
+      <nodes>
+        <classShapeMoniker Id="f08bce91-26a1-48c1-8d46-b49549df8b90" />
+        <classShapeMoniker Id="f08bce91-26a1-48c1-8d46-b49549df8b90" />
+      </nodes>
+    </associationConnector>
+  </nestedChildShapes>
+</ordesignerObjectsDiagram>

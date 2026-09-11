@@ -25,7 +25,7 @@ This directory is the fixed, reviewable home for contracts consumed by MAI-ST pa
 | REST/OpenAPI | `docs/Planning/contracts/openapi-contract.yaml` | #14, #17, #22 | Awaiting Ring 1 definition |
 | PostgreSQL schema/migrations | `docs/Planning/contracts/postgresql-contract.md` | #15, #17, #20, #9 | Awaiting Ring 1 definition |
 | Outbox/events | `docs/Planning/contracts/event-catalog.md` | #14, #15, #17, #20 | Awaiting Ring 1 definition |
-| Analytics snapshot/evidence | `docs/Planning/contracts/analytics-evidence-contract.md` | #15, #11 | Awaiting Ring 1 definition |
+| Analytics snapshot/evidence | `docs/Planning/contracts/analytics-evidence-contract.md` | #15, #11 | Candidate `1.0.0-candidate.1`; Team Lead and Code Reviewer PASS; Test Review FAIL; #57-#62 remediation deferred in DEC-019 |
 | Ownership and baseline registry | `docs/Planning/contracts/README.md` | #21 | Active governance record |
 | Contract change log | `docs/Planning/contracts/change-log.md` | #21 | Active governance record |
 
@@ -53,7 +53,7 @@ Paths marked awaiting definition are reserved but intentionally not populated wi
 | REST/OpenAPI contract | Pending | #14, #17, #22 |
 | PostgreSQL contract | Pending | #15, #17, #20, #9 |
 | Event catalog | Pending | #14, #15, #17, #20 |
-| Analytics snapshot/evidence contract | Pending | #15, #11 |
+| Analytics snapshot/evidence contract | Blocked | Candidate `1.0.0-candidate.1`; REV-014 Test Review FAIL; #57-#62 open and deferred in DEC-019 |
 | Planned compatibility test IDs linked to test strategy | Pending | CT-API-001, CT-DB-001, CT-DB-002, CT-EVT-001, CT-LED-001..019, CT-ANA-001 |
 | DEC-011 floor conformance | Pending | Required per contract and aggregate baseline |
 | Affected stream acknowledgements | Pending | Required after complete candidate publication |

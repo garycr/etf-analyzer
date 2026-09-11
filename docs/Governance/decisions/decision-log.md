@@ -237,3 +237,24 @@
 | **Invalidation** | ADR-001 invalidation conditions or a superseding Workspace Owner-approved ADR |
 | **Status** | Accepted; no implementation, provider ingestion, dependency installation, deployment, baseline freeze, Ring 2 advancement, or parallel execution authorized |
 | **Linked Artifacts** | `docs/Architecture/ADRs/ADR-001-analytics-evidence-retention.md`, `docs/Governance/decisions/reviews/REV-013-analytics-evidence-retention-adr-review.md` |
+
+---
+
+### DEC-019: Defer Analytics Evidence Contract Test Remediation
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-019 |
+| **Date** | 2026-09-11 |
+| **Category** | Review remediation disposition |
+| **Decision** | Defer remediation of REV-014 findings #57-#62 and leave analytics evidence contract candidate.1 blocked |
+| **Policy** | Test quality; decision review; FinOps high-cost approval; contract baseline governance |
+| **Authority** | Workspace Owner |
+| **Accountable** | Team Lead for analytics contract custody; Solo Orchestrator for decision trace |
+| **Context** | Test Review returned FAIL at 3.89/5 because hash-domain, exact-vector, authorization/accessibility, BDD, and traceability evidence remained incomplete; full remediation was estimated at 70k-110k tokens and $0.55-$0.95 |
+| **Alternatives** | Approve full remediation; remediate gate blockers first; defer remediation |
+| **Consequences** | #57-#62 remain open; candidate.1 cannot complete #15/#11, enter the aggregate baseline, or support WBS/IMS eligibility |
+| **Reasoning** | Workspace Owner chose to stop the additional high-cost review/remediation cycle at this time |
+| **Invalidation** | Explicit Workspace Owner approval to resume selected or full #57-#62 remediation |
+| **Status** | Deferred and blocked; no implementation, baseline freeze, Ring 2 advancement, or parallel execution authorized |
+| **Linked Artifacts** | `docs/Governance/decisions/reviews/REV-014-analytics-evidence-contract-test-review.md`, `docs/Planning/contracts/analytics-evidence-contract.md` |

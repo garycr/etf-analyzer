@@ -15,6 +15,7 @@
 | DEC-012 | 2026-09-10 | Governance | Approve Ring 0 Conditional PASS and open Ring 1 planning | Workspace Owner | Solo Orchestrator | Active |
 | DEC-013 | 2026-09-10 | Governance | Appoint distinct Team Lead as schema contract custodian with governed escalation | Workspace Owner | Team Lead | Active |
 | DEC-014 | 2026-09-10 | Architecture | Select field-specific balanced financial precision and half-even rounding | Workspace Owner | Team Lead | Active |
+| DEC-020 | 2026-09-11 | Scope | Re-scope analytics acceptance to a trustworthy first-prototype subset | Workspace Owner | Solo Orchestrator | Active |
 
 ---
 
@@ -258,3 +259,25 @@
 | **Invalidation** | Explicit Workspace Owner approval to resume selected or full #57-#62 remediation |
 | **Status** | Deferred and blocked; no implementation, baseline freeze, Ring 2 advancement, or parallel execution authorized |
 | **Linked Artifacts** | `docs/Governance/decisions/reviews/REV-014-analytics-evidence-contract-test-review.md`, `docs/Planning/contracts/analytics-evidence-contract.md` |
+
+---
+
+### DEC-020: Re-scope Analytics Acceptance for the First Prototype
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-020 |
+| **Date** | 2026-09-11 |
+| **Category** | Scope |
+| **Decision** | Replace DEC-019's blanket deferral with a prototype-scoped acceptance set that retains representative controls for deterministic hashes, point-in-time selection, mutation propagation, missing-data suppression, no-signal distinction, integrity quarantine, atomic commit, idempotency conflict, least privilege, denial-audit failure, bounded half-even arithmetic, and accessible failure recovery. Defer exhaustive permutations and administrative normalization in #57-#62 to later feature releases. |
+| **Policy** | Canonical Objective O-REQ-004, O-REQ-006, and O-REQ-007; O-CST-003 and O-CST-007; O-MET-007; DEC-011 canonical floors; Tier 1 Light governance; decision review |
+| **Authority** | Workspace Owner |
+| **Accountable** | Solo Orchestrator for scope trace; Team Lead for analytics contract custody; implementation owners remain unassigned |
+| **Context** | The first iteration must place a workable local research prototype with end users. Full #57-#62 remediation emphasizes exhaustive future-state combinations and was estimated at 70k-110k tokens and $0.55-$0.95. The reduced planning and reviewer cycle is estimated at 20k-35k tokens and $0.20-$0.40. An alternate-model Plan Reviewer found the direction sound after clarifying security precedence, both idempotency branches, and conditional transformation/provider triggers. |
+| **Alternatives** | Complete every REV-014 finding before implementation; keep all remediation deferred and remain blocked; waive deterministic, security, or accessibility floors |
+| **Consequences** | One prototype analytics acceptance issue will map retained checks to existing CT-ANA identifiers. #57-#62 remain open as post-prototype work. Any pass is prototype-scoped only and does not freeze baseline `v1.0.0`, close #15/#11, pass the full REV-014 review, authorize implementation, release parallel work, or advance Ring 2. Candidate.2 governance synchronization in #64 remains deferred and is a precondition to prototype-scoped acceptance. |
+| **Reasoning** | Representative checks preserve the distinct failure behaviors that make prototype outputs trustworthy while postponing permutation breadth that provides little additional end-user learning in a fixture-first, single-user, single-writer first release. |
+| **Assumptions** | The first prototype is fixture-only, single-runtime, single-writer, and uses no transformation-bearing series, archive/restore/freeze/capacity lifecycle, real provider, or publication-version concurrency. If a displayed rule uses forward-fill, alignment, lag, interpolation, or resampling, one deterministic non-overwriting CT-ANA-004 vector becomes mandatory. If a real provider is connected, rights-restricted Degraded behavior becomes mandatory. Economic ambiguity is deferrable only while fixtures guarantee unique release identity. |
+| **Invalidation** | First real-provider integration; first transformation-bearing rule; first multi-runtime or multi-writer path; implementation of archive, restore, freeze, or capacity states; scope expansion beyond local single-user research; or evidence that a deferred case removes a canonical Objective floor |
+| **Status** | Active; supersedes DEC-019 only as to blanket deferral. Prototype acceptance, #64 synchronization, implementation authorization, and ring advancement remain pending. |
+| **Linked Artifacts** | `docs/Governance/decisions/reviews/REV-015-analytics-prototype-rescope-plan-review.md`, `docs/Governance/decisions/reviews/REV-014-analytics-evidence-contract-test-review.md`, GitHub #57-#62, GitHub #64, GitHub #65 |

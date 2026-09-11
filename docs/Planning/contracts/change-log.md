@@ -53,3 +53,23 @@ Emergency changes are revert-only to the last active baseline. Forward-breaking 
 | Co-signature | Solo Orchestrator originated amendment; independent Team Lead disposition required |
 | Human approval | DEC-016 accepts the reviewed ledger-security architecture at DP-33; implementation, baseline freeze, and contract activation remain unauthorized |
 | Invalidation notice | `1.0.0-candidate.1` custody evidence remains historical; candidate.2 cannot freeze until reviews and affected-stream acknowledgements complete |
+
+### CC-002 - Analytics Evidence Candidate.2 Integrity Amendment
+
+| Field | Value |
+| --- | --- |
+| Change ID | CC-002 |
+| Date | 2026-09-11T13:59:01Z |
+| Originator | Solo Orchestrator implementing the Workspace Owner-approved gate-blocker remediation and #63 |
+| Target baseline | Analytics contract `1.0.0-candidate.2`; aggregate `v1.0.0` remains building and inactive |
+| Affected contracts/streams | `analytics-evidence-contract.md`; `Analytics-Evidence-Reproducibility.feature`; analytics, ingestion #17, portfolio-context, evidence, and prototype acceptance #65 consumers |
+| Classification | Breaking major candidate amendment; no active baseline changed |
+| Classification evidence | Changes canonical hash domains, adds schema-version and portfolio-context bindings, replaces candidate.1 fixture digests, and adds lifecycle/transformation/bundle/manifest vectors. Candidate.1 consumers must migrate to candidate.2 digests. |
+| DEC-011 floor assertion | Pass for the reviewed slice: deterministic evidence, point-in-time selection, exact arithmetic, no-broker, deny-by-default, and accessibility floors are not weakened. Full-floor acceptance remains subject to #65 and the unresolved full REV-014 scope. |
+| Specialist reviews | Existing Team Lead and Code Reviewer PASS retained as historical input; scoped Test Reviewer PASS for M1-M6/M12/M14; final narrow Test Reviewer PASS for R-1..R-5; full REV-014 remains FAIL |
+| Compatibility checks | CT-ANA-001, CT-ANA-002, CT-ANA-003A, and CT-ANA-004 integrity assertions passed in the scoped review; all seven canonical fixture byte lengths and SHA-256 digests revalidated; #65 prototype set remains pending |
+| Custodian disposition | Candidate.2 accepted only as a reviewed intermediate; prototype acceptance and aggregate baseline custody remain pending |
+| Detached final digest | Contract `1023a5b416d4fb42c76b47b6b3deab5bb1a74612711a00159b5a4b4ce2b9c831`; BDD `b7996bd41070f4802434b8d9921b7fc06c3de4a89a3dd8f71611b8302512d22f`; evidence in `docs/Planning/contracts/evidence/CC-002-analytics-candidate-delta.md` |
+| Co-signature | Solo Orchestrator originated the amendment; independent Test Reviewer supplied scoped and final narrow dispositions |
+| Human approval | Workspace Owner approved gate blockers first, then #63 only; #64 administrative synchronization was approved separately. No implementation, baseline freeze, or ring advancement was approved. |
+| Invalidation notice | Candidate.1 digests and REV-014 findings remain historical. Any byte change, #17 identity/order change, or prototype-boundary expansion requires new digests and the applicable custody/review cycle. |

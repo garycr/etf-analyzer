@@ -146,6 +146,62 @@
 
 ---
 
+## 2026-09-11T13:24:12Z | REV-014 scoped recheck | Ring-1 | @test-reviewer
+
+**Type:** REVIEW
+**Decision:** PASS candidate.2 scoped gate-blocker remediation for TR-ANA-M1, M2, M3, M4, M5, M6, M12, and M14
+**Policy:** Test quality | deterministic evidence | point-in-time correctness
+**Authority:** Independent Test Reviewer
+**Accountability:** Team Lead for contract custody; Solo Orchestrator for trace
+**Result:** Candidate.2 may stand as a reviewed intermediate; full REV-014 remains FAIL; R-1..R-5 and C-1..C-3 recorded for follow-up
+**Artifact:** docs/Planning/contracts/analytics-evidence-contract.md
+**authorization-boundary:** No implementation, #15/#11 closure, baseline freeze, Ring 2 advancement, or parallel execution
+**selector:** delegated
+
+---
+
+## 2026-09-11T13:33:27Z | #63 final recheck | Ring-1 | @test-reviewer
+
+**Type:** REVIEW
+**Decision:** PASS R-1..R-5 and permit #63 closure
+**Policy:** Hash derivation | canonical identity | date and ordering determinism
+**Authority:** Independent Test Reviewer
+**Accountability:** Team Lead for contract custody; Solo Orchestrator for issue disposition
+**Result:** No residual scoped integrity blocker; all seven canonical fixtures validated; #63 closed
+**Artifact:** docs/Planning/contracts/analytics-evidence-contract.md
+**authorization-boundary:** Full REV-014 remains FAIL; #57-#62 and #64 unaffected
+**selector:** delegated
+
+---
+
+## 2026-09-11T13:40:00Z | DEC-020 / REV-015 | Ring-1 | @solo-orchestrator
+
+**Type:** SCOPE-DISPOSITION
+**Decision:** Re-scope analytics acceptance to a trustworthy first-prototype vertical slice
+**Policy:** Canonical Objective floors | Tier 1 Light governance | prototype delivery
+**Authority:** Workspace Owner
+**Accountability:** Solo Orchestrator for scope trace; Team Lead for contract custody
+**Result:** #65 created for retained acceptance; #57-#62 remain open as post-prototype work; full REV-014 remains FAIL
+**Artifact:** docs/Governance/decisions/reviews/REV-015-analytics-prototype-rescope-plan-review.md
+**authorization-boundary:** No implementation, baseline freeze, #15/#11 closure, Ring 2 advancement, or parallel execution
+**selector:** human
+
+---
+
+## 2026-09-11T13:59:01Z | #64 / CC-002 | Ring-1 | @solo-orchestrator
+
+**Type:** GOVERNANCE-SYNCHRONIZATION
+**Decision:** Synchronize candidate.2 registry, change-control, review reconstruction, and detached digest evidence
+**Policy:** Contract baseline governance | decision traceability | prototype boundary
+**Authority:** Workspace Owner
+**Accountability:** Solo Orchestrator for administrative synchronization; Team Lead retains contract custody
+**Result:** Candidate.2 recorded with scoped PASS/full REV-014 FAIL; #64 precondition to #65 completed
+**Artifact:** docs/Planning/contracts/evidence/CC-002-analytics-candidate-delta.md
+**authorization-boundary:** Administrative only; #65 remains pending and no implementation, baseline freeze, #15/#11 closure, Ring 2 advancement, or parallel execution is authorized
+**selector:** human
+
+---
+
 ## 2026-09-10T11:30:24-05:00 | WORK-007 | Ring-0 | @solo-orchestrator
 
 **Type:** WORK

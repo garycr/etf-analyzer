@@ -2,7 +2,7 @@
 
 **Contract version:** `1.0.0-candidate.2`
 **Baseline target:** `v1.0.0`
-**Status:** Candidate - gate-blocker remediation authorized; Test Reviewer recheck pending; broader #57-#62 coverage remains deferred
+**Status:** Candidate - scoped gate-blocker and #63 rechecks PASS; full Test Review FAIL; prototype acceptance #65 pending
 **Custodian:** Team Lead
 **Source issues:** GitHub #15 and #11
 **Decision authority:** DEC-017, DEC-018, and ADR-001

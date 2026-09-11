@@ -16,6 +16,8 @@ Feature: Point-in-time analytics evidence reproducibility
     When the P0 backtest input snapshot is selected as of T
     Then every selected observation has a release timestamp at or before T
     And every selected market or corporate-action revision has source availability at or before T
+    And the vintage released exactly at T is selected
+    And the latest eligible market or corporate-action revision is selected under its reviewed revision order
     And no later vintage overwrites a preserved earlier vintage
     And the snapshot records the selected vintage and transformation identities
 
@@ -25,11 +27,11 @@ Feature: Point-in-time analytics evidence reproducibility
     And identical code hash, canonical parameters, seed, provider, benchmark, environment, and assumptions
     When the P0 backtest is repeated under the same evidence schema and baseline version
     Then the canonical input bytes match the golden vector exactly
-    And the input hash is "80321c62c81597405913c984bceadddbee5da585721f3a785493d5de72877143"
+    And the input hash is "cca3db225eaa64d91b3c971b2d366ef7fb8bc0a860b7081349ac622920e5f4fa"
     And the canonical configuration bytes match the golden vector exactly
-    And the configuration hash is "f4ee016a235a8266ddc3c792ede45c5183c59886b78bcd05cb439f745c1b1afa"
+    And the configuration hash is "fa8aac858ca5cee95f658206c1d30bc3ef45e9c4f52867801e27d42e33324d37"
     And the canonical result bytes match the golden vector exactly
-    And the result hash is "f50e990384ea0bfb1698aec045ef6a2c6eccd56ccff9e6693da667ecdf417883"
+    And the result hash is "4ffe4f8e3ee4c0f4d53f90760cdbecbe93f60ee02fa992cc1e350b2e6f819d18"
     And the result remains eligible for evidence-backed publication
 
   Scenario: Rights-restricted inputs fail closed

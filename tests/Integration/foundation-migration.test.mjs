@@ -136,12 +136,15 @@ test(
       );
       assert.equal(
         applied.schemaManifestHash,
-        "83b1c823ef98044704fa903c8c68e091a304be8adda103727231d7252972dd9e",
+        "0c378abe080211c705c41ffd15f9cf8bf7dbc61396917df25444144ed3992c1b",
       );
-      assert.equal(Buffer.byteLength(manifestJson, "utf8"), 5272);
+      assert.equal(Buffer.byteLength(manifestJson, "utf8"), 5324);
       const manifest = JSON.parse(manifestJson);
       assert.equal(manifest.contractVersion, "1.0.0-candidate.2");
-      assert.deepEqual(manifest.systemExtensions, [{ name: "plpgsql" }]);
+      assert.deepEqual(manifest.systemExtensions, [
+        { name: "pgcrypto", version: "1.3" },
+        { name: "plpgsql", version: "1.0" },
+      ]);
       assert.equal(manifest.objects.filter(({ kind }) => kind === "schema").length, 1);
       assert.equal(manifest.objects.filter(({ kind }) => kind === "role").length, 14);
       assert.equal(manifest.objects.filter(({ kind }) => kind === "table").length, 4);

@@ -52,6 +52,7 @@ export function createRoleBootstrapSql(): string {
 
   return [
     "BEGIN;",
+    "CREATE EXTENSION IF NOT EXISTS pgcrypto VERSION '1.3';",
     ...roleStatements,
     ...membershipStatements,
     "DO $bootstrap$",

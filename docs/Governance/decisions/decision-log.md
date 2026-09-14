@@ -22,6 +22,7 @@
 | DEC-024 | 2026-09-14 | Architecture | Provision exact roles, database ACL, and empty `etf` schema externally before migration 0001 | Workspace Owner | Solo Orchestrator | Active |
 | DEC-025 | 2026-09-14 | Architecture | Retain schema USAGE without CREATE for controlled-function owner roles | Workspace Owner | Solo Orchestrator | Active |
 | DEC-026 | 2026-09-14 | Architecture | Persist watchlist aggregate version in an explicit singleton table | Workspace Owner | Solo Orchestrator | Active |
+| DEC-027 | 2026-09-14 | Architecture | Close domain-ledger cryptography, owner calls, and instrument identity | Workspace Owner | Solo Orchestrator | Active |
 
 ---
 
@@ -411,3 +412,22 @@ The hash-governed candidate.2 contract and CC-002 retain their contemporaneous p
 | **Invalidation** | Missing or duplicate state rows, direct runtime mutation, version reset, unlocked compare-and-write, or another hidden version authority fails closed. |
 | **Status** | Active; REV-037 architecture review APPROVED with no Critical or Major finding; REV-036 code review PASS and exact PostgreSQL behavior proven |
 | **Linked Artifacts** | `docs/Planning/contracts/postgresql-contract.md`, `tests/Integration/application-migration.test.mjs`, `docs/artifacts/gate-evidence/wp-1-application-migration.md`, `docs/Governance/decisions/reviews/REV-037-dec-026-watchlist-state-review.md` |
+
+### DEC-027: Close Domain-Ledger Execution Prerequisites
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-027 |
+| **Date** | 2026-09-14 |
+| **Category** | Architecture |
+| **Decision** | Provision PostgreSQL `pgcrypto` externally before migration 0001; use nested owner-controlled functions for the paper-order to ledger to audit to anchor call graph; and persist required `instrumentId` on every paper order from explicit draft creation. |
+| **Policy** | DEC-023; WP-1; CT-DB-001A/D/F/G; CT-LED-001..019; deny-by-default authority; exact canonical evidence; no implicit data derivation |
+| **Authority** | Workspace Owner explicitly approved the recommended payload-first design, `pgcrypto` authority, nested owner-function choreography, and paper-order instrument identity options |
+| **Accountable** | Solo Orchestrator updates all affected contracts and golden manifests, obtains alternate-model architecture review, implements exact 0003 behavior, and does not open WP-2 |
+| **Context** | PostgreSQL core lacks the required SHA-256/HMAC functions; the migration role intentionally cannot install trusted extensions; the prior grant matrix omitted required nested owner calls; and fill/FIFO records require an instrument identity absent from the order aggregate. |
+| **Alternatives** | Trust adapter-supplied proofs; pure PL/pgSQL cryptography; runtime transaction choreography; one consolidated writer; derive instrument from opaque evidence; supply instrument only on fills; defer 0003 |
+| **Consequences** | `pgcrypto` 1.3 becomes an externally provisioned system extension in its default `public` schema and rebaselines the 0001/0002 manifest hashes without changing their SQL bytes. Owner-to-owner EXECUTE grants permit only the nested atomic call graph. Draft creation, PaperOrder, OpenAPI, and `paper_orders` gain required `instrumentId`. |
+| **Assumptions** | PostgreSQL 16.15 supplies trusted `pgcrypto` under the PostgreSQL License; the external provisioner installs it before role lockdown; application canonical JSON supplies exact UTF-8 bytes while PostgreSQL hashes those exact bytes; each nested function validates its closed payload and caller authority. |
+| **Invalidation** | Missing/extra extension, runtime extension authority, adapter-only unverified digest, direct runtime audit/anchor access, partial multi-call commits, mutable/derived/fill-only instrument identity, or an unlisted owner grant fails closed. |
+| **Status** | Active; REV-038 architecture review APPROVED with no Critical or Major finding; 0001/0002 extension rebaseline proven live |
+| **Linked Artifacts** | `docs/Planning/contracts/postgresql-contract.md`, `docs/Planning/contracts/application-contract.md`, `docs/Planning/contracts/openapi-contract.yaml`, `docs/Planning/contracts/domain-ledger-function-contract.md`, `docs/Governance/decisions/reviews/REV-038-dec-027-domain-ledger-prerequisites-review.md` |

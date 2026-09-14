@@ -68,7 +68,7 @@ Schema notation is normative: `T?` is the only nullable form, `T[]` is an ordere
 | `FixtureIngestionStart` | `{jobId: UUID, datasetId: String, datasetVersion: String, fixturePackageHash: Sha256}` | `{job: Job}` |
 | `JobRestart` | `{jobId: UUID}` | `{job: Job}` |
 | `AnalyticsRun` | `{jobId: UUID, evidenceCommandId: UUID, asOfDate: Date, configurationHash: Sha256, inputEvidenceIds: UUID[]}` | `{job: Job}` |
-| `PaperOrderDraftCreate` | `{orderId: UUID, researchEvidenceId: UUID, side: OrderSide, quantity: Quantity, unitPrice: UnitPrice, tradeDate: Date}` | `{order: PaperOrder}` |
+| `PaperOrderDraftCreate` | `{orderId: UUID, instrumentId: String, researchEvidenceId: UUID, side: OrderSide, quantity: Quantity, unitPrice: UnitPrice, tradeDate: Date}` | `{order: PaperOrder}` |
 | `PaperOrderTransition` | `{orderId: UUID, transitionCommandId: UUID, expectedVersion: UInt, transition: OrderTransition, transitionPayload: TransitionPayload}` | `{order: PaperOrder}` |
 | `DiagnosticsExportCreate` | `{exportId: UUID, from: UTCInstant, through: UTCInstant, requestedCodes: String[]}` | `{export: DiagnosticExport}` |
 | `WatchlistGet` | `{}` | `{orderedItems: WatchlistItem[], version: UInt}` |
@@ -83,7 +83,7 @@ Schema notation is normative: `T?` is the only nullable form, `T[]` is an ordere
 
 `Quantity` and `UnitPrice` are exact DEC-014/ledger `1.0.0-candidate.2` canonical scale-10 strings; `Money` is its canonical scale-8 string. `OrderSide` is the closed application input enum `Buy|Sell`. `OrderState` is the exact domain `1.0.0-candidate.1` enum `Draft|Submitted|Accepted|Partial|Filled|Rejected|Canceled|Expired`. `OrderTransition` is `OT-02|OT-03|OT-04|OT-05|OT-06|OT-07|OT-08|OT-09|OT-10`; OT-01 is dispatched only by `PaperOrderDraftCreate`.
 
-`PaperOrder` is the closed application projection `{orderId: UUID, state: OrderState, aggregateVersion: UInt, researchEvidenceId: UUID, side: OrderSide, requestedQuantity: Quantity, filledQuantity: Quantity, openQuantity: Quantity, unitPrice: UnitPrice, tradeDate: Date, confirmation: Confirmation?, transitionHistory: OrderTransitionRecord[]}`. `OrderTransitionRecord` is `{transitionCommandId: UUID, transition: OT-01|OrderTransition, sourceState: Initial|OrderState, targetState: OrderState, trigger: String, occurredAt: UTCInstant, actorId: local-user, correlationId: UUID, priorVersion: UInt, resultingVersion: UInt, baselineVersion: v1.0.0}` and sorts by numeric `resultingVersion`, then `transitionCommandId`. Every value is copied from domain-authoritative state/evidence; the application cannot infer or rewrite it.
+`PaperOrder` is the closed application projection `{orderId: UUID, instrumentId: String, state: OrderState, aggregateVersion: UInt, researchEvidenceId: UUID, side: OrderSide, requestedQuantity: Quantity, filledQuantity: Quantity, openQuantity: Quantity, unitPrice: UnitPrice, tradeDate: Date, confirmation: Confirmation?, transitionHistory: OrderTransitionRecord[]}`. `OrderTransitionRecord` is `{transitionCommandId: UUID, transition: OT-01|OrderTransition, sourceState: Initial|OrderState, targetState: OrderState, trigger: String, occurredAt: UTCInstant, actorId: local-user, correlationId: UUID, priorVersion: UInt, resultingVersion: UInt, baselineVersion: v1.0.0}` and sorts by numeric `resultingVersion`, then `transitionCommandId`. Every value is copied from domain-authoritative state/evidence; the application cannot infer or rewrite it.
 
 `Portfolio` is the closed application projection `{portfolioId: UUID, portfolioVersion: UInt, asOf: UTCInstant, valuationSnapshotId: UUID, precisionPolicyVersion: DEC-014, baselineVersion: v1.0.0, cash: Money, lots: PortfolioLot[], positions: PortfolioPosition[], realizedPnL: Money, totalEquity: Money, reconciliationState: Reconciled|IntegrityBlocked}`. `PortfolioLot` is `{lotId: UUID, instrumentId: String, acquiredAt: UTCInstant, ledgerSequence: UInt, openQuantity: Quantity, openBasis: Money}` and sorts by `(acquiredAt, numeric ledgerSequence, lotId)`. `PortfolioPosition` is `{instrumentId: String, quantity: Quantity, basis: Money, valuation: Money, unrealizedPnL: Money}` and sorts by `instrumentId`. Values are copied from the ledger `1.0.0-candidate.2` authoritative rebuild and reconciliation result; `IntegrityBlocked` exposes no unreconciled values as current.
 
@@ -95,7 +95,7 @@ The application constructs exactly one domain `1.0.0-candidate.1` transition com
 
 | OT | Required source | Target | Trigger | Exact normalized transition payload |
 | --- | --- | --- | --- | --- |
-| OT-01 | `Initial` | `Draft` | `UserCreatedFromResearch` | `{researchEvidenceId, side, quantity, unitPrice, tradeDate}`; application `commandId` becomes `transitionCommandId`, version is `0` |
+| OT-01 | `Initial` | `Draft` | `UserCreatedFromResearch` | `{instrumentId, researchEvidenceId, side, quantity, unitPrice, tradeDate}`; application `commandId` becomes `transitionCommandId`, version is `0` |
 | OT-02 | `Draft` | `Submitted` | `UserConfirmedPaperAction` | `{confirmation: Confirmation}` |
 | OT-03 | `Submitted` | `Accepted` | `PortfolioValidationPassed` | `{portfolioId: UUID, validationSnapshotId: UUID, expectedPortfolioVersion: UInt}` |
 | OT-04 | `Submitted` | `Rejected` | `PortfolioValidationFailed` | `{rejectionCode: String}` |

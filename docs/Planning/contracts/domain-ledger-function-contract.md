@@ -1,0 +1,49 @@
+# Domain-Ledger Controlled Function Contract
+
+**Contract version:** `1.0.0-candidate.2`
+**Decision authority:** DEC-027
+**Status:** Proposed pending alternate-model architecture review
+
+## Trust Boundary
+
+The application canonicalizer supplies exact RFC 8785 UTF-8 text for replay content. `canonicalContent` is the canonical serialization of the selected entry record after removing only the `canonicalContent` member; PostgreSQL parses that text, requires exact field-for-field equality with the remaining payload, validates scalar grammar, and uses fully qualified `public.digest` over the original UTF-8 bytes. PostgreSQL constructs fixed-order commitment and anchor content from validated scalars and uses fully qualified `public.hmac`. PostgreSQL `jsonb` rendering is never hashed.
+
+`recordedAt`, `acceptedAt`, audit sequence, ledger sequence, workload identity, and authentication context are database-owned. `session_user` selects the authenticated workload identity. `app_runtime` maps to actor `local-user`; other runtime roles have no actor subject. Caller-supplied actor, workload, generated time, sequence, digest, or HMAC fields are unknown fields and fail before mutation.
+
+## Closed Entry Records
+
+Fields are required unless suffixed `?`. Unknown, duplicate, missing, null outside `?`, or incorrectly cased fields fail before cast or mutation.
+
+`paper_order_transition(jsonb)` accepts `{canonicalContent:String,correlationId:UUID,occurredAt:UTCInstant,operation:DraftCreate|Transition,orderId:UUID,transitionCommandId:UUID,expectedVersion:UInt,transition:OT-01|OT-02|OT-03|OT-04|OT-05|OT-06|OT-07|OT-08|OT-09|OT-10,transitionPayload:TransitionPayload}`. `DraftCreate` requires OT-01, expected version zero, and `{instrumentId:String,researchEvidenceId:UUID,side:Buy|Sell,quantity:Quantity,unitPrice:UnitPrice,tradeDate:Date}`. `Transition` rejects OT-01 and uses the application candidate.2 payload variant for the selected transition. Fill transitions invoke `ledger_append` inside the same transaction; all successful transitions invoke `audit_append` before return.
+
+`ledger_append(jsonb)` accepts one of three records:
+
+- Cash: `{canonicalContent:String,correlationId:UUID,effectiveAt:UTCInstant,expectedPortfolioVersion:UInt,keyIdentifier:String,portfolioId:UUID,transactionId:UUID,type:CashDeposit|CashWithdrawal,amount:Money}`.
+- Fill: `{canonicalContent:String,correlationId:UUID,effectiveAt:UTCInstant,expectedOrderVersion:UInt,expectedPortfolioVersion:UInt,fee:Money,fillId:UUID,instrumentId:String,keyIdentifier:String,orderId:UUID,orderSide:Buy|Sell,portfolioId:UUID,quantity:Quantity,simulatedAt:UTCInstant,transactionId:UUID,transitionCommandId:UUID,type:BuyFill|SellFill,unitPrice:UnitPrice}`. `paper_order_transition` passes identity from its locked order. `ledger_append` independently re-reads only `order_id`, `instrument_id`, `side`, and `aggregate_version` through a column-level grant, locks the row, and rejects any mismatch before mutation. `Buy` requires `BuyFill`; `Sell` requires `SellFill`. A buy uses `fillId` as its lot identity; a sell computes FIFO allocations from immutable lots and allocations.
+- Reversal: `{canonicalContent:String,correlationId:UUID,effectiveAt:UTCInstant,expectedPortfolioVersion:UInt,keyIdentifier:String,portfolioId:UUID,reversesTransactionId:UUID,transactionId:UUID,type:Reversal}`.
+
+All ledger records fix `precisionPolicyVersion=DEC-014` and `baselineVersion=v1.0.0` inside the function. Ledger success invokes `audit_append` and `anchor_append` in the same transaction. No caller supplies effects, allocations, evidence hashes, sequence, audit rows, commitments, or anchors.
+
+Transaction evidence uses the exact fixed schema and key order in the ledger contract. Allocation evidence is the RFC 8785 canonical array ordered by `(effectOrdinal, lotId)`. Each allocation object contains exactly `allocatedBasis`, `consumedQuantity`, `effectOrdinal`, `lotId`, and `sellTransactionId` in that canonical key order; decimal values are fixed-point strings, UUIDs are lowercase strings, and the ordinal is a JSON integer. A transaction with no allocations hashes the exact UTF-8 bytes `[]`.
+
+`projection_publish(jsonb)` accepts `{asOf:UTCInstant,cash:Money,keyIdentifier:String,lots:PortfolioLot[],portfolioId:UUID,portfolioVersion:UInt,positions:PortfolioPosition[],realizedPnL:Money,reconciliationState:Reconciled|IntegrityBlocked,sourceCommitmentHash:Sha256,totalEquity:Money,valuationSnapshotId:UUID}`. `Reconciled` verifies the accepted commitment and protected checkpoint before replacing the addressed projection and nesting `PublicationCompleted` audit. `IntegrityBlocked` never mutates a projection and nests only `BlockedPublication` audit.
+
+`audit_append(jsonb)` accepts `{action:String,attemptIntentId:UUID,correlationId:UUID,domain:Order|Ledger|Denial,keyIdentifier:String,outcome:AuditOutcome,subject:AuditSubject}`. Order permits `IntentRecorded|Committed|Rejected`; Ledger permits `IntentRecorded|Committed|Rejected|IntegrityFailed|BlockedPublication|PublicationCompleted|TimeoutRecovery|RecoveryCompleted`; Denial permits only `PermissionDenied`.
+
+`OrderAuditSubject` is `{auditId:UUID,orderId:UUID,transitionCommandId:UUID?,errorCode:String?,oldOrderVersion:UInt?,newOrderVersion:UInt?}`. `LedgerAuditSubject` is `{auditId:UUID,portfolioId:UUID,transactionId:UUID?,ledgerSequence:UInt?,errorCode:String?,replayClassification:String,transitionCommandId:UUID?,oldOrderVersion:UInt?,newOrderVersion:UInt?,oldPortfolioVersion:UInt?,newPortfolioVersion:UInt?,reversesTransactionId:UUID?,reversedByTransactionId:UUID?,transactionEvidenceHash:Sha256?,allocationEvidenceHash:Sha256?}`. `DenialAuditSubject` is `{auditId:UUID,originalBackendPid:UInt,backendStart:UTCInstant,originalSessionUser:app_runtime|projection_runtime|audit_runtime|key_injector,denialNonce:LowerHex32,objectClass:table|function|schema|role,objectName:String,denialCode:PermissionDenied,deniedAt:UTCInstant}`. These are the exact caller-visible, non-authentication fields of the selected physical row; database-owned workload identity, authentication digest, recorded time, evidence hash, audit commitment, and anchor fields cannot be supplied.
+
+Domain/outcome and `session_user` routing follows the PostgreSQL contract. The function derives authentication fields, hashes the fixed audit record, inserts one audit row, and invokes `anchor_append` for the audit segment in the same transaction.
+
+Ledger audit evidence hashes the RFC 8785 serialization of the complete persisted row before its generated `auditEvidenceHash` is assigned. Keys are therefore in RFC 8785 lexicographic order: `action`, `actorSubject`, `allocationEvidenceHash`, `attemptIntentId`, `auditId`, `authenticationContextDigest`, `correlationId`, `errorCode`, `ledgerSequence`, `newOrderVersion`, `newPortfolioVersion`, `oldOrderVersion`, `oldPortfolioVersion`, `outcome`, `portfolioId`, `recordedAt`, `replayClassification`, `reversedByTransactionId`, `reversesTransactionId`, `transactionEvidenceHash`, `transactionId`, `transitionCommandId`, and `workloadIdentity`. Every nullable field is present as JSON `null`; UUIDs and fixed-point values are strings, versions and sequences are JSON integers, and `recordedAt` is the database-owned millisecond UTC instant. `auditEvidenceHash` is excluded because it is the digest of these bytes.
+
+`anchor_append(jsonb)` accepts `{domain:Portfolio,keyIdentifier:String,portfolioId:UUID,ledgerSequence:UInt,transactionEvidenceHash:Sha256,allocationEvidenceHash:Sha256,auditEvidenceHash:Sha256}`, `{domain:Audit,keyIdentifier:String,auditSegmentHash:Sha256}`, or `{domain:Verify,portfolioId:UUID,sourceCommitmentHash:Sha256}`. `Verify` is read-only, compares the commitment to the protected checkpoint under anchor-owner authority, returns only `{verified:Boolean}`, and is the only variant permitted when `session_user=projection_runtime`. Portfolio/Audit variants lock predecessor and key rows, construct fixed canonical content, compute SHA-256 and HMAC-SHA-256, append the commitment and anchor, and advance the protected checkpoint atomically.
+
+`anchor_key_inject(text,bytea,timestamptz)` accepts a nonempty key identifier, nonempty key bytes, and millisecond-exact activation instant. It is executable only by `key_injector`, never returns key bytes, and rejects replacement. `key_ciphertext` remains the protected storage column name; its bytes are HMAC key material protected by database encryption at rest and owner isolation.
+
+## Owner Call Graph
+
+`app_runtime -> paper_order_transition -> ledger_append -> audit_append -> anchor_append`; direct cash/reversal commands use `app_runtime -> ledger_append`. `projection_runtime -> projection_publish -> audit_append -> anchor_append`. `audit_runtime -> audit_append -> anchor_append`. Only the first runtime edge and the listed owner-to-owner edges receive EXECUTE. Every nested function independently checks its closed payload and permitted `session_user`/outcome combination.
+
+## Extension Provisioning
+
+The external provisioner installs trusted PostgreSQL 16 `pgcrypto` version `1.3` in its default `public` schema before role lockdown and before migration 0001; `plpgsql` is version `1.0`. PostgreSQL 16 already owns `pg_catalog.gen_random_uuid`, so installing the extension into `pg_catalog` is prohibited. The pinned PostgreSQL 16.15 image is built with OpenSSL. Every crypto invocation is schema-qualified; product roles receive no authority to create, replace, or resolve caller-controlled objects in `public`. Runtime and migration roles cannot create, update, or drop extensions. Canonical manifests for every sequence include exactly those extension versions; prior 0001/0002 manifest hashes are superseded and must be regenerated on the exact PostgreSQL baseline. Migration SQL byte hashes remain unchanged.

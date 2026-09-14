@@ -58,7 +58,14 @@ test("role bootstrap SQL is transactional and denies elevated attributes", () =>
 
   assert.match(sql, /^BEGIN;\n/);
   assert.match(sql, /COMMIT;\n$/);
-  assert.doesNotMatch(sql, /CREATE\s+EXTENSION/iu);
+  assert.match(
+    sql,
+    /CREATE EXTENSION IF NOT EXISTS pgcrypto VERSION '1.3';/,
+  );
+  assert.ok(
+    sql.indexOf("CREATE EXTENSION") < sql.indexOf("CREATE ROLE"),
+    "pgcrypto must be provisioned before product role lockdown",
+  );
   assert.match(
     sql,
     /REVOKE CONNECT, TEMPORARY ON DATABASE %I FROM PUBLIC/,

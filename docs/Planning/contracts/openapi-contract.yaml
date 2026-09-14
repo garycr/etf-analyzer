@@ -615,9 +615,10 @@ components:
     PaperOrderDraftCreateBody:
       type: object
       additionalProperties: false
-      required: [orderId, researchEvidenceId, side, quantity, unitPrice, tradeDate]
+      required: [orderId, instrumentId, researchEvidenceId, side, quantity, unitPrice, tradeDate]
       properties:
         orderId: { $ref: '#/components/schemas/UUID' }
+        instrumentId: { type: string, minLength: 1 }
         researchEvidenceId: { $ref: '#/components/schemas/UUID' }
         side: { type: string, enum: [Buy, Sell] }
         quantity: { $ref: '#/components/schemas/Quantity' }
@@ -1033,9 +1034,10 @@ components:
     PaperOrder:
       type: object
       additionalProperties: false
-      required: [orderId, state, aggregateVersion, researchEvidenceId, side, requestedQuantity, filledQuantity, openQuantity, unitPrice, tradeDate, confirmation, transitionHistory]
+      required: [orderId, instrumentId, state, aggregateVersion, researchEvidenceId, side, requestedQuantity, filledQuantity, openQuantity, unitPrice, tradeDate, confirmation, transitionHistory]
       properties:
         orderId: { $ref: '#/components/schemas/UUID' }
+        instrumentId: { type: string, minLength: 1 }
         state: { type: string, enum: [Draft, Submitted, Accepted, Partial, Filled, Rejected, Canceled, Expired] }
         aggregateVersion: { $ref: '#/components/schemas/UInt' }
         researchEvidenceId: { $ref: '#/components/schemas/UUID' }

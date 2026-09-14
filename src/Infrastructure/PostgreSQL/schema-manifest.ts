@@ -40,7 +40,7 @@ export interface ManifestGrant {
 }
 
 export interface SchemaManifestSource {
-  systemExtensions: readonly { name: string }[];
+  systemExtensions: readonly { name: string; version: string }[];
   migrationSequence: readonly ManifestMigration[];
   objects: readonly ManifestObjectSource[];
   roleMemberships: readonly ManifestRoleMembership[];
@@ -97,8 +97,11 @@ export function buildSchemaManifest(
   prospectiveMigration: ManifestMigration,
 ): string {
   if (
-    source.systemExtensions.length !== 1 ||
-    source.systemExtensions[0]?.name !== "plpgsql"
+    source.systemExtensions.length !== 2 ||
+    source.systemExtensions[0]?.name !== "pgcrypto" ||
+    source.systemExtensions[0]?.version !== "1.3" ||
+    source.systemExtensions[1]?.name !== "plpgsql" ||
+    source.systemExtensions[1]?.version !== "1.0"
   ) {
     throw new Error("APPLICATION_MIGRATIONS_INCOMPLETE");
   }

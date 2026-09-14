@@ -34,6 +34,11 @@ const tableDefinition = {
   triggers: [],
 };
 
+const systemExtensions = [
+  { name: "pgcrypto", version: "1.3" },
+  { name: "plpgsql", version: "1.0" },
+];
+
 function digest(value) {
   return createHash("sha256").update(canonicalizeJson(value), "utf8").digest("hex");
 }
@@ -41,7 +46,7 @@ function digest(value) {
 test("schema manifest emits the exact canonical root and object ordering", () => {
   const manifestJson = buildSchemaManifest(
     {
-      systemExtensions: [{ name: "plpgsql" }],
+      systemExtensions,
       migrationSequence: [],
       objects: [
         {
@@ -101,7 +106,7 @@ test("schema manifest sorts memberships and grants by contract tuples", () => {
   const manifest = JSON.parse(
     buildSchemaManifest(
       {
-        systemExtensions: [{ name: "plpgsql" }],
+        systemExtensions,
         migrationSequence: [],
         objects: [],
         roleMemberships: [
@@ -137,7 +142,7 @@ test("schema manifest tuple ordering is code-unit based and locale independent",
   const manifest = JSON.parse(
     buildSchemaManifest(
       {
-        systemExtensions: [{ name: "plpgsql" }],
+        systemExtensions,
         migrationSequence: [],
         objects: [
           { kind: "role", schema: null, name: "alpha", owner: null, definition: roleDefinition },
@@ -155,7 +160,7 @@ test("schema manifest tuple ordering is code-unit based and locale independent",
 
 test("schema manifest rejects a duplicate or non-contiguous prospective migration", () => {
   const base = {
-    systemExtensions: [{ name: "plpgsql" }],
+    systemExtensions,
     objects: [],
     roleMemberships: [],
     grants: [],
@@ -175,6 +180,38 @@ test("schema manifest rejects a duplicate or non-contiguous prospective migratio
   );
 });
 
+test("schema manifest requires exact system extension names and versions", () => {
+  const source = {
+    migrationSequence: [],
+    objects: [],
+    roleMemberships: [],
+    grants: [],
+  };
+
+  assert.throws(
+    () =>
+      buildSchemaManifest(
+        { ...source, systemExtensions: [{ name: "plpgsql", version: "1.0" }] },
+        migration,
+      ),
+    /APPLICATION_MIGRATIONS_INCOMPLETE/,
+  );
+  assert.throws(
+    () =>
+      buildSchemaManifest(
+        {
+          ...source,
+          systemExtensions: [
+            { name: "pgcrypto", version: "1.2" },
+            { name: "plpgsql", version: "1.0" },
+          ],
+        },
+        migration,
+      ),
+    /APPLICATION_MIGRATIONS_INCOMPLETE/,
+  );
+});
+
 test("PostgreSQL projector rejects unsupported migration sequences before querying", async () => {
   let queryCount = 0;
   await assert.rejects(
@@ -186,7 +223,7 @@ test("PostgreSQL projector rejects unsupported migration sequences before queryi
             return { rows: [] };
           },
         },
-        { sequence: 3, migrationId: "0003-domain-ledger", contentHash: "a".repeat(64) },
+        { sequence: 4, migrationId: "0004-fixtures", contentHash: "a".repeat(64) },
       ),
     /APPLICATION_MIGRATIONS_INCOMPLETE/,
   );

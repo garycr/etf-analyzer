@@ -42,6 +42,25 @@ test(
     try {
       await client.query(createRoleBootstrapSql());
 
+      const publicAuthority = await client.query(
+        `SELECT EXISTS (
+                  SELECT 1
+                    FROM pg_catalog.pg_namespace AS namespace
+                   CROSS JOIN LATERAL pg_catalog.aclexplode(
+                     COALESCE(namespace.nspacl, pg_catalog.acldefault('n', namespace.nspowner))
+                   ) AS privilege
+                   WHERE namespace.nspname = 'public'
+                     AND privilege.grantee = 0
+                     AND privilege.privilege_type = 'CREATE'
+                ) AS public_create,
+                (SELECT bool_or(pg_catalog.has_schema_privilege(role_name, 'public', 'CREATE'))
+                   FROM pg_catalog.unnest($1::text[]) AS role_name) AS product_create`,
+        [productRoles.map(({ name }) => name)],
+      );
+      assert.deepEqual(publicAuthority.rows, [
+        { public_create: false, product_create: false },
+      ]);
+
       const roles = await client.query(
         `SELECT rolname AS name, rolcanlogin AS login, rolinherit AS inherit,
                 rolsuper AS superuser, rolcreaterole AS create_role,

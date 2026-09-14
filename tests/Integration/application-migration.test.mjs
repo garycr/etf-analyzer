@@ -72,9 +72,9 @@ test(
       );
       assert.equal(
         applicationApplied.schemaManifestHash,
-        "d61a6a94778bcfb9d57b449690b8c7888b65a044f809467be28a13d0c2640d34",
+        "a2e237842fd026651e33ef66bcbe0aea56a9c03160ce4b583d902424ac80a3a5",
       );
-      assert.equal(Buffer.byteLength(applicationManifest, "utf8"), 7480);
+      assert.equal(Buffer.byteLength(applicationManifest, "utf8"), 7532);
       const manifest = JSON.parse(applicationManifest);
       assert.equal(manifest.migrationSequence.length, 2);
       assert.equal(manifest.objects.filter(({ kind }) => kind === "table").length, 10);

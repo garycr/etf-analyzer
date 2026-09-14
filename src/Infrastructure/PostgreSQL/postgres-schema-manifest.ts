@@ -16,6 +16,10 @@ import {
   applicationFunctionNames,
   applicationTableNames,
 } from "./migrations/application.js";
+import {
+  domainLedgerFunctionNames,
+  domainLedgerTableNames,
+} from "./migrations/domain-ledger.js";
 import { foundationTableNames } from "./migrations/foundation.js";
 
 interface TableSource {
@@ -135,11 +139,11 @@ export async function projectPostgresSchemaManifest(
   client: ManifestClient,
   prospectiveMigration: ManifestMigration,
 ): Promise<string> {
-  if (prospectiveMigration.sequence < 1 || prospectiveMigration.sequence > 2) {
+  if (prospectiveMigration.sequence < 1 || prospectiveMigration.sequence > 3) {
     throw new Error("APPLICATION_MIGRATIONS_INCOMPLETE");
   }
   const extensions = await client.query(
-    "SELECT extname AS name FROM pg_catalog.pg_extension ORDER BY extname",
+    "SELECT extname AS name, extversion AS version FROM pg_catalog.pg_extension ORDER BY extname",
   );
   const schemaResult = await client.query(
     `SELECT owner.rolname AS owner,
@@ -323,10 +327,12 @@ export async function projectPostgresSchemaManifest(
   const expectedTableNames = [
     ...foundationTableNames,
     ...(prospectiveMigration.sequence >= 2 ? applicationTableNames : []),
+    ...(prospectiveMigration.sequence >= 3 ? domainLedgerTableNames : []),
   ].sort(compareCodeUnits);
-  const expectedFunctionNames = (
-    prospectiveMigration.sequence >= 2 ? [...applicationFunctionNames] : []
-  ).sort(compareCodeUnits);
+  const expectedFunctionNames = [
+    ...(prospectiveMigration.sequence >= 2 ? applicationFunctionNames : []),
+    ...(prospectiveMigration.sequence >= 3 ? domainLedgerFunctionNames : []),
+  ].sort(compareCodeUnits);
 
   if (
     schemaResult.rows.length !== 1 ||
@@ -500,7 +506,10 @@ export async function projectPostgresSchemaManifest(
   }));
   return buildSchemaManifest(
     {
-      systemExtensions: extensions.rows.map((row) => ({ name: requireString(row.name) })),
+      systemExtensions: extensions.rows.map((row) => ({
+        name: requireString(row.name),
+        version: requireString(row.version),
+      })),
       migrationSequence: migrations.rows.map((row) => ({
         sequence: Number(row.sequence),
         migrationId: requireString(row.migration_id),

@@ -6,6 +6,17 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-14 | REV-039 0003 domain-ledger migration accepted | Ring-2 | @code-reviewer
+
+**Decision:** Accept the bounded `0003-domain-ledger` additive migration after closing canonical evidence, FIFO/reversal, immediate-FK, clean-authority, and audit-digest findings
+**Policy:** DEC-023; DEC-027; WP-1; code review; test quality; exact catalog closure
+**Authority:** Independent Code Reviewer final PASS with no in-scope blocker
+**Accountability:** Solo Orchestrator publishes only the empty-database migration increment and continues sequentially within WP-1
+**Result:** SQL hash `5e4bb49c7f1be74c25d6eb5d585305c00f5df9791bfe2ab2a4348fa10fb1fdb5`; manifest hash `150541903c6e9f644a2db065fc5ffc04480232b5a3623ef9704e171522e70da4`; 13,358 bytes; 76/76 tests; zero skips; zero vulnerabilities
+**authorization-boundary:** Additive 0003 installation into an empty database only; no legacy copy, transformation, backfill, historical reconciliation, runtime audit coordinator, denial collector, migrations 0004-0006, WP-1 exit, WP-2, release, deployment, or production authority
+
+---
+
 ## 2026-09-14 | REV-037 DEC-026 watchlist state approved | Ring-2 | @architect-reviewer
 
 **Decision:** Approve explicit singleton aggregate-version state for the watchlist after reviewing authority, concurrency, catalog closure, and traceability

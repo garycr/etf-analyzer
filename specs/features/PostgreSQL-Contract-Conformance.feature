@@ -92,6 +92,7 @@ Feature: CT-DB-001 PostgreSQL contract conformance
     When grants are compared with the closed role matrix
     Then PUBLIC has no database, schema, table, sequence, function, or role privilege
     And database CONNECT is granted only to deployment_login, migration_executor, app_runtime, projection_runtime, audit_runtime, and key_injector
+    And schema USAGE without CREATE is retained only for application_writer_owner, ledger_writer_owner, projection_owner, audit_writer_owner, anchor_owner, and evidence_writer_owner among object-owner roles
     And app_runtime cannot own objects, run DDL, set role, bypass row security, or directly mutate protected tables
     And each SECURITY DEFINER function has a fixed trusted search_path, fully qualified objects, revoked PUBLIC execution, and no caller-derived dynamic SQL
     And a denied attempt records no SQL text, parameter value, secret, or protected key material

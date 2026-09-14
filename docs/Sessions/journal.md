@@ -6,6 +6,61 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-14 | REV-037 DEC-026 watchlist state approved | Ring-2 | @architect-reviewer
+
+**Decision:** Approve explicit singleton aggregate-version state for the watchlist after reviewing authority, concurrency, catalog closure, and traceability
+**Policy:** Architecture Review; DEC-026; WP-1; CT-DB-001A/B/C
+**Authority:** Independent Architect Reviewer final APPROVED disposition with no Critical or Major finding
+**Accountability:** Solo Orchestrator publishes the bounded 0002 increment and continues sequentially within WP-1
+**Result:** Exact singleton structure, row lock, remove-empty-reinsert monotonicity, concurrent one-winner behavior, canonical hashes, and 61/61 suite evidence accepted
+**authorization-boundary:** 0002 application migration only; migrations 0003-0006, complete CT-DB-001, WP-1 exit, WP-2, release, deployment, and production remain open or unauthorized
+
+---
+
+## 2026-09-14 | DEC-026 explicit watchlist aggregate state | Ring-2 | @workspace-owner
+
+**Decision:** Add and lock one canonical `watchlist_state` row so removing the final item cannot reset the application watchlist version
+**Policy:** DEC-023; WP-1; application expected-version semantics; CT-DB-001A/B/C; exact catalog closure
+**Authority:** Workspace Owner explicitly approved the recommended singleton state-table correction
+**Accountability:** Solo Orchestrator synchronizes contract/evidence, obtains final architecture review, and keeps migrations 0003-0006 and WP-2 closed
+**Result:** Remove-last/reinsert advances versions 1 to 2 to 3; concurrent same-version writers yield one commit and one rejection; full exact-baseline suite passes 61/61 with zero skips
+**authorization-boundary:** Six-table 0002 correction only; no direct runtime state mutation, hidden tombstone/replay authority, migrations 0003-0006, WP-1 exit, WP-2, release, deployment, or production authority
+
+---
+
+## 2026-09-14 | REV-035 DEC-025 owner schema usage accepted | Ring-2 | @architect-reviewer
+
+**Decision:** Accept retained schema USAGE without CREATE for controlled-function owners after canonical sequence-2 evidence closed the conditional finding
+**Policy:** Architecture Review; DEC-025; WP-1; CT-DB-001D
+**Authority:** Independent Architect Reviewer final PASS with no Critical or Major finding
+**Accountability:** Solo Orchestrator applies the pattern only when each later controlled-function owner is introduced
+**Result:** Application owner privilege is USAGE true and CREATE false; five SECURITY DEFINER functions execute and appear in the 0002 canonical manifest
+**authorization-boundary:** DEC-025 authority pattern only; later owner implementations remain tied to their migrations and WP-2 remains closed
+
+---
+
+## 2026-09-14 | REV-036 0002 application code review accepted | Ring-2 | @code-reviewer
+
+**Decision:** Accept the repaired 0002 SQL, functions, aggregate version state, and sequence-2 projector after all Critical and Major findings closed
+**Policy:** DEC-023; DEC-025; DEC-026; WP-1; code review; test quality
+**Authority:** Independent Code Reviewer final PASS with no blocker
+**Accountability:** Solo Orchestrator records canonical evidence and obtains final DEC-026 architecture disposition before publication
+**Result:** Final SQL hash `9865cd75bd6249b4a567daf840f95ad3d7b52bbf534060e87a34516fd0867fdb`; manifest hash `d61a6a94778bcfb9d57b449690b8c7888b65a044f809467be28a13d0c2640d34`; 7,480 bytes; 61/61 tests; zero vulnerabilities
+**authorization-boundary:** 0002 only; migrations 0003-0006, complete CT-DB-001, WP-1 exit, WP-2, release, deployment, and production remain open or unauthorized
+
+---
+
+## 2026-09-14 | DEC-025 controlled-function owner schema usage | Ring-2 | @workspace-owner
+
+**Decision:** Retain schema `USAGE` without `CREATE` for exactly the six controlled-function owner roles after their migration DDL
+**Policy:** DEC-023; WP-1; CT-DB-001A/C/D/K; exact ownership; deny-by-default authority; architecture review
+**Authority:** Workspace Owner explicitly approved Option A after live PostgreSQL 16 reproduced SQLSTATE 42501 inside a SECURITY DEFINER function
+**Accountability:** Solo Orchestrator updates the closed grant contract, proves the pattern in 0002, obtains independent architecture recheck, and keeps WP-2 closed
+**Result:** `application_writer_owner` now has schema USAGE true and CREATE false; 0002 static and live behavior tests pass 5/5; cross-owner contract application remains prospective
+**authorization-boundary:** DEC-025 authorizes only minimum schema lookup for the six named function owners; no schema CREATE, PUBLIC grant, changed ownership, migrations 0003-0006, WP-1 exit, WP-2, release, deployment, or production authority
+
+---
+
 ## 2026-09-14 | REV-034 foundation manifest code review accepted | Ring-2 | @code-reviewer
 
 **Decision:** Accept the WP-1 canonical foundation manifest and exact database-ACL implementation after closing fixture cleanup isolation

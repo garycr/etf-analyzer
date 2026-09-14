@@ -186,7 +186,7 @@ test("PostgreSQL projector rejects unsupported migration sequences before queryi
             return { rows: [] };
           },
         },
-        { sequence: 2, migrationId: "0002-application", contentHash: "a".repeat(64) },
+        { sequence: 3, migrationId: "0003-domain-ledger", contentHash: "a".repeat(64) },
       ),
     /APPLICATION_MIGRATIONS_INCOMPLETE/,
   );

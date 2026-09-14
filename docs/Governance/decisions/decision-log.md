@@ -20,6 +20,8 @@
 | DEC-022 | 2026-09-11 | Scope | Re-scope #21 to an implemented-surface prototype contract freeze | Workspace Owner | Solo Orchestrator | Reviewed; execution pending |
 | DEC-023 | 2026-09-11 | Ring gate | Approve simplified Tier 1 plan and advance Ring 1 to Ring 2 | Workspace Owner | Solo Orchestrator | Active |
 | DEC-024 | 2026-09-14 | Architecture | Provision exact roles, database ACL, and empty `etf` schema externally before migration 0001 | Workspace Owner | Solo Orchestrator | Active |
+| DEC-025 | 2026-09-14 | Architecture | Retain schema USAGE without CREATE for controlled-function owner roles | Workspace Owner | Solo Orchestrator | Active |
+| DEC-026 | 2026-09-14 | Architecture | Persist watchlist aggregate version in an explicit singleton table | Workspace Owner | Solo Orchestrator | Active |
 
 ---
 
@@ -371,3 +373,41 @@ The hash-governed candidate.2 contract and CC-002 retain their contemporaneous p
 | **Invalidation** | Any extra or missing database grant, `PUBLIC` database privilege, extra schema ACL/default privilege/object, owner mismatch, unenumerated provisioner DDL, or permanent owner grant fails closed and requires explicit operator remediation. |
 | **Status** | Active; database-ACL amendment owner-approved; REV-033 architecture recheck PASS with no Critical or Major finding; implementation limited to WP-1 evidence |
 | **Linked Artifacts** | `docs/Planning/contracts/postgresql-contract.md`, `specs/features/PostgreSQL-Contract-Conformance.feature`, `docs/Operations/postgresql-bootstrap-recovery.md`, `docs/artifacts/gate-evidence/wp-1-postgresql-role-bootstrap.md`, `docs/Governance/decisions/reviews/REV-033-dec-024-database-acl-amendment-review.md` |
+
+### DEC-025: Retain Schema Usage for Controlled-Function Owners
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-025 |
+| **Date** | 2026-09-14 |
+| **Category** | Architecture |
+| **Decision** | After each owner creates its objects, revoke schema `CREATE` but retain schema `USAGE` for exactly `application_writer_owner`, `ledger_writer_owner`, `projection_owner`, `audit_writer_owner`, `anchor_owner`, and `evidence_writer_owner`. |
+| **Policy** | DEC-023; WP-1; CT-DB-001A/C/D/K; deny-by-default authority; exact ownership; fixed qualified `SECURITY DEFINER` bodies; architecture and alternate-model decision review |
+| **Authority** | Workspace Owner explicitly approved Option A after live PostgreSQL 16 returned SQLSTATE 42501 inside an `application_writer_owner` SECURITY DEFINER function whose temporary schema USAGE had been revoked |
+| **Accountable** | Solo Orchestrator proves `USAGE=true`, `CREATE=false`, updates canonical manifest and contract evidence, obtains architecture recheck, and keeps WP-2 closed |
+| **Context** | PostgreSQL executes SECURITY DEFINER statements as the function owner, and object ownership does not confer namespace lookup. The current closed matrix therefore makes every qualified controlled-function body fail after temporary schema privileges are revoked. |
+| **Alternatives** | Retain minimum per-owner schema USAGE; transfer functions to schema_owner and collapse separation of duties; grant PUBLIC USAGE or elevated authority; pause for redesign |
+| **Consequences** | Controlled-function owners can resolve qualified `etf` objects but cannot create schema objects. Exact object ownership, fixed search paths, runtime separation, PUBLIC denial, and no-dynamic-SQL rules remain unchanged. Six additional schema grant records become canonical manifest content. |
+| **Assumptions** | Every controlled function references only its contract-authorized objects and all direct object privileges continue to derive from exact ownership or separately enumerated grants. |
+| **Invalidation** | Schema CREATE for any function-owner role, schema USAGE for another owner or PUBLIC, changed function ownership, unqualified object access, or broader role authority fails closed. |
+| **Status** | Active; REV-035 architecture recheck PASS with no Critical or Major finding; application_writer_owner implementation canonically evidenced in 0002 |
+| **Linked Artifacts** | `docs/Planning/contracts/postgresql-contract.md`, `specs/features/PostgreSQL-Contract-Conformance.feature`, `docs/Governance/decisions/reviews/REV-035-dec-025-controlled-function-owner-usage-review.md` |
+
+### DEC-026: Persist the Watchlist Aggregate Version Explicitly
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-026 |
+| **Date** | 2026-09-14 |
+| **Category** | Architecture |
+| **Decision** | Add `watchlist_state(singleton boolean,version bigint)` to `0002-application`, seed exactly `(true,0)`, and lock that row for every watchlist compare-and-write operation. |
+| **Policy** | DEC-023; WP-1; application candidate.2 watchlist expected-version semantics; CT-DB-001A/B/C; exact catalog closure; architecture review |
+| **Authority** | Workspace Owner explicitly approved the singleton state-table option after implementation analysis proved the five-table physical model loses the aggregate version when the final item is removed |
+| **Accountable** | Solo Orchestrator keeps the singleton exact, proves monotonic empty-state and concurrent-writer behavior, updates canonical hashes, and does not open WP-2 |
+| **Context** | `watchlist_items.version` cannot preserve one application aggregate version when no item exists. Resetting to zero would allow stale writes; tombstones or hidden replay rows would misrepresent domain state. |
+| **Alternatives** | Add explicit singleton state; reset version when empty; retain hidden tombstones; pause for contract redesign |
+| **Consequences** | The closed 0002 table set increases from five to six. Removing the final item retains the aggregate version, and a row lock provides atomic compare-and-set semantics without a queue or event surface. |
+| **Assumptions** | Exactly one singleton row exists and only `watchlist_write` mutates it after migration. |
+| **Invalidation** | Missing or duplicate state rows, direct runtime mutation, version reset, unlocked compare-and-write, or another hidden version authority fails closed. |
+| **Status** | Active; REV-037 architecture review APPROVED with no Critical or Major finding; REV-036 code review PASS and exact PostgreSQL behavior proven |
+| **Linked Artifacts** | `docs/Planning/contracts/postgresql-contract.md`, `tests/Integration/application-migration.test.mjs`, `docs/artifacts/gate-evidence/wp-1-application-migration.md`, `docs/Governance/decisions/reviews/REV-037-dec-026-watchlist-state-review.md` |

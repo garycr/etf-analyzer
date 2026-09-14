@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import type { CanonicalJsonValue } from "../CanonicalJson/canonical-json.js";
 import type {
   ManifestClient,
@@ -10,6 +12,10 @@ import {
   type ManifestObjectSource,
   type ManifestRoleMembership,
 } from "./schema-manifest.js";
+import {
+  applicationFunctionNames,
+  applicationTableNames,
+} from "./migrations/application.js";
 import { foundationTableNames } from "./migrations/foundation.js";
 
 interface TableSource {
@@ -51,6 +57,19 @@ function compareCodeUnits(left: string, right: string): number {
   if (left < right) return -1;
   if (left > right) return 1;
   return 0;
+}
+
+function normalizePostgresDefinition(value: string): string {
+  return `${value
+    .replace(/\r\n?/gu, "\n")
+    .split("\n")
+    .map((line) => line.replace(/[ \t]+$/gu, ""))
+    .join("\n")
+    .replace(/\n+$/gu, "")}\n`;
+}
+
+function sha256Text(value: string): string {
+  return createHash("sha256").update(value, "utf8").digest("hex");
 }
 
 export async function collectPostgresManifestGrants(
@@ -116,7 +135,7 @@ export async function projectPostgresSchemaManifest(
   client: ManifestClient,
   prospectiveMigration: ManifestMigration,
 ): Promise<string> {
-  if (prospectiveMigration.sequence !== 1) {
+  if (prospectiveMigration.sequence < 1 || prospectiveMigration.sequence > 2) {
     throw new Error("APPLICATION_MIGRATIONS_INCOMPLETE");
   }
   const extensions = await client.query(
@@ -165,17 +184,34 @@ export async function projectPostgresSchemaManifest(
       WHERE namespace.nspname = 'etf' AND relation.relkind = 'r'
       ORDER BY relation.relname`,
   );
+  const functions = await client.query(
+    `SELECT function_record.proname AS name, owner.rolname AS owner,
+            pg_catalog.oidvectortypes(function_record.proargtypes) AS arguments,
+            pg_catalog.pg_get_function_result(function_record.oid) AS returns,
+            language_record.lanname AS language,
+            function_record.prosecdef AS security_definer,
+            CASE function_record.provolatile
+              WHEN 'i' THEN 'immutable' WHEN 's' THEN 'stable' ELSE 'volatile'
+            END AS volatility,
+            CASE function_record.proparallel
+              WHEN 's' THEN 'safe' WHEN 'r' THEN 'restricted' ELSE 'unsafe'
+            END AS parallel_safety,
+            function_record.proconfig AS configuration,
+            pg_catalog.pg_get_functiondef(function_record.oid) AS definition
+       FROM pg_catalog.pg_proc AS function_record
+       JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = function_record.pronamespace
+       JOIN pg_catalog.pg_roles AS owner ON owner.oid = function_record.proowner
+       JOIN pg_catalog.pg_language AS language_record ON language_record.oid = function_record.prolang
+      WHERE namespace.nspname = 'etf'
+      ORDER BY function_record.proname, function_record.oid`,
+  );
   const unsupportedObjects = await client.query(
     `SELECT
        (SELECT count(*)::integer
           FROM pg_catalog.pg_class AS relation
           JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = relation.relnamespace
          WHERE namespace.nspname = 'etf' AND relation.relkind NOT IN ('r', 'i'))
-       +
-       (SELECT count(*)::integer
-          FROM pg_catalog.pg_proc AS function_record
-          JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = function_record.pronamespace
-         WHERE namespace.nspname = 'etf') AS unsupported_count`,
+       AS unsupported_count`,
   );
   const columns = await client.query(
     `SELECT relation.relname AS table_name, attribute.attnum::integer AS ordinal,
@@ -284,11 +320,19 @@ export async function projectPostgresSchemaManifest(
       ORDER BY relation.relname, trigger_record.tgname`,
   );
   const grants = await collectPostgresManifestGrants(client);
+  const expectedTableNames = [
+    ...foundationTableNames,
+    ...(prospectiveMigration.sequence >= 2 ? applicationTableNames : []),
+  ].sort(compareCodeUnits);
+  const expectedFunctionNames = (
+    prospectiveMigration.sequence >= 2 ? [...applicationFunctionNames] : []
+  ).sort(compareCodeUnits);
 
   if (
     schemaResult.rows.length !== 1 ||
     roles.rows.length !== productRoles.length ||
-    tables.rows.length !== foundationTableNames.length ||
+    tables.rows.length !== expectedTableNames.length ||
+    functions.rows.length !== expectedFunctionNames.length ||
     Number(unsupportedObjects.rows[0]?.unsupported_count) !== 0
   ) {
     throw new Error("APPLICATION_MIGRATIONS_INCOMPLETE");
@@ -296,8 +340,15 @@ export async function projectPostgresSchemaManifest(
   const actualTableNames = tables.rows
     .map((row) => requireString(row.name))
     .sort(compareCodeUnits);
-  const expectedTableNames = [...foundationTableNames].sort(compareCodeUnits);
   if (actualTableNames.some((name, index) => name !== expectedTableNames[index])) {
+    throw new Error("APPLICATION_MIGRATIONS_INCOMPLETE");
+  }
+  const actualFunctionNames = functions.rows
+    .map((row) => requireString(row.name))
+    .sort(compareCodeUnits);
+  if (
+    actualFunctionNames.some((name, index) => name !== expectedFunctionNames[index])
+  ) {
     throw new Error("APPLICATION_MIGRATIONS_INCOMPLETE");
   }
   const schema = schemaResult.rows[0];
@@ -380,6 +431,36 @@ export async function projectPostgresSchemaManifest(
     };
     return { kind: "table", schema: "etf", ...table, definition };
   });
+  const functionObjects: ManifestObjectSource[] = functions.rows.map(
+    (row): ManifestObjectSource => {
+      const configuration = row.configuration;
+      if (
+        !Array.isArray(configuration) ||
+        configuration.length !== 1 ||
+        configuration[0] !== "search_path=pg_catalog, etf"
+      ) {
+        throw new Error("APPLICATION_MIGRATIONS_INCOMPLETE");
+      }
+      return {
+        kind: "function",
+        schema: "etf",
+        name: requireString(row.name),
+        owner: requireString(row.owner),
+        definition: {
+          arguments: requireString(row.arguments),
+          returns: requireString(row.returns),
+          language: requireString(row.language),
+          securityDefiner: requireBoolean(row.security_definer),
+          volatility: requireString(row.volatility),
+          parallelSafety: requireString(row.parallel_safety),
+          searchPath: ["pg_catalog", "etf"],
+          bodyHash: sha256Text(
+            normalizePostgresDefinition(requireString(row.definition)),
+          ),
+        },
+      };
+    },
+  );
 
   const objects: ManifestObjectSource[] = [
     {
@@ -408,6 +489,7 @@ export async function projectPostgresSchemaManifest(
       },
     })),
     ...tableObjects,
+    ...functionObjects,
   ];
   const roleMemberships: ManifestRoleMembership[] = memberships.rows.map((row) => ({
     role: requireString(row.role),

@@ -59,6 +59,14 @@ test("role bootstrap SQL is transactional and denies elevated attributes", () =>
   assert.match(sql, /^BEGIN;\n/);
   assert.match(sql, /COMMIT;\n$/);
   assert.doesNotMatch(sql, /CREATE\s+EXTENSION/iu);
+  assert.match(
+    sql,
+    /REVOKE CONNECT, TEMPORARY ON DATABASE %I FROM PUBLIC/,
+  );
+  assert.match(
+    sql,
+    /GRANT CONNECT ON DATABASE %I TO deployment_login, migration_executor, app_runtime, projection_runtime, audit_runtime, key_injector/,
+  );
   assert.equal(
     (sql.match(/CREATE SCHEMA etf AUTHORIZATION schema_owner;/gu) ?? []).length,
     1,

@@ -18,8 +18,17 @@ const fixtureUnlockSql =
 async function dropProductRoles(client) {
   await client.query("ROLLBACK").catch(() => undefined);
   await client.query("DROP SCHEMA IF EXISTS etf CASCADE");
+  const existing = await client.query(
+    `SELECT rolname FROM pg_catalog.pg_roles WHERE rolname = ANY($1::text[])`,
+    [productRoles.map(({ name }) => name)],
+  );
+  const roleNames = existing.rows.map(({ rolname }) => rolname);
+  if (roleNames.length > 0) {
+    await client.query(`DROP OWNED BY ${roleNames.join(", ")}`);
+    await client.query(`DROP ROLE ${roleNames.join(", ")}`);
+  }
   await client.query(
-    `DROP ROLE IF EXISTS ${productRoles.map(({ name }) => name).join(", ")}`,
+    "DO $cleanup$ BEGIN EXECUTE format('GRANT CONNECT, TEMPORARY ON DATABASE %I TO PUBLIC', current_database()); END $cleanup$;",
   );
 }
 
@@ -83,6 +92,34 @@ test(
           set_option: true,
         })),
       );
+
+      const databaseAcl = await client.query(
+        `SELECT CASE WHEN privilege.grantee = 0 THEN 'PUBLIC' ELSE grantee.rolname END AS grantee,
+                privilege.privilege_type AS privilege, privilege.is_grantable AS grant_option
+           FROM pg_catalog.pg_database AS database
+           CROSS JOIN LATERAL pg_catalog.aclexplode(
+             COALESCE(database.datacl, pg_catalog.acldefault('d', database.datdba))
+           ) AS privilege
+           LEFT JOIN pg_catalog.pg_roles AS grantee ON grantee.oid = privilege.grantee
+          WHERE database.datname = pg_catalog.current_database()
+            AND privilege.grantee <> database.datdba
+          ORDER BY grantee, privilege`,
+      );
+      assert.deepEqual(
+        databaseAcl.rows,
+        [
+          "app_runtime",
+          "audit_runtime",
+          "deployment_login",
+          "key_injector",
+          "migration_executor",
+          "projection_runtime",
+        ].map((grantee) => ({
+          grantee,
+          privilege: "CONNECT",
+          grant_option: false,
+        })),
+      );
     } finally {
       try {
         await dropProductRoles(client);
@@ -116,6 +153,55 @@ test(
         [productRoles.map(({ name }) => name)],
       );
       assert.deepEqual(remaining.rows, []);
+    } finally {
+      try {
+        await dropProductRoles(client);
+      } finally {
+        await client.query(fixtureUnlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
+  "role bootstrap rolls back database ACLs after a post-ACL failure",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    await client.connect();
+    await client.query(fixtureLockSql);
+    try {
+      await dropProductRoles(client);
+      const failingSql = createRoleBootstrapSql().replace(
+        "CREATE SCHEMA etf AUTHORIZATION schema_owner;",
+        "SELECT missing_post_acl_function();\nCREATE SCHEMA etf AUTHORIZATION schema_owner;",
+      );
+      await assert.rejects(() => client.query(failingSql), /missing_post_acl_function/);
+      await client.query("ROLLBACK").catch(() => undefined);
+
+      const remainingRoles = await client.query(
+        `SELECT rolname
+           FROM pg_catalog.pg_roles
+          WHERE rolname = ANY($1::text[])`,
+        [productRoles.map(({ name }) => name)],
+      );
+      assert.deepEqual(remainingRoles.rows, []);
+
+      const publicAcl = await client.query(
+        `SELECT privilege.privilege_type AS privilege
+           FROM pg_catalog.pg_database AS database
+           CROSS JOIN LATERAL pg_catalog.aclexplode(
+             COALESCE(database.datacl, pg_catalog.acldefault('d', database.datdba))
+           ) AS privilege
+          WHERE database.datname = pg_catalog.current_database()
+            AND privilege.grantee = 0
+          ORDER BY privilege`,
+      );
+      assert.deepEqual(publicAcl.rows, [
+        { privilege: "CONNECT" },
+        { privilege: "TEMPORARY" },
+      ]);
     } finally {
       try {
         await dropProductRoles(client);

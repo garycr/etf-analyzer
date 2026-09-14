@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { createHash } from "node:crypto";
 
 import {
   foundationMigration,
@@ -15,6 +16,10 @@ test("0001 foundation has the exact identity and closed object set", () => {
     "portfolio_anchor_checkpoints",
     "audit_anchor_checkpoints",
   ]);
+  assert.equal(
+    createHash("sha256").update(foundationMigration.sql, "utf8").digest("hex"),
+    "a604802a67bed66c6ce79d2f2f856b48e184ae5b4f76803ab8ead3a135c85291",
+  );
 });
 
 test("0001 foundation SQL creates only contract-owned foundation tables", () => {

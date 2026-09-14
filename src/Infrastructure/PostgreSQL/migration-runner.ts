@@ -9,9 +9,11 @@ interface QueryResult {
   rows: Record<string, unknown>[];
 }
 
-export interface MigrationClient {
+export interface ManifestClient {
   query(sql: string, values?: readonly unknown[]): Promise<QueryResult>;
 }
+
+export type MigrationClient = ManifestClient;
 
 export interface MigrationResult {
   applied: boolean;

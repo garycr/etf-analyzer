@@ -11,11 +11,13 @@ Feature: CT-DB-001 PostgreSQL contract conformance
   Rule: Empty bootstrap has one ordered result
   Scenario: CT-DB-001A an empty database reaches the exact candidate schema
     Given no application schema, migration row, extension, or product role exists
-    And the external provisioner is not a product role and has PostgreSQL CREATEROLE authority
+    And the external provisioner is not a product role and has PostgreSQL CREATEROLE and database-owner authority
     When the provisioner creates all fourteen product roles with the contract attributes
     And the provisioner grants deployment_login membership in migration_executor with ADMIN FALSE, INHERIT FALSE, and SET TRUE
     And the provisioner grants migration_executor membership in migration_owner with ADMIN FALSE, INHERIT FALSE, and SET TRUE
     And the provisioner grants migration_owner SET TRUE, INHERIT FALSE, and ADMIN FALSE membership in every other owner role
+    And the provisioner revokes database CONNECT and TEMPORARY from PUBLIC
+    And the provisioner grants database CONNECT only to deployment_login, migration_executor, app_runtime, projection_runtime, audit_runtime, and key_injector
     And the provisioner creates only empty schema etf authorized to schema_owner
     And schema etf has no explicit ACL, relation, routine, or schema-scoped default privilege
     And deployment_login connects and sets migration_executor then migration_owner
@@ -50,6 +52,9 @@ Feature: CT-DB-001 PostgreSQL contract conformance
       | changed function body hash                 |
       | extra runtime role membership              |
       | PUBLIC execute grant                       |
+      | PUBLIC database CONNECT grant              |
+      | PUBLIC database TEMPORARY grant            |
+      | missing app_runtime database CONNECT grant |
 
   Scenario Outline: CT-DB-001C a failed migration leaves no partial candidate state
     Given migration "<migration>" is forced to fail at "<boundary>"
@@ -85,7 +90,8 @@ Feature: CT-DB-001 PostgreSQL contract conformance
       | schema_owner       | migration_owner    | false       | false         | true      |
     And deployment_login connects, sets migration_executor, sets migration_owner, then resets and closes before its credential is removed
     When grants are compared with the closed role matrix
-    Then PUBLIC has no schema, table, sequence, function, or role privilege
+    Then PUBLIC has no database, schema, table, sequence, function, or role privilege
+    And database CONNECT is granted only to deployment_login, migration_executor, app_runtime, projection_runtime, audit_runtime, and key_injector
     And app_runtime cannot own objects, run DDL, set role, bypass row security, or directly mutate protected tables
     And each SECURITY DEFINER function has a fixed trusted search_path, fully qualified objects, revoked PUBLIC execution, and no caller-derived dynamic SQL
     And a denied attempt records no SQL text, parameter value, secret, or protected key material

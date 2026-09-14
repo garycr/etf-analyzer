@@ -19,7 +19,7 @@
 | DEC-021 | 2026-09-11 | Scope closure | Close #11 and #15 as prototype-scoped planning complete | Workspace Owner | Solo Orchestrator | Active |
 | DEC-022 | 2026-09-11 | Scope | Re-scope #21 to an implemented-surface prototype contract freeze | Workspace Owner | Solo Orchestrator | Reviewed; execution pending |
 | DEC-023 | 2026-09-11 | Ring gate | Approve simplified Tier 1 plan and advance Ring 1 to Ring 2 | Workspace Owner | Solo Orchestrator | Active |
-| DEC-024 | 2026-09-14 | Architecture | Provision the exact empty `etf` schema externally before migration 0001 | Workspace Owner | Solo Orchestrator | Active |
+| DEC-024 | 2026-09-14 | Architecture | Provision exact roles, database ACL, and empty `etf` schema externally before migration 0001 | Workspace Owner | Solo Orchestrator | Active |
 
 ---
 
@@ -360,14 +360,14 @@ The hash-governed candidate.2 contract and CC-002 retain their contemporaneous p
 | **ID** | DEC-024 |
 | **Date** | 2026-09-14T14:36:40Z |
 | **Category** | Architecture |
-| **Decision** | The external PostgreSQL provisioner atomically creates the closed roles, memberships, and exact empty `etf` schema owned by `schema_owner`; `0001-foundation` verifies that prerequisite and creates only its four tables and migration row. |
-| **Policy** | DEC-023; WP-1; CT-DB-001A/C/D/K; deny-by-default authority; no implicit repair; architecture review required |
-| **Authority** | Workspace Owner selected external schema provisioning after live PostgreSQL 16 returned SQLSTATE 42501 for product-role schema creation |
-| **Accountable** | Solo Orchestrator closes review findings, maintains executable preflight/rollback evidence, and does not open WP-2 |
-| **Context** | Neither `migration_owner` nor `schema_owner` has database `CREATE`, and widening permanent product-role authority would weaken the closed grant model. |
+| **Decision** | The external PostgreSQL database-owner provisioner atomically creates the closed roles and memberships, revokes database `CONNECT,TEMPORARY` from `PUBLIC`, grants database `CONNECT` only to the six closed login roles, and creates the exact empty `etf` schema owned by `schema_owner`; `0001-foundation` verifies that prerequisite and creates only its four tables and migration row. Catalog evidence expands PostgreSQL NULL database and function ACLs through `pg_catalog.acldefault`. |
+| **Policy** | DEC-023; WP-1; CT-DB-001A/B/C/D/K; deny-by-default authority; no implicit repair; architecture and alternate-model decision review required |
+| **Authority** | Workspace Owner selected external empty-schema provisioning after live PostgreSQL 16 returned SQLSTATE 42501, then explicitly selected exact external database ACL provisioning after catalog execution proved NULL database ACLs preserve implicit `PUBLIC CONNECT,TEMPORARY` |
+| **Accountable** | Solo Orchestrator maintains exact database/schema preflight, manifest, rollback, and cleanup evidence and does not open WP-2 |
+| **Context** | Neither `migration_owner` nor `schema_owner` has database `CREATE`. PostgreSQL's default NULL database ACL grants `PUBLIC CONNECT,TEMPORARY`, which conflicts with the closed database grant matrix and cannot be hidden from canonical evidence. Widening permanent product-role authority or deferring connection denial until migration 0006 would weaken bootstrap isolation. |
 | **Alternatives** | Widen migration privileges; pause for authority redesign; provision exactly the empty schema externally |
-| **Consequences** | Roles, memberships, and empty schema form an allowed but `NotReady` prerequisite. `0001` uses temporary transaction-local schema grants for direct final-owner object creation and revokes them before manifest projection. |
-| **Assumptions** | The provisioner has database-owner authority, executes no other product DDL, and removes credentials after bootstrap. |
-| **Invalidation** | Any extra schema ACL/default privilege/object, owner mismatch, broader provisioner DDL, or permanent owner grant fails closed and requires explicit operator remediation. |
-| **Status** | Active; independent architecture review PASS; implementation limited to WP-1 evidence |
-| **Linked Artifacts** | `docs/Planning/contracts/postgresql-contract.md`, `specs/features/PostgreSQL-Contract-Conformance.feature`, `docs/Operations/postgresql-bootstrap-recovery.md` |
+| **Consequences** | Roles, memberships, the exact six database `CONNECT` grants, no `PUBLIC` database privilege, and the empty schema form an allowed but `NotReady` prerequisite. `0001` uses temporary transaction-local schema grants for direct final-owner object creation and revokes them before manifest projection. Any implicit PUBLIC function grant remains visible as drift. |
+| **Assumptions** | The provisioner has database-owner authority, performs only the enumerated role, membership, database-ACL, and empty-schema operations, and removes credentials after bootstrap. |
+| **Invalidation** | Any extra or missing database grant, `PUBLIC` database privilege, extra schema ACL/default privilege/object, owner mismatch, unenumerated provisioner DDL, or permanent owner grant fails closed and requires explicit operator remediation. |
+| **Status** | Active; database-ACL amendment owner-approved; REV-033 architecture recheck PASS with no Critical or Major finding; implementation limited to WP-1 evidence |
+| **Linked Artifacts** | `docs/Planning/contracts/postgresql-contract.md`, `specs/features/PostgreSQL-Contract-Conformance.feature`, `docs/Operations/postgresql-bootstrap-recovery.md`, `docs/artifacts/gate-evidence/wp-1-postgresql-role-bootstrap.md`, `docs/Governance/decisions/reviews/REV-033-dec-024-database-acl-amendment-review.md` |

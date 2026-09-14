@@ -6,6 +6,39 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-14 | REV-034 foundation manifest code review accepted | Ring-2 | @code-reviewer
+
+**Decision:** Accept the WP-1 canonical foundation manifest and exact database-ACL implementation after closing fixture cleanup isolation
+**Policy:** DEC-023; DEC-024; WP-1; code review; test quality; deny-by-default database authority
+**Authority:** Independent Code Reviewer final PASS with no Critical, Major, or open Minor finding
+**Accountability:** Solo Orchestrator publishes the bounded increment and continues sequentially with the remaining WP-1 migrations
+**Result:** PostgreSQL 16 catalog projection, RFC 8785 hashing, NULL-ACL expansion, unsupported-object rollback, exact table closure, and fixture isolation passed the full live suite 56/56 with zero skips; npm audit found zero vulnerabilities
+**authorization-boundary:** Foundation manifest and database ACL increment only; migrations 0002-0006, complete CT-DB-001, WP-1 exit, WP-2, baseline activation, release, deployment, and production remain open or unauthorized
+
+---
+
+## 2026-09-14 | REV-033 DEC-024 database ACL amendment accepted | Ring-2 | @architect-reviewer
+
+**Decision:** Accept the owner-approved DEC-024 database-ACL amendment after contract, BDD, recovery, evidence, manifest-fidelity, and post-ACL rollback remediation
+**Policy:** Architecture Review; alternate-model Decision Review; DEC-023; DEC-024; WP-1; CT-DB-001A/B/C/D/K
+**Authority:** Architect Reviewer recheck dispatched on Claude Sonnet 5 returned PASS with no Critical or Major finding
+**Accountability:** Solo Orchestrator retains WP-1 scope, completes code review and remaining migrations, and does not open WP-2
+**Result:** Exact external database ACL and NULL-ACL expansion are accepted; full live suite passed 56/56 with zero skips; REV-033 records the disposition
+**authorization-boundary:** This accepts only the DEC-024 bootstrap and canonical ACL-evidence amendment; migrations 0002-0006, complete CT-DB-001, WP-1 exit, WP-2, baseline activation, release, deployment, and production remain unauthorized
+
+---
+
+## 2026-09-14 | DEC-024 exact database ACL amendment | Ring-2 | @workspace-owner
+
+**Decision:** Amend the external bootstrap to revoke database `CONNECT,TEMPORARY` from `PUBLIC`, grant `CONNECT` only to the six closed login roles, and expand NULL database/function ACLs in canonical catalog evidence
+**Policy:** DEC-023; DEC-024; WP-1; CT-DB-001A/B/C/D/K; deny-by-default authority; decision traceability
+**Authority:** Workspace Owner explicitly selected exact external database ACL provisioning after live PostgreSQL 16 exposed implicit PUBLIC defaults
+**Accountability:** Solo Orchestrator maintains exact provisioner scope, rollback and manifest evidence, closes alternate-model review conditions, and keeps WP-2 closed
+**Result:** Post-ACL rollback and fixture restoration passed 8/8 focused integration tests; canonical manifest is 5,272 bytes with SHA-256 `83b1c823ef98044704fa903c8c68e091a304be8adda103727231d7252972dd9e`; later REV-033 records the final architecture PASS
+**authorization-boundary:** Exact database ACL provisioning is authorized only inside the enumerated DEC-024 bootstrap transaction; remaining migrations, complete CT-DB-001, WP-1 exit, WP-2, baseline activation, release, deployment, and production remain unauthorized
+
+---
+
 ## 2026-09-14T14:36:40Z | DEC-024 external schema bootstrap accepted | Ring-2 | @architect-reviewer
 
 **Decision:** Provision exactly the empty `etf` schema externally, then require `0001-foundation` to verify it and create tables directly under their final owners

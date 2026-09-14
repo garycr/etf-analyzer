@@ -24,10 +24,33 @@
 | DEC-026 | 2026-09-14 | Architecture | Persist watchlist aggregate version in an explicit singleton table | Workspace Owner | Solo Orchestrator | Active |
 | DEC-027 | 2026-09-14 | Architecture | Close domain-ledger cryptography, owner calls, and instrument identity | Workspace Owner | Solo Orchestrator | Active |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
+| DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 
 ---
 
 ## Decision Records
+
+### DEC-029: Analytics Retention Epoch and Canonicalization
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-029 |
+| **Date** | 2026-09-14 |
+| **Category** | Architecture |
+| **Decision** | Represent analytics retention epochs as `timestamp(3) with time zone`, generate the epoch once inside `evidence_commit`, derive deadlines from elapsed 24-hour intervals, and add private helper `_evidence_rfc8785(jsonb)` so generated retention-bearing records are hashed as RFC 8785 bytes in the atomic transaction |
+| **Policy** | DEC-017; DEC-018; ADR-001; analytics evidence contract; PostgreSQL exact-catalog closure; Fully Agentic governance |
+| **Authority** | Solo Orchestrator under DEC-028 after independent Architect Reviewer approval of Option A |
+| **Accountable** | Solo Orchestrator |
+| **Context** | The PostgreSQL table registry alone declared `retention_epoch bigint`; the governing retention decision, ADR, OpenAPI UTCInstant, and canonical golden bytes all require a database-generated UTC instant. PostgreSQL 16 has no built-in RFC 8785 serializer, so the generated epoch could not enter verified bundle and manifest hashes with only the two public controlled functions. |
+| **Alternatives** | Retain bigint; trust `jsonb::text`; accept caller-generated epoch/hashes; two-step adapter protocol; private RFC 8785 helper |
+| **Consequences** | Migration 0005 contains three functions, but only `evidence_commit` and `evidence_read` are runtime APIs. The helper is invoker-security, immutable, strict, parallel safe, owner-only, and included in exact manifest hashes. No populated migration compatibility is required. |
+| **Reasoning** | The selected design preserves database time authority, atomic evidence integrity, replay stability, and the governing canonical hash contract without adding an extension or trusting caller-generated final evidence. |
+| **Assumptions** | The accepted evidence JSON profile prohibits arbitrary JSON numbers and permits only canonical safe integers on closed fields. |
+| **Invalidation** | PostgreSQL adds a reviewed native RFC 8785 facility, the evidence hash contract changes, or a populated 0005 baseline exists before this correction is published |
+| **Status** | Active |
+| **Linked Artifacts** | `docs/Architecture/ADRs/ADR-001-analytics-evidence-retention.md`, `docs/Planning/contracts/analytics-evidence-contract.md`, `docs/Planning/contracts/postgresql-contract.md`, GitHub issue #68 |
+
+---
 
 ### DEC-001: Workspace Tier Selection
 

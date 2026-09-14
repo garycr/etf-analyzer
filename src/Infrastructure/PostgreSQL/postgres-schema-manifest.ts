@@ -24,6 +24,10 @@ import {
   fixtureFunctionNames,
   fixtureTableNames,
 } from "./migrations/fixtures.js";
+import {
+  analyticsEvidenceFunctionNames,
+  analyticsEvidenceTableNames,
+} from "./migrations/analytics-evidence.js";
 import { foundationTableNames } from "./migrations/foundation.js";
 
 interface TableSource {
@@ -143,7 +147,7 @@ export async function projectPostgresSchemaManifest(
   client: ManifestClient,
   prospectiveMigration: ManifestMigration,
 ): Promise<string> {
-  if (prospectiveMigration.sequence < 1 || prospectiveMigration.sequence > 4) {
+  if (prospectiveMigration.sequence < 1 || prospectiveMigration.sequence > 5) {
     throw new Error("APPLICATION_MIGRATIONS_INCOMPLETE");
   }
   const extensions = await client.query(
@@ -333,11 +337,13 @@ export async function projectPostgresSchemaManifest(
     ...(prospectiveMigration.sequence >= 2 ? applicationTableNames : []),
     ...(prospectiveMigration.sequence >= 3 ? domainLedgerTableNames : []),
     ...(prospectiveMigration.sequence >= 4 ? fixtureTableNames : []),
+    ...(prospectiveMigration.sequence >= 5 ? analyticsEvidenceTableNames : []),
   ].sort(compareCodeUnits);
   const expectedFunctionNames = [
     ...(prospectiveMigration.sequence >= 2 ? applicationFunctionNames : []),
     ...(prospectiveMigration.sequence >= 3 ? domainLedgerFunctionNames : []),
     ...(prospectiveMigration.sequence >= 4 ? fixtureFunctionNames : []),
+    ...(prospectiveMigration.sequence >= 5 ? analyticsEvidenceFunctionNames : []),
   ].sort(compareCodeUnits);
 
   if (

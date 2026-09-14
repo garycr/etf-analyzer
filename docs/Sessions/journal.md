@@ -6,6 +6,17 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-14 | REV-041 0005 analytics-evidence migration accepted | Ring-2 | @code-reviewer
+
+**Decision:** Accept the bounded `0005-analytics-evidence` additive migration after closing canonical admission, replay concurrency, publication serialization, degraded persistence, read-integrity, retention-cardinality, rollback, and exact-hash findings
+**Policy:** DEC-023; DEC-029; WP-1; code review; test quality; exact catalog closure; RET-A-1.0
+**Authority:** Independent Code Reviewer final APPROVE/PASS with no remaining finding
+**Accountability:** Solo Orchestrator publishes only the empty-database sequence-5 increment and continues sequentially to `0006-controlled-access`
+**Result:** SQL hash `638fdcb40695be04a30c56807e529f753fd37c80ccfdcd6ad58f04e603287cc4`; manifest hash `3ec98b0909672256f88fe5e6851507ee634f5f8c484bcc745fe26e3e70e1a5ec`; 94/94 tests; lint pass; zero vulnerabilities; GitHub issue #68
+**authorization-boundary:** Additive 0005 physical persistence into an empty database with synthetic conformance records only; no legacy copy, transformation, backfill, reconciliation, 0006 controls, WP-1 exit, WP-2, WP-3 authorization orchestration, WP-5 analytics computation, release, deployment, or production authority
+
+---
+
 ## 2026-09-14 | REV-040 0004 fixture migration accepted | Ring-2 | @code-reviewer
 
 **Decision:** Accept the bounded `0004-fixtures` additive migration after closing physical-preservation, replay-custody, exact-catalog, ordered-readback, rollback, and PostgreSQL identifier-limit findings

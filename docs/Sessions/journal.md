@@ -6,6 +6,17 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-14 | REV-040 0004 fixture migration accepted | Ring-2 | @code-reviewer
+
+**Decision:** Accept the bounded `0004-fixtures` additive migration after closing physical-preservation, replay-custody, exact-catalog, ordered-readback, rollback, and PostgreSQL identifier-limit findings
+**Policy:** DEC-023; DEC-028; WP-1; code review; test quality; exact catalog closure
+**Authority:** Independent Code Reviewer final PASS with no in-scope finding
+**Accountability:** Solo Orchestrator publishes only the empty-database fixture migration increment and continues sequentially within WP-1
+**Result:** SQL hash `8f73d86024e38c043328c3ac3102dffb627df579757009f150f789bba1bb5b60`; manifest hash `1c51b8d8b88fd9a5c31af24ae8560f82f9359093134adf4edcd8a6255d9a212e`; 86/86 tests; zero vulnerabilities; GitHub issue #67
+**authorization-boundary:** Additive 0004 physical persistence into an empty database with synthetic conformance records only; no legacy copy, transformation, backfill, reconciliation, JSONL reconstruction, full package validation, PT-FIX behavior, migrations 0005-0006, WP-1 exit, WP-2, release, deployment, or production authority
+
+---
+
 ## 2026-09-14 | REV-039 0003 domain-ledger migration accepted | Ring-2 | @code-reviewer
 
 **Decision:** Accept the bounded `0003-domain-ledger` additive migration after closing canonical evidence, FIFO/reversal, immediate-FK, clean-authority, and audit-digest findings

@@ -23,6 +23,7 @@
 | DEC-025 | 2026-09-14 | Architecture | Retain schema USAGE without CREATE for controlled-function owner roles | Workspace Owner | Solo Orchestrator | Active |
 | DEC-026 | 2026-09-14 | Architecture | Persist watchlist aggregate version in an explicit singleton table | Workspace Owner | Solo Orchestrator | Active |
 | DEC-027 | 2026-09-14 | Architecture | Close domain-ledger cryptography, owner calls, and instrument identity | Workspace Owner | Solo Orchestrator | Active |
+| DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 
 ---
 
@@ -431,3 +432,22 @@ The hash-governed candidate.2 contract and CC-002 retain their contemporaneous p
 | **Invalidation** | Missing/extra extension, runtime extension authority, adapter-only unverified digest, direct runtime audit/anchor access, partial multi-call commits, mutable/derived/fill-only instrument identity, or an unlisted owner grant fails closed. |
 | **Status** | Active; REV-038 architecture review APPROVED with no Critical or Major finding; 0001/0002 extension rebaseline proven live |
 | **Linked Artifacts** | `docs/Planning/contracts/postgresql-contract.md`, `docs/Planning/contracts/application-contract.md`, `docs/Planning/contracts/openapi-contract.yaml`, `docs/Planning/contracts/domain-ledger-function-contract.md`, `docs/Governance/decisions/reviews/REV-038-dec-027-domain-ledger-prerequisites-review.md` |
+
+### DEC-028: Enable Fully Agentic Delivery
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-028 |
+| **Date** | 2026-09-14 |
+| **Category** | Governance |
+| **Decision** | Change workspace autonomy from Human-in-the-Loop to Fully Agentic. The Solo Orchestrator may evaluate, decide, record, and proceed through routine work, review remediation, work-package progression, and ring gates without waiting for synchronous Workspace Owner approval. |
+| **Policy** | `.github/skills/human-decision-points.md` section 5; Tier 1 Small Team; Light governance; prototype scope and sequential Ring 2 WBS |
+| **Authority** | Workspace Owner selected the recommended Fully Agentic mode after reviewing the retained approval boundaries. |
+| **Accountable** | Solo Orchestrator preserves required tests, reviews, evidence, decision logging, and GitHub issue traceability; stops for DP-1, DP-25, and DP-26; and does not expand the approved prototype or begin a dependent work package before its prerequisites pass. |
+| **Context** | The Workspace Owner is satisfied with observed detail and accuracy and requested fewer synchronous approvals so implementation can proceed more efficiently. |
+| **Alternatives** | Retain Human-in-the-Loop; require approval only at ring gates; define custom decision boundaries. |
+| **Consequences** | Routine approvals become asynchronous and are represented by decision records and GitHub issues. Production deployment, emergency hotfix approval, and team-tier selection remain human decisions. The Workspace Owner may restore Human-in-the-Loop mode at any time. |
+| **Assumptions** | Existing quality controls remain active and the agent escalates ambiguity, unavailable authority, budget hard stops, secrets, and irreversible production actions. |
+| **Invalidation** | Workspace Owner revocation, repeated material quality failures, a required governance degradation trigger, or inability to maintain the mandated audit trail restores or requires a lower-autonomy mode. |
+| **Status** | Active |
+| **Linked Artifacts** | `.github/workspace-config.md`, `.github/skills/human-decision-points.md`, `docs/Planning/tasks/ring-2-wbs.md` |

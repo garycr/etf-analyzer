@@ -9,13 +9,15 @@
 **Structure:** Small Team
 **Top Role:** Solo Orchestrator
 **Config Hash:** `c01decb4c0a0e4fde7455f935487df3add1c07f2c7443773fd9a3379a9875509`
-**Autonomy:** Human-in-the-Loop
+**Autonomy:** Fully Agentic
 **Governance Intensity:** Light
 
 > **Light Governance.** Only ring gate decision points are enforced (DP-5, DP-8, DP-13, DP-22, DP-24).
 > - Brainstorming is available but not required at any ring.
 > - Architecture reviews are recommended but not mandatory at gates.
 > - Best for small teams, migrations, or rapid delivery.
+>
+> **Fully Agentic override.** The Solo Orchestrator evaluates, records, and proceeds through agent-owned decisions without waiting. DP-1, DP-25, and DP-26 remain human-owned. Required tests, reviews, evidence, scope boundaries, and asynchronous GitHub traceability remain enforced.
 **Configured:** 2026-09-10
 **Last Modified:** 2026-09-10
 

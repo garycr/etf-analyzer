@@ -91,3 +91,16 @@ test("migration preflight permits contract lifecycle event fields", () => {
 
   assert.doesNotThrow(() => prepareMigrationSet(artifacts));
 });
+
+test("migration preflight permits contract release timestamp indexes", () => {
+  const artifacts = expectedMigrationIds.map((migrationId, index) => ({
+    migrationId,
+    sequence: index + 1,
+    sql:
+      index === 3
+        ? "CREATE INDEX ix_economic_observations__release_timestamp ON etf.economic_observations (release_timestamp);\n"
+        : migrationSql[index],
+  }));
+
+  assert.doesNotThrow(() => prepareMigrationSet(artifacts));
+});

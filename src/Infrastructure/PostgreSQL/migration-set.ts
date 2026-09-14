@@ -21,7 +21,7 @@ export interface PreparedMigration extends MigrationArtifact {
 
 const productExtensionPattern = /\bCREATE\s+EXTENSION\b/iu;
 const durableHandoffObjectPattern =
-  /\bCREATE\s+(?:TABLE|FUNCTION|TRIGGER|INDEX|VIEW)\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:[a-z_][a-z0-9_]*\.)?[a-z0-9_]*(?:outbox|event|queue|schedule|lease|worker_inbox|notification|delayed_consumer)[a-z0-9_]*/iu;
+  /\bCREATE\s+(?:TABLE|FUNCTION|TRIGGER|INDEX|VIEW)\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:[a-z_][a-z0-9_]*\.)?[a-z0-9_]*(?:outbox|event|queue|schedule|(?<!re)lease|worker_inbox|notification|delayed_consumer)[a-z0-9_]*/iu;
 
 export function validateMigrationArtifact(artifact: MigrationArtifact): void {
   if (expectedMigrationIds[artifact.sequence - 1] !== artifact.migrationId) {

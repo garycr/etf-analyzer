@@ -20,6 +20,10 @@ import {
   domainLedgerFunctionNames,
   domainLedgerTableNames,
 } from "./migrations/domain-ledger.js";
+import {
+  fixtureFunctionNames,
+  fixtureTableNames,
+} from "./migrations/fixtures.js";
 import { foundationTableNames } from "./migrations/foundation.js";
 
 interface TableSource {
@@ -139,7 +143,7 @@ export async function projectPostgresSchemaManifest(
   client: ManifestClient,
   prospectiveMigration: ManifestMigration,
 ): Promise<string> {
-  if (prospectiveMigration.sequence < 1 || prospectiveMigration.sequence > 3) {
+  if (prospectiveMigration.sequence < 1 || prospectiveMigration.sequence > 4) {
     throw new Error("APPLICATION_MIGRATIONS_INCOMPLETE");
   }
   const extensions = await client.query(
@@ -328,10 +332,12 @@ export async function projectPostgresSchemaManifest(
     ...foundationTableNames,
     ...(prospectiveMigration.sequence >= 2 ? applicationTableNames : []),
     ...(prospectiveMigration.sequence >= 3 ? domainLedgerTableNames : []),
+    ...(prospectiveMigration.sequence >= 4 ? fixtureTableNames : []),
   ].sort(compareCodeUnits);
   const expectedFunctionNames = [
     ...(prospectiveMigration.sequence >= 2 ? applicationFunctionNames : []),
     ...(prospectiveMigration.sequence >= 3 ? domainLedgerFunctionNames : []),
+    ...(prospectiveMigration.sequence >= 4 ? fixtureFunctionNames : []),
   ].sort(compareCodeUnits);
 
   if (

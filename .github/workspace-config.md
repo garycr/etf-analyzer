@@ -8,7 +8,7 @@
 **Tier:** 1 — Small Team
 **Structure:** Small Team
 **Top Role:** Solo Orchestrator
-**Config Hash:** `dcbf39178571eb11b1781138b3018271950668467988cf167d20ddc20168b6fe`
+**Config Hash:** `c01decb4c0a0e4fde7455f935487df3add1c07f2c7443773fd9a3379a9875509`
 **Autonomy:** Human-in-the-Loop
 **Governance Intensity:** Light
 
@@ -161,3 +161,8 @@ Team Lead (You — main thread)
 - **Tier 1 → 2:** Activates PM, Project Leads, formal governance, planning artifacts
 - **Tier 2 → 3:** Activates Program Executive, Ops Chief, Embedded Enablers, full compliance suite
 - **Downgrade:** Higher-tier files remain in place but are marked inactive in this config
+
+## Deployment Configuration
+
+**Deployment Mode:** Full local (VSIX)
+**Governance Source:** bundled-vsix

@@ -16,6 +16,10 @@
 | DEC-013 | 2026-09-10 | Governance | Appoint distinct Team Lead as schema contract custodian with governed escalation | Workspace Owner | Team Lead | Active |
 | DEC-014 | 2026-09-10 | Architecture | Select field-specific balanced financial precision and half-even rounding | Workspace Owner | Team Lead | Active |
 | DEC-020 | 2026-09-11 | Scope | Re-scope analytics acceptance to a trustworthy first-prototype subset | Workspace Owner | Solo Orchestrator | Active |
+| DEC-021 | 2026-09-11 | Scope closure | Close #11 and #15 as prototype-scoped planning complete | Workspace Owner | Solo Orchestrator | Active |
+| DEC-022 | 2026-09-11 | Scope | Re-scope #21 to an implemented-surface prototype contract freeze | Workspace Owner | Solo Orchestrator | Reviewed; execution pending |
+| DEC-023 | 2026-09-11 | Ring gate | Approve simplified Tier 1 plan and advance Ring 1 to Ring 2 | Workspace Owner | Solo Orchestrator | Active |
+| DEC-024 | 2026-09-14 | Architecture | Provision the exact empty `etf` schema externally before migration 0001 | Workspace Owner | Solo Orchestrator | Active |
 
 ---
 
@@ -281,3 +285,89 @@
 | **Invalidation** | First real-provider integration; first transformation-bearing rule; first multi-runtime or multi-writer path; implementation of archive, restore, freeze, or capacity states; scope expansion beyond local single-user research; or evidence that a deferred case removes a canonical Objective floor |
 | **Status** | Active; supersedes DEC-019 only as to blanket deferral. #64 synchronization is complete; prototype acceptance #65, implementation authorization, and ring advancement remain pending. |
 | **Linked Artifacts** | `docs/Governance/decisions/reviews/REV-015-analytics-prototype-rescope-plan-review.md`, `docs/Governance/decisions/reviews/REV-014-analytics-evidence-contract-test-review.md`, GitHub #57-#62, GitHub #64, GitHub #65 |
+
+---
+
+### DEC-021: Close Prototype-Scoped Analytics Planning
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-021 |
+| **Date** | 2026-09-11 |
+| **Category** | Scope closure |
+| **Decision** | Close GitHub #11 and #15 as prototype-scoped planning complete after #65 and REV-016 PASS. |
+| **Policy** | DEC-020 prototype boundary; REV-016 independent acceptance; Human-in-the-Loop scope disposition |
+| **Authority** | Workspace Owner |
+| **Accountable** | Solo Orchestrator for synchronized issue closure and boundary preservation; Team Lead retains analytics contract custody |
+| **Context** | The accepted local, fixture-only, single-user prototype has design-time coverage for point-in-time truth, reproducibility, retention, integrity, least privilege, and fail-closed evidence behavior. #65 closed after an independent narrow PASS with no open Critical or Major finding in the retained subset. |
+| **Alternatives** | Keep #11/#15 open until full REV-014 remediation; close them without preserving deferred debt; close them as prototype-scoped complete while retaining #57-#62 |
+| **Consequences** | #11 and #15 close as completed for the first prototype. #57-#62 remain open as non-waived post-prototype debt, full REV-014 remains FAIL, and candidate.2 remains a reviewed intermediate outside the accepted prototype slice. |
+| **Reasoning** | Parent planning issues should reflect the accepted delivery scope while exhaustive future-state permutations remain visible and independently tracked. |
+| **Assumptions** | DEC-020 prototype assumptions and all seven #65 entry guards remain valid. |
+| **Invalidation** | Any DEC-020 invalidation trigger, failure of a #65 entry guard, or expansion beyond the accepted prototype scope reopens the applicable analytics planning obligation. |
+| **Status** | Active; supersedes DEC-020 and REV-016 only as to their prior prohibition on #11/#15 closure. No other authority boundary changes. |
+| **Linked Artifacts** | `docs/Planning/contracts/evidence/ISSUE-065-prototype-analytics-acceptance.md`, `docs/Governance/decisions/reviews/REV-016-prototype-analytics-acceptance-test-review.md`, GitHub #11, GitHub #15, GitHub #57-#62 |
+
+The hash-governed candidate.2 contract and CC-002 retain their contemporaneous pre-closure status text so their recorded SHA-256 remains valid. DEC-021 and the mutable contract registry are the current status authority.
+
+---
+
+### DEC-022: Re-scope the Prototype Contract Freeze
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-022 |
+| **Date** | 2026-09-11 |
+| **Category** | Scope |
+| **Decision** | Re-scope #21 from a complete future-state aggregate baseline to a guarded freeze of only the contract surfaces implemented by the first local, fixture-only, single-user prototype. |
+| **Policy** | DEC-011 canonical floors; DEC-013 custody; DEC-020/DEC-021 prototype boundary; Tier 1 Light governance; decision review |
+| **Authority** | Workspace Owner |
+| **Accountable** | Solo Orchestrator for scope trace; Team Lead retains contract custody; implementation owners remain unassigned |
+| **Context** | Mandatory future-state OpenAPI, populated-database migration, event, provider, and multi-stream evidence would create speculative work for a sequential prototype. The prototype still needs stable contracts for every surface it actually consumes. |
+| **Alternatives** | Complete the full aggregate baseline before prototype planning closure; waive contract coordination; freeze only inventoried surfaces with deterministic expansion guards |
+| **Consequences** | #21 uses a durable surface inventory and conditional guards. The canonical browser/localhost API and PostgreSQL surfaces are expected; their absence requires an explicit Workspace Owner Objective deviation. Events, provider breadth, upgrade compatibility, and stream acknowledgements are promoted when their corresponding guard fails. Custody, DEC-011 floors, version binding, review, and no-self-approval remain mandatory. |
+| **Reasoning** | Contract rigor should follow the prototype's real blast radius while guards prevent optional surfaces from appearing without their required controls. |
+| **Assumptions** | Local fixtures, disabled outbound provider egress, one sequential stream, no prior active compatibility claim, expected bounded localhost API and PostgreSQL surfaces, and only inventoried durable event handoffs. |
+| **Invalidation** | Any guard failure; real-provider connection; second implementation stream; prior-baseline compatibility claim; or an implemented API, database, outbox, or asynchronous event surface missing its bounded contract. |
+| **Status** | Workspace Owner approved all REV-017 corrections; independent Plan Reviewer recheck PASS with no unresolved Critical or Major finding. Acceptance definition is reviewed; #21 execution and closure evidence remain pending. No implementation, baseline activation, parallel release, or Ring 2 authority follows. |
+| **Linked Artifacts** | `docs/Planning/contracts/evidence/ISSUE-021-prototype-contract-freeze.md`, GitHub #21, DEC-011, DEC-013, DEC-020, DEC-021 |
+
+---
+
+### DEC-023: Approve Ring 1 Exit and Open Ring 2
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-023 |
+| **Date** | 2026-09-11T19:36:59Z |
+| **Category** | Ring gate |
+| **Decision** | Approve the Tier 1 Light applicability reconciliation, sequential WP-1..WP-8 WBS, 16-week schedule, cost/token baseline, and #21 planning closure; close Ring 1 and open Ring 2 at WP-1 only. |
+| **Policy** | Active Tier 1 Small Team / Light configuration; Ring 1 gate; Human-in-the-Loop; DEC-010/011/012/013/020/021/022 |
+| **Authority** | Workspace Owner |
+| **Accountable** | Solo Orchestrator executes one package at a time, beginning with WP-1; Team Lead retains contract custody |
+| **Context** | Design-time contracts were complete, but Ring 1 remained at 10% because executable evidence and generic Five-Team ceremony had been treated as planning prerequisites. The reconciled package separates planning allocation from Ring 2 proof. |
+| **Alternatives** | Continue generic Five-Team artifact generation; approve planning but hold Ring 2; accept the simplified Tier 1 package and advance |
+| **Consequences** | Ring 1 closes at 100%; #21 closes as planning complete; Ring 2 opens at WP-1. Executable checks remain mandatory in WP-1..WP-8 and DP-33 remains required in WP-8 before IV&V. |
+| **Assumptions** | One sequential stream; fixture-only runtime; no live provider, broker, event handoff, public ingress, baseline activation, deployment, or runtime AI dependency |
+| **Invalidation** | A second stream, live-provider path, contract drift, scope change above threshold, failed WP gate, or forecast variance above policy threshold requires owner disposition or rebaseline. |
+| **Status** | Active; authorizes Ring 2 WP-1 only and no production action |
+| **Linked Artifacts** | `docs/Planning/ring-1-exit-assessment.md`, `docs/Planning/tasks/ring-2-wbs.md`, `docs/Planning/schedule/ring-2-delivery-schedule.md`, `docs/Planning/cost-baseline.md`, `docs/Planning/token-review-baseline.md`, GitHub #21 |
+
+### DEC-024: Provision the Initial Schema Externally
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-024 |
+| **Date** | 2026-09-14T14:36:40Z |
+| **Category** | Architecture |
+| **Decision** | The external PostgreSQL provisioner atomically creates the closed roles, memberships, and exact empty `etf` schema owned by `schema_owner`; `0001-foundation` verifies that prerequisite and creates only its four tables and migration row. |
+| **Policy** | DEC-023; WP-1; CT-DB-001A/C/D/K; deny-by-default authority; no implicit repair; architecture review required |
+| **Authority** | Workspace Owner selected external schema provisioning after live PostgreSQL 16 returned SQLSTATE 42501 for product-role schema creation |
+| **Accountable** | Solo Orchestrator closes review findings, maintains executable preflight/rollback evidence, and does not open WP-2 |
+| **Context** | Neither `migration_owner` nor `schema_owner` has database `CREATE`, and widening permanent product-role authority would weaken the closed grant model. |
+| **Alternatives** | Widen migration privileges; pause for authority redesign; provision exactly the empty schema externally |
+| **Consequences** | Roles, memberships, and empty schema form an allowed but `NotReady` prerequisite. `0001` uses temporary transaction-local schema grants for direct final-owner object creation and revokes them before manifest projection. |
+| **Assumptions** | The provisioner has database-owner authority, executes no other product DDL, and removes credentials after bootstrap. |
+| **Invalidation** | Any extra schema ACL/default privilege/object, owner mismatch, broader provisioner DDL, or permanent owner grant fails closed and requires explicit operator remediation. |
+| **Status** | Active; independent architecture review PASS; implementation limited to WP-1 evidence |
+| **Linked Artifacts** | `docs/Planning/contracts/postgresql-contract.md`, `specs/features/PostgreSQL-Contract-Conformance.feature`, `docs/Operations/postgresql-bootstrap-recovery.md` |

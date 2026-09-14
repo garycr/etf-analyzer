@@ -6,6 +6,17 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-14T14:36:40Z | DEC-024 external schema bootstrap accepted | Ring-2 | @architect-reviewer
+
+**Decision:** Provision exactly the empty `etf` schema externally, then require `0001-foundation` to verify it and create tables directly under their final owners
+**Policy:** DEC-023; WP-1; CT-DB-001A/C/D/K; deny-by-default authority; architecture review
+**Authority:** Workspace Owner selection followed by independent Architect Reviewer PASS with no release-blocking findings
+**Accountability:** Solo Orchestrator retains WP-1 scope, canonical manifest implementation, and complete migration evidence; WP-2 remains closed
+**Result:** Pinned PostgreSQL proved exact role/schema bootstrap 3/3, direct final ownership with temporary `USAGE, CREATE` revoked before projection 1/1, forced rollback to the exact empty prerequisite, and explicit absent-ledger `NotReady` behavior 5/5
+**authorization-boundary:** DEC-024 and the bootstrap/0001 authority path are accepted; no complete manifest, committed 0001 ledger row, CT-DB-001, WP-1 exit, WP-2 overlap, baseline activation, release, deployment, or production authority
+
+---
+
 ## 2026-09-10T15:44:47 | WORK-001 | Ring-0 | @extension
 
 **Type:** WORK
@@ -15,6 +26,60 @@
 **duration-ms:** 6
 
 ---
+
+## 2026-09-11T19:19:07Z | Ring 1 exit reconciliation plan review | Ring-1 | @plan-reviewer
+
+**Decision:** PASS the Tier 1 Light exit package for Workspace Owner presentation after bounded DP-33 tracking and clarity corrections
+**Policy:** Tier 1 Light governance; Ring 1 exit criteria; alternate-model decision review; no executable-evidence waiver
+**Authority:** Independent Plan Reviewer using Claude Sonnet 5
+**Accountability:** Solo Orchestrator assigns DP-33 before IV&V, clarifies sizing/rounding/sequential risk, and presents one owner gate decision
+**Result:** 0 Critical; 1 Major closed by WP-8/M8 DP-33 allocation; three Minor clarifications applied; contracts and implementation evidence not reopened
+**authorization-boundary:** Ring 1 remains REVIEW at 95%; #21 remains open; no Ring 2, implementation, dependency, baseline activation, parallel work, deployment, or production authorization
+
+## 2026-09-11T19:19:07Z | Ring 1 GitHub tracking reconciliation | Ring-1 | @solo-orchestrator
+
+**Decision:** Create the mandatory open Ring 1 milestone and assign issue #21 without closing or advancing either
+**Policy:** Ring-management GitHub milestone mapping; Ring 1 gate evidence integrity
+**Authority:** Workspace Owner instruction to reconcile the Ring 1 exit gate
+**Accountability:** Solo Orchestrator verifies milestone and issue state before owner gate presentation
+**Result:** GitHub milestone #1 `Ring 1 — Plan` is OPEN; issue #21 is OPEN and assigned to it
+**authorization-boundary:** Administrative tracking only; Ring 1 remains REVIEW and no Ring 2 or implementation authority is granted
+
+## 2026-09-11T22:18:00Z | REV-030 PostgreSQL role-bootstrap review | Ring-2 | @code-reviewer
+
+**Decision:** Accept the external PostgreSQL role-bootstrap increment after rollback, cleanup, and closed-membership remediation
+**Policy:** DEC-023; WP-1; CT-DB-001A/D; code review; deny-by-default database authority
+**Authority:** Independent Code Reviewer final PASS with no blocker
+**Accountability:** Solo Orchestrator continues WP-1 with product migrations, object grants/functions, and schema manifests
+**Result:** Exact fourteen roles and nine memberships executed against PostgreSQL 16.15; forced rollback and closed catalog checks passed; 25 tests passed with zero skips
+**authorization-boundary:** Role bootstrap leaf only; no complete CT-DB-001, WP-1 exit, WP-2 overlap, baseline activation, architecture acceptance, release, deployment, or production authority
+
+## 2026-09-11T20:20:10Z | REV-029 PostgreSQL readiness review | Ring-2 | @code-reviewer
+
+**Decision:** Accept the PostgreSQL 16 baseline-settings readiness increment after evidence remediation and recheck
+**Policy:** DEC-023; WP-1; CT-DB-001K; code review; OSS review
+**Authority:** Independent Code Reviewer PASS after exact evidence-count correction
+**Accountability:** Solo Orchestrator continues WP-1 with migration SQL, role bootstrap, manifests, and remaining conformance evidence
+**Result:** Pinned PostgreSQL 16.15 returned `16.15|UTF8|UTC|on|C`; 20 tests passed with zero skips; dependency audit found zero vulnerabilities
+**authorization-boundary:** Baseline-settings leaf only; no complete CT-DB-001, WP-1 exit, WP-2 overlap, baseline activation, architecture acceptance, release, deployment, or production authority
+
+## 2026-09-11T19:59:55Z | REV-028 WP-1 foundation code review | Ring-2 | @code-reviewer
+
+**Decision:** Accept the first WP-1 foundation increment after focused remediation and alternate-model recheck
+**Policy:** DEC-023; WP-1 test-first delivery; code review; test quality; OSS review
+**Authority:** Independent Code Reviewer PASS with no Critical or Major finding
+**Accountability:** Solo Orchestrator continues WP-1 with PostgreSQL execution and preserves the sequential boundary
+**Result:** Node 20/TypeScript build, CI commands, fail-closed configuration, redacted logging, health primitives, migration preflight, 15 unit tests, and zero-vulnerability audit validated
+**authorization-boundary:** WP-1 remains in progress; no completed CT-DB-001 claim, WP-2 overlap, baseline activation, architecture acceptance, release, deployment, or production action
+
+## 2026-09-11T19:36:59Z | DEC-023 Ring 1 exit decision | Ring-1 | @workspace-owner
+
+**Decision:** Approve the reconciled Tier 1 plan and baselines, close #21 and Ring 1, and advance to Ring 2 at WP-1 only
+**Policy:** Tier 1 Light governance; Human-in-the-Loop ring gate; DEC-010/011/012/013/020/021/022
+**Authority:** Workspace Owner explicit selection `Approve and advance to Ring 2`
+**Accountability:** Solo Orchestrator executes the approved sequential WBS beginning with WP-1 and reports variance; Team Lead retains contract custody
+**Result:** DEC-023 recorded; Ring 1 Closed/100%; Ring 2 Active/0%; WBS, schedule, cost, and token baselines approved; local #21 planning evidence closed
+**authorization-boundary:** WP-1 may begin; no WP-2 overlap, parallel work, live provider, broker, public ingress, durable event, baseline activation, deployment, or production authorization
 
 ## 2026-09-10T15:46:17 | WORK-002 | Ring-0 | @initializer
 
@@ -199,6 +264,576 @@
 **Artifact:** docs/Planning/contracts/evidence/CC-002-analytics-candidate-delta.md
 **authorization-boundary:** Administrative only; #65 remains pending and no implementation, baseline freeze, #15/#11 closure, Ring 2 advancement, or parallel execution is authorized
 **selector:** human
+
+---
+
+## 2026-09-11T14:20:00Z | REV-016 initial review | Ring-1 | @test-reviewer
+
+**Type:** REVIEW
+**Decision:** FAIL #65 prototype analytics acceptance pending two narrow Major corrections
+**Policy:** DEC-020 prototype minimum set | independent test review | decision traceability
+**Authority:** Independent Test Reviewer
+**Accountability:** Solo Orchestrator for artifact correction; Workspace Owner for finding disposition
+**Result:** No Critical findings; 11/13 unconditional rows and conditional CT-ANA-004 met; M-1 and M-2 block closure; Mi-1..Mi-10 require human disposition
+**Artifact:** docs/Governance/decisions/reviews/REV-016-prototype-analytics-acceptance-test-review.md
+**authorization-boundary:** #65 remains open; full REV-014 remains FAIL; no implementation, baseline freeze, #15/#11 closure, Ring 2 advancement, or parallel execution
+**selector:** delegated
+
+---
+
+## 2026-09-11T14:24:00Z | REV-016 disposition | Ring-1 | @solo-orchestrator
+
+**Type:** FINDING-DISPOSITION
+**Decision:** Remediate REV-016 M-1 and M-2; defer Mi-1..Mi-10 as non-waiving review debt
+**Policy:** Human-in-the-Loop finding disposition | DEC-020 prototype boundary
+**Authority:** Workspace Owner
+**Accountability:** Solo Orchestrator for bounded remediation and independent recheck
+**Result:** M-1/M-2 corrected; focused seven-condition validation PASS; final independent recheck pending
+**Artifact:** docs/Planning/contracts/evidence/ISSUE-065-prototype-analytics-acceptance.md
+**authorization-boundary:** Planning artifact remediation only; no implementation, baseline freeze, #15/#11 closure, Ring 2 advancement, or parallel execution
+**selector:** human
+
+---
+
+## 2026-09-11T14:31:00Z | REV-016 final recheck | Ring-1 | @test-reviewer
+
+**Type:** REVIEW
+**Decision:** PASS the corrected #65 prototype analytics acceptance allocation
+**Policy:** DEC-020 prototype minimum set | narrow independent recheck | non-waiving finding disposition
+**Authority:** Independent Test Reviewer
+**Accountability:** Solo Orchestrator for review persistence and #65 disposition; Workspace Owner retains scope authority
+**Result:** M-1 and M-2 closed; 0 new Critical and 0 new Major; Mi-1..Mi-10 explicitly deferred by Workspace Owner; all 14 rows intact; #65 may close as prototype-analytics planning acceptance only
+**Artifact:** docs/Governance/decisions/reviews/REV-016-prototype-analytics-acceptance-test-review.md
+**authorization-boundary:** Full REV-014 remains FAIL; candidate.2 remains a reviewed intermediate; no implementation, baseline freeze, #15/#11 closure, Ring 2 advancement, release, or parallel execution
+**selector:** delegated
+
+---
+
+## 2026-09-11T14:35:00Z | #65 closure | Ring-1 | @solo-orchestrator
+
+**Type:** ISSUE-CLOSURE
+**Decision:** Close #65 as completed after independent prototype-scoped PASS
+**Policy:** DEC-020 prototype acceptance | REV-016 final narrow recheck
+**Authority:** Workspace Owner scope disposition and Independent Test Reviewer PASS
+**Accountability:** Solo Orchestrator for issue closure and boundary preservation
+**Result:** #65 closed; 14-row allocation and seven guards accepted for prototype analytics planning; Mi-1..Mi-10 remain non-waived review debt
+**Artifact:** docs/Planning/contracts/evidence/ISSUE-065-prototype-analytics-acceptance.md
+**authorization-boundary:** Full REV-014 remains FAIL; #57-#62 remain open; candidate.2 remains a reviewed intermediate; no implementation, baseline freeze, #15/#11 closure, Ring 2 advancement, release, or parallel execution
+**selector:** human-and-delegated
+
+---
+
+## 2026-09-11T14:45:00Z | DEC-021 / #11 / #15 | Ring-1 | @solo-orchestrator
+
+**Type:** SCOPE-CLOSURE
+**Decision:** Close #11 and #15 as prototype-scoped planning complete
+**Policy:** DEC-020 prototype boundary | REV-016 independent PASS | Human-in-the-Loop disposition
+**Authority:** Workspace Owner
+**Accountability:** Solo Orchestrator for issue closure and status synchronization; Team Lead retains analytics contract custody
+**Result:** Prototype analytics planning accepted; #11/#15 authorized to close; #57-#62 remain open and full REV-014 remains FAIL
+**Artifact:** docs/Governance/decisions/decision-log.md#DEC-021
+**authorization-boundary:** No contract digest change, baseline freeze, implementation, dependency installation, Ring 2 advancement, release, or parallel execution
+**selector:** human
+
+---
+
+## 2026-09-11T14:49:00Z | #11 / #15 closure | Ring-1 | @solo-orchestrator
+
+**Type:** ISSUE-CLOSURE
+**Decision:** Close GitHub #11 and #15 as completed for prototype-scoped planning
+**Policy:** DEC-021 | REV-016 prototype analytics PASS
+**Authority:** Workspace Owner
+**Accountability:** Solo Orchestrator for remote closure and trace consistency
+**Result:** #11 and #15 closed as completed; issue descriptions preserve full REV-014 FAIL, reviewed-intermediate status, and #57-#62 deferred debt
+**Artifact:** docs/Governance/decisions/decision-log.md#DEC-021
+**authorization-boundary:** No baseline freeze, implementation, dependency installation, Ring 2 advancement, release, or parallel execution
+**selector:** human
+
+---
+
+## 2026-09-11T15:05:00Z | DEC-022 / #21 re-scope | Ring-1 | @solo-orchestrator
+
+**Type:** SCOPE-DISPOSITION
+**Decision:** Re-scope #21 to a guarded prototype contract-surface freeze
+**Policy:** DEC-011 floors | DEC-013 custody | DEC-020 prototype boundary | decision review
+**Authority:** Workspace Owner
+**Accountability:** Solo Orchestrator for scope trace; Team Lead retains contract custody
+**Result:** Future-state API, migration, event, provider, and multi-stream obligations become conditional on durable surface guards; alternate-model Plan Review pending
+**Artifact:** docs/Planning/contracts/evidence/ISSUE-021-prototype-contract-freeze.md
+**authorization-boundary:** No implementation, dependency installation, baseline activation, parallel release, architecture acceptance, or Ring 2 advancement
+**selector:** human
+
+---
+
+## 2026-09-11T15:14:00Z | REV-017 / DEC-022 | Ring-1 | @plan-reviewer
+
+**Type:** REVIEW
+**Decision:** IMPROVEMENTS IDENTIFIED for the #21 prototype contract-surface freeze
+**Policy:** Alternate-model decision review | DEC-011 floors | DEC-013 custody | prototype boundary
+**Authority:** Independent Plan Reviewer
+**Accountability:** Workspace Owner for finding disposition; Solo Orchestrator for approved remediation
+**Result:** Mechanism accepted in principle; C-1..C-4, M-1..M-6, Mi-1..Mi-7, and S-1..S-2 require human disposition before live #21 criteria change
+**Artifact:** docs/Governance/decisions/reviews/REV-017-issue-021-prototype-contract-freeze-plan-review.md
+**authorization-boundary:** #21 remains unchanged and open; no implementation, dependency installation, baseline activation, architecture acceptance, parallel release, or Ring 2 advancement
+**selector:** delegated
+
+---
+
+## 2026-09-11T15:18:00Z | REV-017 disposition | Ring-1 | @solo-orchestrator
+
+**Type:** FINDING-DISPOSITION
+**Decision:** Approve all REV-017 corrections for the DEC-022 #21 re-scope
+**Policy:** Human-in-the-Loop decision review | DEC-011 floors | DEC-013 custody
+**Authority:** Workspace Owner
+**Accountability:** Solo Orchestrator for remediation and registry synchronization; Team Lead retains custody
+**Result:** C-1..C-4, M-1..M-6, Mi-1..Mi-7, and S-1..S-2 remediated; CC-003 and registry synchronized; independent recheck pending
+**Artifact:** docs/Planning/contracts/evidence/ISSUE-021-prototype-contract-freeze.md
+**authorization-boundary:** Live #21 criteria unchanged pending recheck; no implementation, dependency installation, baseline activation, architecture acceptance, parallel release, or Ring 2 advancement
+**selector:** human
+
+---
+
+## 2026-09-11T15:25:00Z | REV-017 final recheck | Ring-1 | @plan-reviewer
+
+**Type:** REVIEW
+**Decision:** PASS the corrected DEC-022 #21 prototype contract-freeze acceptance definition
+**Policy:** Alternate-model decision recheck | DEC-011 floors | DEC-013 custody
+**Authority:** Independent Plan Reviewer
+**Accountability:** Solo Orchestrator for persistence and live #21 synchronization; Team Lead retains custody
+**Result:** All 19 REV-017 findings closed; 0 new Critical and 0 new Major; live #21 criteria may be updated; execution and closure evidence remain pending
+**Artifact:** docs/Governance/decisions/reviews/REV-017-issue-021-prototype-contract-freeze-plan-review.md
+**authorization-boundary:** #21 remains open; no implementation, dependency installation, baseline activation, architecture acceptance, parallel release, or Ring 2 advancement
+**selector:** delegated
+
+---
+
+## 2026-09-11T15:29:00Z | #21 acceptance synchronization | Ring-1 | @solo-orchestrator
+
+**Type:** GOVERNANCE-SYNCHRONIZATION
+**Decision:** Replace live #21 criteria with the reviewed DEC-022 prototype contract-freeze definition
+**Policy:** DEC-022 | REV-017 final PASS | contract custody governance
+**Authority:** Workspace Owner
+**Accountability:** Solo Orchestrator for issue synchronization; Team Lead retains contract custody
+**Result:** #21 now tracks `v1.0.0-prototype.1`, mandatory fixture/application/storage boundaries, expected API/PostgreSQL contracts, conditional events, and eight re-evaluated guards; execution evidence remains pending
+**Artifact:** docs/Planning/contracts/evidence/ISSUE-021-prototype-contract-freeze.md
+**authorization-boundary:** #21 remains open; no implementation, dependency installation, baseline activation, architecture acceptance, parallel release, or Ring 2 advancement
+**selector:** human-and-delegated
+
+---
+
+## 2026-09-11T15:42:00Z | REV-018 surface inventory custody | Ring-1 | @team-lead
+
+**Type:** REVIEW
+**Decision:** IMPROVEMENTS IDENTIFIED for the first #21 prototype surface inventory
+**Policy:** DEC-013 custody | DEC-022 freeze definition | REV-017 corrections
+**Authority:** Team Lead contract custodian
+**Accountability:** Workspace Owner for finding disposition; Solo Orchestrator for approved remediation
+**Result:** Candidate artifact accepted structurally; 0 Critical, 4 Major, 6 Minor, and 2 Nit findings require disposition; event absence conditionally accepted; independent verification pending
+**Artifact:** docs/Governance/decisions/reviews/REV-018-prototype-surface-inventory-custody-review.md
+**authorization-boundary:** #21 remains open; no implementation, dependency installation, baseline activation, architecture acceptance, parallel release, or Ring 2 advancement
+**selector:** delegated
+
+---
+
+## 2026-09-11T15:46:00Z | REV-018 disposition | Ring-1 | @solo-orchestrator
+
+**Type:** FINDING-DISPOSITION
+**Decision:** Approve all REV-018 prototype surface inventory corrections
+**Policy:** Human-in-the-Loop review disposition | DEC-013 custody | DEC-022 freeze definition
+**Authority:** Workspace Owner
+**Accountability:** Solo Orchestrator for remediation and CC-004; Team Lead for custody recheck
+**Result:** MAJ-1..MAJ-4, MIN-1..MIN-6, and NIT-1..NIT-2 remediated; registry and CC-004 synchronized; custody recheck and independent verification pending
+**Artifact:** docs/Planning/contracts/prototype-surface-inventory.md
+**authorization-boundary:** #21 remains open; no implementation, dependency installation, baseline activation, architecture acceptance, parallel release, or Ring 2 advancement
+**selector:** human
+
+---
+
+## 2026-09-11T15:52:00Z | REV-018 custody recheck | Ring-1 | @team-lead
+
+**Type:** REVIEW
+**Decision:** PASS prototype surface inventory `1.0.0-candidate.1` for Team Lead custody
+**Policy:** DEC-013 custody | DEC-022 | REV-018 remediation
+**Authority:** Team Lead contract custodian
+**Accountability:** Solo Orchestrator for persistence; independent reviewer for remaining verification
+**Result:** All REV-018 findings closed; 0 new Critical and 0 new Major; event absence accepted as guarded; independent verification remains pending
+**Artifact:** docs/Governance/decisions/reviews/REV-018-prototype-surface-inventory-custody-review.md
+**authorization-boundary:** #21 remains open; API/store/provider/stream guards remain blocked; no implementation, baseline activation, architecture acceptance, parallel release, or Ring 2 advancement
+**selector:** delegated
+
+---
+
+## 2026-09-11T16:01:00Z | REV-019 inventory verification | Ring-1 | @architect-reviewer
+
+**Type:** REVIEW
+**Decision:** PASS independent verification of prototype surface inventory `1.0.0-candidate.1`
+**Policy:** DEC-022 | REV-017 acceptance definition | DEC-013 independent custody controls
+**Authority:** Independent Architect Reviewer
+**Accountability:** Workspace Owner for Minor/Suggestion disposition; Solo Orchestrator for status synchronization
+**Result:** 0 Critical and 0 Major; inventory accepted as first #21 execution artifact; 5 Minor and 2 Suggestion patch corrections require human disposition; #21 remains open
+**Artifact:** docs/Governance/decisions/reviews/REV-019-prototype-surface-inventory-independent-verification.md
+**authorization-boundary:** API/store/provider/stream guards remain blocked; no implementation, baseline activation, architecture acceptance, parallel release, or Ring 2 advancement
+**selector:** delegated
+
+---
+
+## 2026-09-11T16:10:00Z | REV-019 disposition and synchronization | Ring-1 | @solo-orchestrator
+
+**Type:** DECISION
+**Decision:** Workspace Owner approved REV-019 MIN-1..MIN-5 and SUG-1..SUG-2; all seven patch corrections applied and mutable publication records synchronized
+**Policy:** DEC-013 no-self-approval | DEC-022 prototype scope | REV-019 independent PASS | inventory semantic candidate-versioning rule
+**Authority:** Workspace Owner
+**Accountability:** Solo Orchestrator for correction and synchronization; Team Lead retains contract custody
+**Result:** Inventory independent verification complete; eight guards preserved; only `PT-CONTRACT-001` planning-completeness leg passes; #21 remains open
+**Artifacts:** docs/Planning/contracts/prototype-surface-inventory.md | docs/Planning/contracts/README.md | docs/Planning/contracts/change-log.md | docs/Governance/decisions/reviews/REV-019-prototype-surface-inventory-independent-verification.md
+**authorization-boundary:** API/store/provider/stream guards remain blocked; no implementation, dependency installation, baseline activation, architecture acceptance, parallel release, or Ring 2 advancement
+**selector:** human
+
+---
+
+## 2026-09-11T16:24:00Z | REV-020 fixture contract custody review | Ring-1 | @team-lead
+
+**Type:** REVIEW
+**Decision:** FAIL fixture contract `1.0.0-candidate.1` custody review
+**Policy:** DEC-013 custody | DEC-014 precision | DEC-021 analytics allocation | DEC-022 prototype scope | issue #21 fixture freeze requirement
+**Authority:** Distinct Team Lead contract custodian
+**Accountability:** Workspace Owner for finding disposition; Solo Orchestrator for approved remediation
+**Result:** 0 Critical, 6 Major, 3 Minor, 1 Nit; candidate.2 required for remediation; independent verification not started
+**Artifact:** docs/Governance/decisions/reviews/REV-020-fixture-contract-custody-review.md
+**authorization-boundary:** Fixture candidate remains unaccepted; #21 open; API/store/provider/stream guards blocked; no implementation, provider access, baseline activation, parallel release, or Ring 2 advancement
+**selector:** delegated
+
+---
+
+## 2026-09-11T16:43:00Z | REV-020 remediation and custody recheck | Ring-1 | @team-lead
+
+**Type:** REVIEW
+**Decision:** PASS fixture contract `1.0.0-candidate.2` final custody recheck
+**Policy:** Workspace Owner-approved REV-020 remediation | DEC-013 custody | DEC-014 precision | DEC-021 analytics allocation | DEC-022 prototype scope
+**Authority:** Distinct Team Lead contract custodian
+**Accountability:** Workspace Owner for new NIT-2 disposition; Solo Orchestrator for synchronization; independent reviewer remains pending
+**Result:** All original 6 Major, 3 Minor, and 1 Nit closed; 0 unresolved Critical/Major; golden vectors and `PT-FIX-001A..O` reverified; new NIT-2 non-blocking and pending
+**Artifacts:** docs/Planning/contracts/fixture-contract.md | specs/features/Fixture-Contract-Conformance.feature | docs/Governance/decisions/reviews/REV-020-fixture-contract-custody-review.md
+**authorization-boundary:** Custody PASS only; no independent acceptance, implementation, provider access, baseline activation, parallel release, or Ring 2 advancement
+**selector:** delegated
+
+---
+
+## 2026-09-11T16:47:00Z | REV-020 NIT-2 disposition | Ring-1 | @solo-orchestrator
+
+**Type:** DECISION
+**Decision:** Workspace Owner approved new REV-020 NIT-2 table-spacing correction
+**Policy:** DEC-013 custody | REV-020 final custody PASS
+**Authority:** Workspace Owner
+**Accountability:** Solo Orchestrator for correction and validation
+**Result:** NIT-2 corrected; no REV-020 finding remains unresolved; independent fixture verification remains pending
+**Artifacts:** specs/features/Fixture-Contract-Conformance.feature | docs/Governance/decisions/reviews/REV-020-fixture-contract-custody-review.md
+**authorization-boundary:** Cosmetic correction only; no implementation, provider access, baseline activation, parallel release, or Ring 2 advancement
+**selector:** human
+
+---
+
+## 2026-09-11T16:55:00Z | REV-021 fixture independent verification | Ring-1 | @architect-reviewer
+
+**Type:** REVIEW
+**Decision:** PASS independent alternate-role verification of fixture contract `1.0.0-candidate.2`
+**Policy:** DEC-013 independent review | DEC-014 precision | DEC-021 analytics allocation | DEC-022 prototype scope | issue #21 fixture freeze requirement
+**Authority:** Independent Architect Reviewer
+**Accountability:** Workspace Owner for 3 Minor and 1 Suggestion disposition; Solo Orchestrator for approved correction and synchronization
+**Result:** 0 Critical, 0 Major; candidate accepted at contract level; quality score, malformed-order fallback, mutable records, and reviewer-provenance wording require disposition; #21 remains open
+**Artifact:** docs/Governance/decisions/reviews/REV-021-fixture-contract-independent-verification.md
+**authorization-boundary:** API/store/provider/stream guards remain blocked; no implementation, provider access, baseline activation, parallel release, or Ring 2 advancement
+**selector:** delegated
+
+---
+
+## 2026-09-11T17:03:00Z | REV-021 disposition and fixture synchronization | Ring-1 | @solo-orchestrator
+
+**Type:** DECISION
+**Decision:** Workspace Owner approved REV-021 MINOR-1..3 and SUGGESTION-1 with 4.74 design-time quality score; fixture candidate.2 synchronized
+**Policy:** DEC-013 custody | DEC-022 prototype scope | REV-020 custody PASS | REV-021 independent alternate-role PASS
+**Authority:** Workspace Owner
+**Accountability:** Solo Orchestrator for correction/synchronization; Team Lead retains contract custody
+**Result:** Fixture portion of `PT-CONTRACT-001` design-time resolution complete; application/PostgreSQL/OpenAPI and aggregate resolution pending; implementation agreement pending; #21 open
+**Artifacts:** docs/Planning/contracts/fixture-contract.md | specs/features/Fixture-Contract-Conformance.feature | docs/Planning/contracts/prototype-surface-inventory.md | docs/Planning/contracts/README.md | docs/Planning/contracts/change-log.md | docs/Governance/decisions/reviews/REV-021-fixture-contract-independent-verification.md
+**authorization-boundary:** API/store/provider/stream guards remain blocked; no implementation, provider access, baseline activation, architecture acceptance, parallel release, or Ring 2 advancement
+**selector:** human
+
+---
+
+## 2026-09-11T17:24:00Z | REV-022 application contract custody review | Ring-1 | @team-lead
+
+**Type:** REVIEW
+**Decision:** FAIL application boundary contract `1.0.0-candidate.1` custody review
+**Policy:** DEC-013 custody | DEC-022 prototype scope | issue #21 application freeze requirement | issue #22 NFR inputs
+**Authority:** Distinct Team Lead contract custodian
+**Accountability:** Workspace Owner for 7 Major and 2 Minor dispositions; Solo Orchestrator for approved remediation
+**Result:** 0 Critical, 7 Major, 2 Minor; 9-command/7-query surface accepted but schemas/replay/jobs/errors/redaction/recovery/timestamp roles require closure; candidate.1 may remain
+**Artifact:** docs/Governance/decisions/reviews/REV-022-application-contract-custody-review.md
+**authorization-boundary:** Application candidate unaccepted; #21 open; API/store/provider/stream guards blocked; no implementation, HTTP/PostgreSQL design, event scope, baseline activation, parallel release, or Ring 2 advancement
+
+## 2026-09-11T17:35:00Z | REV-022 finding disposition and remediation | Ring-1 | @workspace-owner
+
+**Decision:** Approve REV-022 MAJOR-1..7 and MINOR-1..2; retain application contract `1.0.0-candidate.1`
+**Policy:** Human-in-the-Loop finding disposition; DEC-013 custody separation; test-first contract remediation
+**Authority:** Workspace Owner approval in the governed session
+**Accountability:** Originating agent expanded `PT-APP-001A..P` before contract correction; Team Lead must recheck all nine findings before independent verification
+**Result:** Candidate.1 now defines 16 closed operation schemas, layered replay, four-state jobs, ranked errors, fail-closed redaction, restartability-aware recovery, five timestamp roles, and exact warning metadata; focused structural checks passed
+**authorization-boundary:** Remediation only; candidate remains unaccepted pending custody recheck; #21 open; API/store/provider/stream guards blocked; no implementation, HTTP/PostgreSQL design, event scope, baseline activation, parallel release, or Ring 2 advancement
+
+## 2026-09-11T17:50:00Z | REV-022 final custody recheck | Ring-1 | @team-lead
+
+**Decision:** PASS application contract `1.0.0-candidate.1` Team Lead custody with all REV-022 findings closed
+**Policy:** DEC-013 distinct custody; REV-022 approved finding set; design-time test-quality rubric
+**Authority:** Team Lead custody recheck, distinct from originator
+**Accountability:** Independent alternate-role reviewer must verify the unchanged candidate before mutable registry synchronization
+**Result:** 0 unresolved Critical/Major/Minor findings; 16 literal operation vectors, concrete replay/collision vectors, exact readiness schema, and 4.86/5.0 design-time score accepted
+**authorization-boundary:** Custody PASS only; independent verification pending; #21 open; API/store/provider/stream guards blocked; no implementation, HTTP/PostgreSQL design, event scope, baseline activation, parallel release, or Ring 2 advancement
+
+## 2026-09-11T18:05:00Z | REV-023 application independent verification | Ring-1 | @architect-reviewer
+
+**Decision:** FAIL independent alternate-role verification of application contract `1.0.0-candidate.1`
+**Policy:** DEC-013 independent verification; decision review; Human-in-the-Loop finding disposition
+**Authority:** Architect Reviewer, distinct from originator and Team Lead custodian; alternate-model provenance not exposed
+**Accountability:** Workspace Owner must disposition 5 Major and 1 Minor finding before remediation or deferral; Team Lead must recheck substantive changes before repeated independent review
+**Result:** 0 Critical, 5 Major, 1 Minor; owner-type imports/mapping, exact RFC replay bytes, defect-derived precedence, full readiness vectors, recovery records, and later mutable synchronization remain open
+**authorization-boundary:** Application candidate not independently verified; #21 open; API/store/provider/stream guards blocked; no implementation, HTTP/PostgreSQL design, event scope, baseline activation, parallel release, or Ring 2 advancement
+
+## 2026-09-11T18:15:00Z | REV-023 finding disposition | Ring-1 | @workspace-owner
+
+**Decision:** Approve REV-023 MAJOR-1..5 and MINOR-1; retain application contract `1.0.0-candidate.1`
+**Policy:** Human-in-the-Loop finding disposition; DEC-013 review separation; test-first remediation
+**Authority:** Workspace Owner approval in the governed session
+**Accountability:** Originating agent remediates; Team Lead rechecks substantive changes; Architect Reviewer repeats independent verification before mutable synchronization
+**Result:** All six corrections approved without operation, owner, durable-handoff, event, or implementation scope change
+**authorization-boundary:** Remediation only; candidate remains independently unverified; #21 open; API/store/provider/stream guards blocked; no implementation, HTTP/PostgreSQL design, event scope, baseline activation, parallel release, or Ring 2 advancement
+
+## 2026-09-11T18:45:00Z | REV-023 final verification and CC-006 synchronization | Ring-1 | @architect-reviewer
+
+**Decision:** PASS application contract `1.0.0-candidate.1` independent alternate-role verification and close REV-023 MINOR-1 by mutable synchronization
+**Policy:** DEC-013 review separation; approved REV-023 remediation; contract registry synchronization
+**Authority:** Architect Reviewer substantive PASS; Workspace Owner prior approval of MAJOR-1..5 and MINOR-1
+**Accountability:** Team Lead retains custody; PostgreSQL and OpenAPI candidates require their own test-first custody and independent verification sequence
+**Result:** 0 Critical/Major substantive findings; application candidate, inventory, registry, CC-006, REV-022/023, and journal synchronized; alternate-model provenance not claimed
+**authorization-boundary:** Application design-time resolution complete only; #21 open; PostgreSQL/OpenAPI and API/store/provider/stream guards pending or blocked; no implementation, event scope, baseline activation, architecture acceptance, parallel release, deployment, or Ring 2 advancement
+
+## 2026-09-11T19:10:00Z | REV-024 PostgreSQL contract custody review | Ring-1 | @team-lead
+
+**Decision:** FAIL PostgreSQL contract `1.0.0-candidate.1` custody and classify approved remediation, if any, as candidate.2
+**Policy:** DEC-013 custody/default-to-breaking; issue #21 durable-store requirements; pinned owner authority
+**Authority:** Team Lead, distinct from originator
+**Accountability:** Workspace Owner must disposition 3 Critical and 6 Major findings before remediation or deferral
+**Result:** Migration sequence/CT-DB IDs/no-event boundary accepted, but catalog manifest, ledger authority/records, fixture constraints, analytics retention, value validation, restart/readiness, and direct vectors are not closed
+**authorization-boundary:** PostgreSQL candidate unaccepted; STORE and aggregate resolution blocked; no SQL migration, implementation, dependency, HTTP/event design, inventory synchronization, baseline activation, parallel release, deployment, Ring 2, or #21 closure
+
+## 2026-09-11T19:20:00Z | REV-024 finding disposition | Ring-1 | @workspace-owner
+
+**Decision:** Approve REV-024 CRITICAL-1..3 and MAJOR-1..6; authorize PostgreSQL `1.0.0-candidate.2` test-first remediation
+**Policy:** Human-in-the-Loop finding disposition; DEC-013 default-to-breaking; pinned owner authority
+**Authority:** Workspace Owner approval in the governed session
+**Accountability:** Originating agent remediates CT-DB-001 first; Team Lead rechecks; independent alternate-role verification remains separate
+**Result:** All nine corrections approved; no SQL migration or implementation authority granted
+**authorization-boundary:** Candidate.2 remediation only; STORE and aggregate resolution blocked; no SQL migration, dependency, HTTP/event design, inventory synchronization, baseline activation, parallel release, deployment, Ring 2, or #21 closure
+**selector:** delegated
+
+## 2026-09-11T20:00:00Z | REV-024 candidate.2 custody recheck 1 | Ring-1 | @team-lead
+
+**Decision:** FAIL PostgreSQL contract `1.0.0-candidate.2` custody; retain all REV-024 findings as OPEN
+**Policy:** DEC-013 custody/default-to-breaking; approved REV-024 remediation; pinned owner authority
+**Authority:** Team Lead, distinct from originator
+**Accountability:** Originating agent consolidates the contradictory physical manifest and direct CT-DB vectors; Team Lead performs a fresh recheck
+**Result:** 3 Critical and 6 Major remain: addendum/manifest contradiction, missing protected and ledger/evidence records, incomplete grants/constraints, fixture revision and retention errors, negative-zero/code contradictions, and indirect restart/drift/rollback vectors
+**authorization-boundary:** Candidate.2 remains unaccepted; independent verification and synchronization blocked; no SQL migration, implementation, dependency, HTTP/event design, baseline activation, parallel release, deployment, Ring 2, or #21 closure
+
+## 2026-09-11T20:30:00Z | REV-024 candidate.2 custody recheck 2 | Ring-1 | @team-lead
+
+**Decision:** FAIL PostgreSQL contract `1.0.0-candidate.2` custody with 2 Critical and 4 Major still open
+**Policy:** DEC-013 custody/default-to-breaking; approved REV-024 remediation; pinned owner authority
+**Authority:** Team Lead, distinct from originator
+**Accountability:** Originating agent remediates only the six open findings; Team Lead performs the next custody recheck
+**Result:** CRITICAL-3, MAJOR-3, and MAJOR-5 CLOSED; CRITICAL-1/2 and MAJOR-1/2/4/6 OPEN for exact catalog/denial boundaries, fixture fidelity/scales, constraint matrices, and direct F-I vectors
+**authorization-boundary:** Candidate.2 remains unaccepted; independent verification and synchronization blocked; no SQL migration, implementation, dependency, HTTP/event design, baseline activation, parallel release, deployment, Ring 2, or #21 closure
+
+## 2026-09-11T21:00:00Z | REV-024 candidate.2 custody recheck 3 | Ring-1 | @team-lead
+
+**Decision:** FAIL PostgreSQL contract `1.0.0-candidate.2` custody with 2 Critical and 2 Major still open
+**Policy:** DEC-013 custody/default-to-breaking; approved REV-024 remediation; pinned owner authority
+**Authority:** Team Lead, distinct from originator
+**Accountability:** Originating agent remediates only CRITICAL-1/2 and MAJOR-2/4; Team Lead rechecks
+**Result:** MAJOR-1 and MAJOR-6 CLOSED; remaining gaps are canonical catalog shapes/hash input, projection/denial authentication, exact FK/check registry, and timestamp/JSON/error allocation
+**authorization-boundary:** Candidate.2 remains unaccepted; independent verification and synchronization blocked; no SQL migration, implementation, dependency, HTTP/event design, baseline activation, parallel release, deployment, Ring 2, or #21 closure
+
+## 2026-09-11T21:30:00Z | REV-024 candidate.2 custody recheck 4 | Ring-1 | @team-lead
+
+**Decision:** FAIL PostgreSQL contract `1.0.0-candidate.2` custody with 2 Critical and 2 Major open
+**Policy:** DEC-013 custody/default-to-breaking; approved REV-024 remediation; pinned owner authority
+**Authority:** Team Lead, distinct from originator
+**Accountability:** Originating agent corrects only the four enumerated catalog/audit/FK/error defects; Team Lead rechecks
+**Result:** Prior closures retained; self-hash/allocation/rendering, denial routing/hash, reconstructive FK rules, and exact timestamp/domain JSON codes required correction
+**authorization-boundary:** Candidate.2 remains unaccepted; independent verification and synchronization blocked; no SQL migration, implementation, dependency, HTTP/event design, baseline activation, parallel release, deployment, Ring 2, or #21 closure
+
+## 2026-09-11T22:00:00Z | REV-024 candidate.2 custody recheck 5 | Ring-1 | @team-lead
+
+**Decision:** FAIL PostgreSQL contract `1.0.0-candidate.2` custody with 2 Critical and 0 Major open
+**Policy:** DEC-013 custody/default-to-breaking; PostgreSQL 16 catalog/security semantics; pinned owner authority
+**Authority:** Team Lead, distinct from originator
+**Accountability:** Originating agent corrects only trigger allocation, live catalog reconstruction, SECURITY DEFINER routing, and verifiable denial binding; Team Lead rechecks
+**Result:** All Major findings CLOSED; CRITICAL-1/2 retained pending PostgreSQL 16 mechanics correction
+**authorization-boundary:** Candidate.2 remains unaccepted; independent verification and synchronization blocked; no SQL migration, implementation, dependency, HTTP/event design, baseline activation, parallel release, deployment, Ring 2, or #21 closure
+
+## 2026-09-11T22:30:00Z | REV-024 candidate.2 custody recheck 6 | Ring-1 | @team-lead
+
+**Decision:** PASS PostgreSQL contract `1.0.0-candidate.2` custody and CLOSE CRITICAL-1..3 plus MAJOR-1..6
+**Policy:** DEC-013 custody separation; PostgreSQL 16 design-time closure; issue #21 bounded sequence
+**Authority:** Team Lead, distinct from originator
+**Accountability:** Independent alternate-role reviewer verifies current candidate before any synchronization
+**Result:** 0 Critical, 0 Major, 0 Minor, 0 Nit; exactly CT-DB-001A..L retained; Ring 2 SQL/hashes/execution remain deferred
+**authorization-boundary:** Independent verification only; no synchronization, SQL migration, implementation, dependency, HTTP/event design, baseline activation, parallel release, deployment, Ring 2, or #21 closure
+
+## 2026-09-11T23:00:00Z | REV-025 PostgreSQL independent verification | Ring-1 | @architect-reviewer
+
+**Decision:** FAIL independent verification of PostgreSQL `1.0.0-candidate.2` with 1 Critical and 4 Major findings
+**Policy:** DEC-013 review separation; mandatory independent decision review; PostgreSQL 16 and pinned owner authority
+**Authority:** Architect Reviewer, distinct from originator and Team Lead custodian
+**Accountability:** Workspace Owner dispositions REV-025 before remediation or deferral
+**Result:** Migration membership semantics, owner identifier types, bounded read reconstruction, denial negative vectors, and system-extension handling block synchronization
+**report:** docs/Governance/decisions/reviews/REV-025-postgresql-contract-independent-review.md
+**authorization-boundary:** PostgreSQL candidate remains independently unverified; no synchronization, SQL migration, implementation, dependency, HTTP/event design, baseline activation, parallel release, deployment, Ring 2, or #21 closure
+
+## 2026-09-11T23:15:00Z | REV-025 finding disposition and remediation | Ring-1 | @workspace-owner
+
+**Decision:** Approve REV-025 CRITICAL-1 and MAJOR-1..4; retain PostgreSQL contract `1.0.0-candidate.2` and remediate test-first
+**Policy:** Human-in-the-Loop finding disposition; native PostgreSQL 16 role, DDL, catalog, function, and system-extension semantics; empty-database bootstrap with generic SQL used only as guidance
+**Authority:** Workspace Owner approval in the governed session
+**Accountability:** Originating agent remediates; Team Lead rechecks all five findings; independent Architect Reviewer repeats verification before mutable synchronization
+**Result:** Direct vectors now cover native role membership, system `plpgsql`, owner-preserving text identities, bounded application readers, and denial binding; focused validation precedes custody recheck
+**authorization-boundary:** Remediation only; no data migration, synchronization, SQL migration artifacts, implementation, dependency, HTTP/event design, baseline activation, parallel release, deployment, Ring 2, guard unblocking, or #21 closure
+
+## 2026-09-11T23:40:00Z | REV-025 custody recheck 1 and corrective classification | Ring-1 | @team-lead
+
+**Decision:** FAIL PostgreSQL candidate.2 custody with CRITICAL-1 and MAJOR-2 open; classify owner-preserving EvidenceGet correction as application `1.0.0-candidate.2`
+**Policy:** Native PostgreSQL 16 ownership rules; DEC-013 default-to-breaking; approved REV-025 remediation; analytics owner identity authority
+**Authority:** Team Lead custody finding; Workspace Owner's prior approval of REV-025 corrections
+**Accountability:** Originating agent adds external cluster provisioning and complete ownership memberships, corrects the application evidence scalar test-first, and returns both candidates for custody recheck
+**Result:** MAJOR-1/3/4 closed; focused post-correction validation passes the nine-membership ownership graph and complete opaque `{evidence: Evidence}` reader
+**authorization-boundary:** Both candidates remain unverified; no synchronization, SQL migration artifacts, implementation, dependency, HTTP/event design, baseline activation, parallel release, deployment, Ring 2, guard unblocking, or #21 closure
+
+## 2026-09-12T00:10:00Z | REV-025 custody recheck 2 | Ring-1 | @team-lead
+
+**Decision:** PASS application candidate.2 custody; FAIL PostgreSQL candidate.2 custody pending one new Major finding
+**Policy:** DEC-013 custody/default-to-breaking; approved REV-025 remediation; native PostgreSQL 16 bootstrap authority
+**Authority:** Team Lead, distinct from originator
+**Accountability:** Workspace Owner dispositions NEW-MAJOR-1; originating agent corrected the already-approved direct evidence-reader vector and awaits authority for CT-DB-001C
+**Result:** PostgreSQL CRITICAL-1 and MAJOR-1/3/4 closed; MAJOR-2 direct evidence vector now passes; NEW-MAJOR-1 identifies stale `0001-foundation | after first role` interruption wording after role provisioning moved outside migrations
+**authorization-boundary:** Application independent verification and PostgreSQL remediation/recheck only; no synchronization, SQL migration artifacts, implementation, dependency, HTTP/event design, baseline activation, parallel release, deployment, Ring 2, guard unblocking, or #21 closure
+
+## 2026-09-12T00:20:00Z | REV-025 NEW-MAJOR-1 disposition | Ring-1 | @workspace-owner
+
+**Decision:** Approve correction of CT-DB-001C migration 0001 interruption boundary from `after first role` to `after schema creation`
+**Policy:** Human-in-the-Loop finding disposition; native PostgreSQL 16 prerequisite provisioning; closed migration allocation
+**Authority:** Workspace Owner approval in the governed session
+**Accountability:** Originating agent corrects and validates the vector; Team Lead repeats custody recheck before independent verification
+**Result:** CT-DB-001C now interrupts migration 0001 only at an object allocated to that product migration
+**authorization-boundary:** Test correction only; no synchronization, SQL migration artifacts, implementation, dependency, HTTP/event design, baseline activation, parallel release, deployment, Ring 2, guard unblocking, or #21 closure
+
+## 2026-09-12T00:35:00Z | REV-025 custody recheck 3 | Ring-1 | @team-lead
+
+**Decision:** PASS PostgreSQL candidate.2 custody with all REV-025 and NEW-MAJOR-1 findings closed
+**Policy:** DEC-013 custody separation; approved REV-025 remediation; native PostgreSQL 16 bootstrap and owner authority
+**Authority:** Team Lead, distinct from originator
+**Accountability:** Independent Architect Reviewer verifies application candidate.2 and PostgreSQL candidate.2 before mutable synchronization
+**Result:** 0 open Critical/Major findings; direct evidence reader and migration 0001 interruption pass; exactly CT-DB-001A..L retained; design-time quality 4.8/5
+**authorization-boundary:** Independent verification only; no synchronization, SQL migration artifacts, implementation, dependency, HTTP/event design, baseline activation, parallel release, deployment, Ring 2, guard unblocking, OpenAPI work, or #21 closure
+
+## 2026-09-12T01:00:00Z | REV-026 independent re-verification | Ring-1 | @architect-reviewer
+
+**Decision:** PASS application candidate.2 and PostgreSQL candidate.2 independent re-verification with one metadata Minor
+**Policy:** DEC-013 independent review separation; approved REV-025 remediation; native PostgreSQL 16 and pinned owner authority
+**Authority:** Independent Architect Reviewer; model provenance unavailable and not claimed
+**Accountability:** Workspace Owner dispositions REV-026 MINOR-1 before Solo Orchestrator performs limited mutable synchronization
+**Result:** 0 Critical, 0 Major, 1 Minor; both candidates substantively verified at design time; test quality 4.8/5 each
+**authorization-boundary:** Finding disposition and approved metadata synchronization only; no SQL migration artifacts, implementation, dependency, HTTP/event design, baseline activation, parallel release, deployment, Ring 2, guard unblocking, OpenAPI work, or #21 closure
+
+## 2026-09-12T01:20:00Z | REV-026 disposition and CC-007 synchronization | Ring-1 | @solo-orchestrator
+
+**Decision:** Workspace Owner approved REV-026 MINOR-1; synchronize application/PostgreSQL candidate.2 metadata and close the Minor
+**Policy:** Human-in-the-Loop finding disposition; DEC-013 reviewed-candidate synchronization; issue #21 bounded sequence
+**Authority:** Workspace Owner approval in the governed session; REV-026 independent PASS
+**Accountability:** Solo Orchestrator synchronized contract status/checklists, inventory, registry, and CC-007; Team Lead retains custody
+**Result:** Application, PostgreSQL, and inventory candidate.2 metadata are consistent; STORE passes qualified design-time resolution; OpenAPI remains pending; focused validation and diff check pass
+**authorization-boundary:** OpenAPI contract work may proceed separately; no SQL migration artifacts, implementation, dependency, HTTP/event implementation, baseline activation, parallel release, deployment, Ring 2, provider/stream guard unblocking, or #21 closure
+
+## 2026-09-12T02:00:00Z | OpenAPI candidate.1 transport decisions | Ring-1 | @workspace-owner
+
+**Decision:** Transport opaque EvidenceGet identity as a required query String accepting UUID-shaped text; use a closed Problem response for pre-dispatch protocol failures while retaining `APPLICATION_DEPENDENCY_UNAVAILABLE`/503 for unknown application exceptions
+**Policy:** Analytics owner identity authority; application candidate.2 error precedence; CT-API-001 test-first design; no active API baseline
+**Authority:** Workspace Owner approval in the governed session
+**Accountability:** Solo Orchestrator defines OpenAPI candidate.1 and CT-API-001A..L; Team Lead custody and independent Architect Reviewer verification remain required before synchronization
+**Result:** Test-first vectors pass; self-contained OpenAPI 3.1 candidate maps exactly sixteen application operations over loopback and remains pending review
+**authorization-boundary:** Design-time contract only; no HTTP implementation, dependency, public ingress, provider/broker/event scope, baseline activation, deployment, Ring 2, guard unblocking, or #21 closure
+
+## 2026-09-12T02:40:00Z | REV-027 OpenAPI custody review | Ring-1 | @team-lead
+
+**Decision:** FAIL OpenAPI `1.0.0-candidate.1` custody; remediation requires candidate.2
+**Policy:** DEC-013 default-to-breaking and distinct custody; application/owner contract authority; CT-API-001 quality floor
+**Authority:** Team Lead, distinct from originator
+**Accountability:** Workspace Owner dispositions 2 Critical, 4 Major, and 1 Minor finding before remediation or deferral
+**Result:** Operation cardinality and basic OpenAPI structure pass, but owner schemas, status/code closure, endpoint constants, adaptation profile, cross-field invariants, and direct vectors block acceptance
+**authorization-boundary:** Independent verification and synchronization blocked; no HTTP implementation, dependency, public ingress, provider/broker/event scope, baseline activation, deployment, parallel work, Ring 2, guard unblocking, or #21 closure
+
+## 2026-09-11T19:00:44Z | REV-027 disposition and candidate.2 remediation | Ring-1 | @workspace-owner
+
+**Decision:** Approve all REV-027 findings and remediate OpenAPI as `1.0.0-candidate.2`
+**Policy:** Human-in-the-Loop finding disposition; DEC-013 default-to-breaking; pinned application/owner authority; test-first correction
+**Authority:** Workspace Owner approval in the governed session
+**Accountability:** Solo Orchestrator expands CT-API A-L before contract correction; Team Lead rechecks all findings before independent verification
+**Result:** Candidate.2 direct vectors and schemas close owner records, status/code sets, endpoint constants, protocol profile, cross-field rules, and YAML alias ambiguity; focused validation in progress
+**authorization-boundary:** Remediation only; no synchronization, HTTP implementation, dependency, public ingress, provider/broker/event scope, baseline activation, deployment, parallel work, Ring 2, guard unblocking, or #21 closure
+
+## 2026-09-11T19:00:44Z | REV-027 custody recheck 1 and bounded correction | Ring-1 | @team-lead
+
+**Decision:** Preserve custody FAIL with CRITICAL-1 and MAJOR-3/4 open; correct only approved candidate.2 findings and require recheck 2
+**Policy:** Test-first correction; DEC-013 default-to-breaking; pinned analytics/evidence and application warning authority
+**Authority:** Team Lead custody recheck 1; Workspace Owner's prior remediation approval
+**Accountability:** Originating agent adds literal vectors before schema correction and returns validated unchanged artifacts to Team Lead
+**Result:** RED vectors exposed owner uniqueness/order, Evidence status/reason, and warning-applicability gaps; focused post-correction validation passes all owner rules, 32 warning schemas, 16 adapter vector pairs, refs, Draft 2020-12 checks, hashes, and file-scoped whitespace checks
+**authorization-boundary:** Custody remains pending; no independent verification, synchronization, implementation, dependency, public ingress, baseline activation, deployment, Ring 2, guard unblocking, or #21 closure
+
+## 2026-09-11T19:00:44Z | REV-027 custody recheck 2 and vector correction | Ring-1 | @team-lead
+
+**Decision:** Preserve custody FAIL with only MAJOR-4 open; correct the `portfolioGet` literal pair and require recheck 3
+**Policy:** Test-first direct-vector evidence; single-defect malformed-vector rule; DEC-013 custody
+**Authority:** Team Lead custody recheck 2; Workspace Owner's prior remediation approval
+**Accountability:** Originating agent adds required `asOf` to both vectors while retaining null `portfolioId` as the sole malformed defect
+**Result:** All 32 JSON cells parse; sixteen valid adapter payloads pass; sixteen malformed payloads each fail for exactly one intentional defect; exact operation coverage, Gherkin structure, and file-scoped whitespace pass
+**authorization-boundary:** Custody remains pending; no independent verification, synchronization, implementation, dependency, public ingress, baseline activation, deployment, Ring 2, guard unblocking, or #21 closure
+
+## 2026-09-11T19:00:44Z | REV-027 custody recheck 3 | Ring-1 | @team-lead
+
+**Decision:** Close all original REV-027 findings with no new findings and issue Team Lead custody PASS
+**Policy:** DEC-013 custody separation; test-first contract conformance; pinned application and owner authority
+**Authority:** Team Lead custody recheck 3
+**Accountability:** Independent Architect Reviewer must verify exact hashes `bc6e6e6f38701ff93644466cbf448141b29e7a24a9a3c79e19a76016f47cf539` and `2594940bbf2f8cd6c60ee50dd0fabfa1116db82905c0ff04056c0724ddf1376e` before synchronization
+**Result:** PASS for CRITICAL-1/2, MAJOR-1..4, MINOR-1; 651 refs, 123 schemas, 57 code bindings, 32 warning schemas, owner/hash adversaries, and 16 literal vector pairs passed
+**authorization-boundary:** Independent verification becomes eligible; no synchronization, implementation, dependency, public ingress, baseline activation, deployment, Ring 2, guard unblocking, or #21 closure
+
+## 2026-09-11T19:19:07Z | REV-027 independent verification | Ring-1 | @architect-reviewer
+
+**Decision:** Issue independent PASS with zero Critical, zero Major, and two Minor findings; hold synchronization for Workspace Owner disposition
+**Policy:** DEC-013 custody separation; alternate-model decision review; Human-in-the-Loop finding disposition
+**Authority:** Independent Architect Reviewer using Claude Sonnet 5; parent execution evidence for byte hashes and reference reconciliation
+**Accountability:** Workspace Owner disposes MINOR-1/2 before the parent synchronizes status, inventory, registry, change-log, or closure evidence
+**Result:** Exact custody hashes re-derived; 651 literal references, 158 unique local targets, zero unresolved; MINOR-1 resolved as counting-method error; MINOR-2 stale status remains valid and pending disposition
+**authorization-boundary:** Independent PASS recorded but synchronization remains paused; no implementation, dependency, public ingress, baseline activation, deployment, Ring 2, guard unblocking, or #21 closure
+
+## 2026-09-11T19:19:07Z | REV-027 Minor disposition and synchronization | Ring-1 | @workspace-owner
+
+**Decision:** Approve both independent-review Minor findings and synchronize OpenAPI candidate.2 design-time resolution
+**Policy:** Human-in-the-Loop disposition; DEC-013 custody/change governance; issue #21 guarded prototype freeze
+**Authority:** Workspace Owner approval in the governed session
+**Accountability:** Solo Orchestrator synchronizes status, inventory candidate.3, registry, CC-008, roadmap, and closure evidence while preserving all non-API blockers
+**Result:** MINOR-1 closed by exact hashes and 651/158/0 reference evidence; MINOR-2 closed by status correction; `PT-CONTRACT-SCOPE-API` now PASS qualified at design time; #21 remains open
+**authorization-boundary:** No implementation, dependency, public ingress, baseline activation, deployment, parallel release, Ring 2 advancement, provider/stream guard promotion, or #21 closure
 
 ---
 

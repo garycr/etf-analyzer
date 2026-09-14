@@ -1,0 +1,1391 @@
+openapi: 3.1.0
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+info:
+  title: ETF Analyzer Local API
+  version: 1.0.0-candidate.2
+  description: >-
+    Inactive Ring 1 contract for the loopback-only browser-to-application boundary.
+    It authorizes no implementation, deployment, public ingress, provider, broker,
+    event, dependency, baseline activation, or Ring 2 work.
+servers:
+  - url: http://127.0.0.1:{port}/api/v1
+    variables:
+      port:
+        default: "4173"
+        description: Configured loopback API port.
+x-etf-contract-version: 1.0.0-candidate.2
+x-etf-prototype-candidate: v1.0.0-prototype.1
+x-etf-application-contract: 1.0.0-candidate.2
+x-etf-status: rev-027-independent-pass-design-time
+x-etf-conformance-plan: CT-API-001A..L
+x-etf-implementation-status: not-started
+x-etf-loopback-only: true
+x-etf-allowed-hosts: [127.0.0.1]
+x-etf-origin-policy: configured-local-workbench-origins-only
+x-etf-reject-duplicate-json-members: true
+x-etf-request-body-limit: finite-and-configured
+x-etf-no-http-202: true
+x-etf-no-callbacks-webhooks-events-or-provider-egress: true
+x-etf-conformance-profile:
+  genericToolingScope: OpenAPI-and-JSON-Schema-structure-only
+  additionalNormativeValidationRequired: true
+  requestBodyLimitBytes: 1048576
+  jsonDecoding: UTF-8-reject-invalid-and-duplicate-members
+  allowedHost: 127.0.0.1:<configured-port>
+  allowedOrigins: configured-local-workbench-origins-only
+  cors:
+    methods: [GET, POST, PUT, DELETE]
+    headers: [Content-Type, Accept, X-Request-ID, X-Correlation-ID, X-Requested-At, Idempotency-Key]
+    credentials: false
+    wildcard: false
+  injectedApplicationFields:
+    actorId: local-user
+    prototypeCandidate: v1.0.0-prototype.1
+    contractVersion: 1.0.0-candidate.2
+  queryIdempotencyKey: reject-before-dispatch
+  ownerImportValidation:
+    authority: docs/Planning/contracts/analytics-evidence-contract.md@1.0.0-candidate.2
+    failure: reject-before-response
+    comparison: Unicode-code-point
+    rules:
+      - { schema: AnalyticsResult, collectionJsonPointer: /signals, uniqueBy: [/instrumentId], ascendingBy: [/instrumentId] }
+      - { schema: AnalyticsResult, collectionJsonPointer: /trades, uniqueBy: [/tradeOrdinal], ascendingContiguousUIntBy: /tradeOrdinal, firstValue: '0' }
+      - { schema: AnalyticsResult, collectionJsonPointer: /metrics, uniqueBy: [/metricId], ascendingBy: [/metricId] }
+      - { schema: AnalyticsResult, collectionJsonPointer: /warnings, uniqueBy: [/warningCode, /subjectId], ascendingBy: [/subjectId, /warningCode], nulls: first }
+security: []
+paths:
+  /watchlist/items/{instrumentId}:
+    parameters:
+      - $ref: '#/components/parameters/InstrumentId'
+    put:
+      operationId: watchlistPut
+      x-etf-application-operation: WatchlistPut
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/RequestedAt'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        $ref: '#/components/requestBodies/WatchlistPutBody'
+      responses:
+        '200': { $ref: '#/components/responses/WatchlistPutSuccess' }
+        '400':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedWatchlistPut' }, { $ref: '#/components/schemas/Failed400' }] }, { $ref: '#/components/schemas/Problem400' }] } } }
+        '403':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedWatchlistPut' }, { $ref: '#/components/schemas/Failed403' }] }, { $ref: '#/components/schemas/Problem403' }] } } }
+        '406': { description: Not acceptable, content: { application/json: { schema: { $ref: '#/components/schemas/Problem406' } } } }
+        '413': { description: Request too large, content: { application/json: { schema: { $ref: '#/components/schemas/Problem413' } } } }
+        '415': { description: Unsupported media type, content: { application/json: { schema: { $ref: '#/components/schemas/Problem415' } } } }
+        '409': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedWatchlistPut' }, { $ref: '#/components/schemas/Failed409' }] } } } }
+        '422': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedWatchlistPut' }, { $ref: '#/components/schemas/Failed422' }] } } } }
+        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedWatchlistPut' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedWatchlistPut' }, { $ref: '#/components/schemas/Failed503' }] } } } }
+    delete:
+      operationId: watchlistRemove
+      x-etf-application-operation: WatchlistRemove
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/RequestedAt'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/ExpectedVersion'
+      responses:
+        '200': { $ref: '#/components/responses/VersionSuccess' }
+        '400':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedWatchlistRemove' }, { $ref: '#/components/schemas/Failed400' }] }, { $ref: '#/components/schemas/Problem400' }] } } }
+        '403':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedWatchlistRemove' }, { $ref: '#/components/schemas/Failed403' }] }, { $ref: '#/components/schemas/Problem403' }] } } }
+        '406': { description: Not acceptable, content: { application/json: { schema: { $ref: '#/components/schemas/Problem406' } } } }
+        '413': { description: Request too large, content: { application/json: { schema: { $ref: '#/components/schemas/Problem413' } } } }
+        '415': { description: Unsupported media type, content: { application/json: { schema: { $ref: '#/components/schemas/Problem415' } } } }
+        '409': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedWatchlistRemove' }, { $ref: '#/components/schemas/Failed409' }] } } } }
+        '422': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedWatchlistRemove' }, { $ref: '#/components/schemas/Failed422' }] } } } }
+        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedWatchlistRemove' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedWatchlistRemove' }, { $ref: '#/components/schemas/Failed503' }] } } } }
+  /watchlist/order:
+    put:
+      operationId: watchlistReorder
+      x-etf-application-operation: WatchlistReorder
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/RequestedAt'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody: { $ref: '#/components/requestBodies/WatchlistReorderBody' }
+      responses:
+        '200': { $ref: '#/components/responses/WatchlistReorderSuccess' }
+        '400':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedWatchlistReorder' }, { $ref: '#/components/schemas/Failed400' }] }, { $ref: '#/components/schemas/Problem400' }] } } }
+        '403':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedWatchlistReorder' }, { $ref: '#/components/schemas/Failed403' }] }, { $ref: '#/components/schemas/Problem403' }] } } }
+        '406': { description: Not acceptable, content: { application/json: { schema: { $ref: '#/components/schemas/Problem406' } } } }
+        '413': { description: Request too large, content: { application/json: { schema: { $ref: '#/components/schemas/Problem413' } } } }
+        '415': { description: Unsupported media type, content: { application/json: { schema: { $ref: '#/components/schemas/Problem415' } } } }
+        '409': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedWatchlistReorder' }, { $ref: '#/components/schemas/Failed409' }] } } } }
+        '422': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedWatchlistReorder' }, { $ref: '#/components/schemas/Failed422' }] } } } }
+        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedWatchlistReorder' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedWatchlistReorder' }, { $ref: '#/components/schemas/Failed503' }] } } } }
+  /fixture-ingestions:
+    post:
+      operationId: fixtureIngestionStart
+      x-etf-application-operation: FixtureIngestionStart
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/RequestedAt'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody: { $ref: '#/components/requestBodies/FixtureIngestionStartBody' }
+      responses:
+        '201': { $ref: '#/components/responses/FixtureIngestionStartSuccess' }
+        '400':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedFixtureIngestionStart' }, { $ref: '#/components/schemas/Failed400' }] }, { $ref: '#/components/schemas/Problem400' }] } } }
+        '403':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedFixtureIngestionStart' }, { $ref: '#/components/schemas/Failed403' }] }, { $ref: '#/components/schemas/Problem403' }] } } }
+        '406': { description: Not acceptable, content: { application/json: { schema: { $ref: '#/components/schemas/Problem406' } } } }
+        '413': { description: Request too large, content: { application/json: { schema: { $ref: '#/components/schemas/Problem413' } } } }
+        '415': { description: Unsupported media type, content: { application/json: { schema: { $ref: '#/components/schemas/Problem415' } } } }
+        '409': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedFixtureIngestionStart' }, { $ref: '#/components/schemas/Failed409' }] } } } }
+        '422': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedFixtureIngestionStart' }, { $ref: '#/components/schemas/Failed422' }] } } } }
+        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedFixtureIngestionStart' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedFixtureIngestionStart' }, { $ref: '#/components/schemas/Failed503' }] } } } }
+  /jobs/{jobId}/restart:
+    post:
+      operationId: jobRestart
+      x-etf-application-operation: JobRestart
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/RequestedAt'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { $ref: '#/components/responses/JobRestartSuccess' }
+        '400':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedJobRestart' }, { $ref: '#/components/schemas/Failed400' }] }, { $ref: '#/components/schemas/Problem400' }] } } }
+        '403':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedJobRestart' }, { $ref: '#/components/schemas/Failed403' }] }, { $ref: '#/components/schemas/Problem403' }] } } }
+        '406': { description: Not acceptable, content: { application/json: { schema: { $ref: '#/components/schemas/Problem406' } } } }
+        '413': { description: Request too large, content: { application/json: { schema: { $ref: '#/components/schemas/Problem413' } } } }
+        '415': { description: Unsupported media type, content: { application/json: { schema: { $ref: '#/components/schemas/Problem415' } } } }
+        '404': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedJobRestart' }, { $ref: '#/components/schemas/Failed404' }] } } } }
+        '409': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedJobRestart' }, { $ref: '#/components/schemas/Failed409' }] } } } }
+        '422': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedJobRestart' }, { $ref: '#/components/schemas/Failed422' }] } } } }
+        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedJobRestart' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedJobRestart' }, { $ref: '#/components/schemas/Failed503' }] } } } }
+  /analytics/runs:
+    post:
+      operationId: analyticsRun
+      x-etf-application-operation: AnalyticsRun
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/RequestedAt'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody: { $ref: '#/components/requestBodies/AnalyticsRunBody' }
+      responses:
+        '201': { $ref: '#/components/responses/AnalyticsRunSuccess' }
+        '400':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedAnalyticsRun' }, { $ref: '#/components/schemas/Failed400' }] }, { $ref: '#/components/schemas/Problem400' }] } } }
+        '403':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedAnalyticsRun' }, { $ref: '#/components/schemas/Failed403' }] }, { $ref: '#/components/schemas/Problem403' }] } } }
+        '406': { description: Not acceptable, content: { application/json: { schema: { $ref: '#/components/schemas/Problem406' } } } }
+        '413': { description: Request too large, content: { application/json: { schema: { $ref: '#/components/schemas/Problem413' } } } }
+        '415': { description: Unsupported media type, content: { application/json: { schema: { $ref: '#/components/schemas/Problem415' } } } }
+        '409': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedAnalyticsRun' }, { $ref: '#/components/schemas/Failed409' }] } } } }
+        '422': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedAnalyticsRun' }, { $ref: '#/components/schemas/Failed422' }] } } } }
+        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedAnalyticsRun' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedAnalyticsRun' }, { $ref: '#/components/schemas/Failed503' }] } } } }
+  /paper-orders:
+    post:
+      operationId: paperOrderDraftCreate
+      x-etf-application-operation: PaperOrderDraftCreate
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/RequestedAt'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody: { $ref: '#/components/requestBodies/PaperOrderDraftCreateBody' }
+      responses:
+        '201': { $ref: '#/components/responses/PaperOrderDraftCreateSuccess' }
+        '400':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedPaperOrderDraftCreate' }, { $ref: '#/components/schemas/Failed400' }] }, { $ref: '#/components/schemas/Problem400' }] } } }
+        '403':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedPaperOrderDraftCreate' }, { $ref: '#/components/schemas/Failed403' }] }, { $ref: '#/components/schemas/Problem403' }] } } }
+        '406': { description: Not acceptable, content: { application/json: { schema: { $ref: '#/components/schemas/Problem406' } } } }
+        '413': { description: Request too large, content: { application/json: { schema: { $ref: '#/components/schemas/Problem413' } } } }
+        '415': { description: Unsupported media type, content: { application/json: { schema: { $ref: '#/components/schemas/Problem415' } } } }
+        '409': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPaperOrderDraftCreate' }, { $ref: '#/components/schemas/Failed409' }] } } } }
+        '422': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPaperOrderDraftCreate' }, { $ref: '#/components/schemas/Failed422' }] } } } }
+        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPaperOrderDraftCreate' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPaperOrderDraftCreate' }, { $ref: '#/components/schemas/Failed503' }] } } } }
+  /paper-orders/{orderId}/transitions:
+    post:
+      operationId: paperOrderTransition
+      x-etf-application-operation: PaperOrderTransition
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/RequestedAt'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody: { $ref: '#/components/requestBodies/PaperOrderTransitionBody' }
+      responses:
+        '200': { $ref: '#/components/responses/PaperOrderTransitionSuccess' }
+        '400':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedPaperOrderTransition' }, { $ref: '#/components/schemas/Failed400' }] }, { $ref: '#/components/schemas/Problem400' }] } } }
+        '403':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedPaperOrderTransition' }, { $ref: '#/components/schemas/Failed403' }] }, { $ref: '#/components/schemas/Problem403' }] } } }
+        '406': { description: Not acceptable, content: { application/json: { schema: { $ref: '#/components/schemas/Problem406' } } } }
+        '413': { description: Request too large, content: { application/json: { schema: { $ref: '#/components/schemas/Problem413' } } } }
+        '415': { description: Unsupported media type, content: { application/json: { schema: { $ref: '#/components/schemas/Problem415' } } } }
+        '404': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPaperOrderTransition' }, { $ref: '#/components/schemas/Failed404' }] } } } }
+        '409': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPaperOrderTransition' }, { $ref: '#/components/schemas/Failed409' }] } } } }
+        '422': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPaperOrderTransition' }, { $ref: '#/components/schemas/Failed422' }] } } } }
+        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPaperOrderTransition' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPaperOrderTransition' }, { $ref: '#/components/schemas/Failed503' }] } } } }
+  /diagnostic-exports:
+    post:
+      operationId: diagnosticsExportCreate
+      x-etf-application-operation: DiagnosticsExportCreate
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/RequestedAt'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody: { $ref: '#/components/requestBodies/DiagnosticsExportCreateBody' }
+      responses:
+        '201': { $ref: '#/components/responses/DiagnosticExportSuccess' }
+        '400':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedDiagnosticsExportCreate' }, { $ref: '#/components/schemas/Failed400' }] }, { $ref: '#/components/schemas/Problem400' }] } } }
+        '403':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedDiagnosticsExportCreate' }, { $ref: '#/components/schemas/Failed403' }] }, { $ref: '#/components/schemas/Problem403' }] } } }
+        '406': { description: Not acceptable, content: { application/json: { schema: { $ref: '#/components/schemas/Problem406' } } } }
+        '413': { description: Request too large, content: { application/json: { schema: { $ref: '#/components/schemas/Problem413' } } } }
+        '415': { description: Unsupported media type, content: { application/json: { schema: { $ref: '#/components/schemas/Problem415' } } } }
+        '409': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedDiagnosticsExportCreate' }, { $ref: '#/components/schemas/Failed409' }] } } } }
+        '422': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedDiagnosticsExportCreate' }, { $ref: '#/components/schemas/Failed422' }] } } } }
+        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedDiagnosticsExportCreate' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedDiagnosticsExportCreate' }, { $ref: '#/components/schemas/Failed503' }] } } } }
+  /watchlist:
+    get:
+      operationId: watchlistGet
+      x-etf-application-operation: WatchlistGet
+      x-etf-forbid-header: Idempotency-Key
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/RequestedAt'
+      responses:
+        '200': { $ref: '#/components/responses/WatchlistGetSuccess' }
+        '400':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedWatchlistGet' }, { $ref: '#/components/schemas/Failed400' }] }, { $ref: '#/components/schemas/Problem400' }] } } }
+        '403':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedWatchlistGet' }, { $ref: '#/components/schemas/Failed403' }] }, { $ref: '#/components/schemas/Problem403' }] } } }
+        '406': { description: Not acceptable, content: { application/json: { schema: { $ref: '#/components/schemas/Problem406' } } } }
+        '413': { description: Request too large, content: { application/json: { schema: { $ref: '#/components/schemas/Problem413' } } } }
+        '415': { description: Unsupported media type, content: { application/json: { schema: { $ref: '#/components/schemas/Problem415' } } } }
+        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedWatchlistGet' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedWatchlistGet' }, { $ref: '#/components/schemas/Failed503' }] } } } }
+  /jobs/{jobId}:
+    get:
+      operationId: jobGet
+      x-etf-application-operation: JobGet
+      x-etf-forbid-header: Idempotency-Key
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/RequestedAt'
+      responses:
+        '200': { $ref: '#/components/responses/JobGetSuccess' }
+        '400':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedJobGet' }, { $ref: '#/components/schemas/Failed400' }] }, { $ref: '#/components/schemas/Problem400' }] } } }
+        '403':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedJobGet' }, { $ref: '#/components/schemas/Failed403' }] }, { $ref: '#/components/schemas/Problem403' }] } } }
+        '406': { description: Not acceptable, content: { application/json: { schema: { $ref: '#/components/schemas/Problem406' } } } }
+        '413': { description: Request too large, content: { application/json: { schema: { $ref: '#/components/schemas/Problem413' } } } }
+        '415': { description: Unsupported media type, content: { application/json: { schema: { $ref: '#/components/schemas/Problem415' } } } }
+        '404': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedJobGet' }, { $ref: '#/components/schemas/Failed404' }] } } } }
+        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedJobGet' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedJobGet' }, { $ref: '#/components/schemas/Failed503' }] } } } }
+  /readiness:
+    get:
+      operationId: readinessGet
+      x-etf-application-operation: ReadinessGet
+      x-etf-forbid-header: Idempotency-Key
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/RequestedAt'
+      responses:
+        '200': { $ref: '#/components/responses/ReadinessSuccess' }
+        '400':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedReadinessGet' }, { $ref: '#/components/schemas/Failed400' }] }, { $ref: '#/components/schemas/Problem400' }] } } }
+        '403':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedReadinessGet' }, { $ref: '#/components/schemas/Failed403' }] }, { $ref: '#/components/schemas/Problem403' }] } } }
+        '406': { description: Not acceptable, content: { application/json: { schema: { $ref: '#/components/schemas/Problem406' } } } }
+        '413': { description: Request too large, content: { application/json: { schema: { $ref: '#/components/schemas/Problem413' } } } }
+        '415': { description: Unsupported media type, content: { application/json: { schema: { $ref: '#/components/schemas/Problem415' } } } }
+        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedReadinessGet' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedReadinessGet' }, { $ref: '#/components/schemas/Failed503' }] } } } }
+  /analytics/results/{publicationTargetId}:
+    get:
+      operationId: analyticsResultGet
+      x-etf-application-operation: AnalyticsResultGet
+      x-etf-forbid-header: Idempotency-Key
+      parameters:
+        - $ref: '#/components/parameters/PublicationTargetId'
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/RequestedAt'
+      responses:
+        '200': { $ref: '#/components/responses/AnalyticsResultSuccess' }
+        '400':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedAnalyticsResultGet' }, { $ref: '#/components/schemas/Failed400' }] }, { $ref: '#/components/schemas/Problem400' }] } } }
+        '403':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedAnalyticsResultGet' }, { $ref: '#/components/schemas/Failed403' }] }, { $ref: '#/components/schemas/Problem403' }] } } }
+        '406': { description: Not acceptable, content: { application/json: { schema: { $ref: '#/components/schemas/Problem406' } } } }
+        '413': { description: Request too large, content: { application/json: { schema: { $ref: '#/components/schemas/Problem413' } } } }
+        '415': { description: Unsupported media type, content: { application/json: { schema: { $ref: '#/components/schemas/Problem415' } } } }
+        '404': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedAnalyticsResultGet' }, { $ref: '#/components/schemas/Failed404' }] } } } }
+        '422': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedAnalyticsResultGet' }, { $ref: '#/components/schemas/Failed422' }] } } } }
+        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedAnalyticsResultGet' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedAnalyticsResultGet' }, { $ref: '#/components/schemas/Failed503' }] } } } }
+  /evidence:
+    get:
+      operationId: evidenceGet
+      x-etf-application-operation: EvidenceGet
+      x-etf-forbid-header: Idempotency-Key
+      parameters:
+        - $ref: '#/components/parameters/EvidenceId'
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/RequestedAt'
+      responses:
+        '200': { $ref: '#/components/responses/EvidenceSuccess' }
+        '400':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedEvidenceGet' }, { $ref: '#/components/schemas/Failed400' }] }, { $ref: '#/components/schemas/Problem400' }] } } }
+        '403':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedEvidenceGet' }, { $ref: '#/components/schemas/Failed403' }] }, { $ref: '#/components/schemas/Problem403' }] } } }
+        '406': { description: Not acceptable, content: { application/json: { schema: { $ref: '#/components/schemas/Problem406' } } } }
+        '413': { description: Request too large, content: { application/json: { schema: { $ref: '#/components/schemas/Problem413' } } } }
+        '415': { description: Unsupported media type, content: { application/json: { schema: { $ref: '#/components/schemas/Problem415' } } } }
+        '404': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedEvidenceGet' }, { $ref: '#/components/schemas/Failed404' }] } } } }
+        '422': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedEvidenceGet' }, { $ref: '#/components/schemas/Failed422' }] } } } }
+        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedEvidenceGet' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedEvidenceGet' }, { $ref: '#/components/schemas/Failed503' }] } } } }
+  /paper-orders/{orderId}:
+    get:
+      operationId: paperOrderGet
+      x-etf-application-operation: PaperOrderGet
+      x-etf-forbid-header: Idempotency-Key
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/RequestedAt'
+      responses:
+        '200': { $ref: '#/components/responses/PaperOrderGetSuccess' }
+        '400':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedPaperOrderGet' }, { $ref: '#/components/schemas/Failed400' }] }, { $ref: '#/components/schemas/Problem400' }] } } }
+        '403':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedPaperOrderGet' }, { $ref: '#/components/schemas/Failed403' }] }, { $ref: '#/components/schemas/Problem403' }] } } }
+        '406': { description: Not acceptable, content: { application/json: { schema: { $ref: '#/components/schemas/Problem406' } } } }
+        '413': { description: Request too large, content: { application/json: { schema: { $ref: '#/components/schemas/Problem413' } } } }
+        '415': { description: Unsupported media type, content: { application/json: { schema: { $ref: '#/components/schemas/Problem415' } } } }
+        '404': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPaperOrderGet' }, { $ref: '#/components/schemas/Failed404' }] } } } }
+        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPaperOrderGet' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPaperOrderGet' }, { $ref: '#/components/schemas/Failed503' }] } } } }
+  /portfolios/{portfolioId}:
+    get:
+      operationId: portfolioGet
+      x-etf-application-operation: PortfolioGet
+      x-etf-forbid-header: Idempotency-Key
+      parameters:
+        - $ref: '#/components/parameters/PortfolioId'
+        - $ref: '#/components/parameters/AsOf'
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/RequestedAt'
+      responses:
+        '200': { $ref: '#/components/responses/PortfolioSuccess' }
+        '400':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedPortfolioGet' }, { $ref: '#/components/schemas/Failed400' }] }, { $ref: '#/components/schemas/Problem400' }] } } }
+        '403':
+          description: Application failure or pre-dispatch protocol problem
+          content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedPortfolioGet' }, { $ref: '#/components/schemas/Failed403' }] }, { $ref: '#/components/schemas/Problem403' }] } } }
+        '406': { description: Not acceptable, content: { application/json: { schema: { $ref: '#/components/schemas/Problem406' } } } }
+        '413': { description: Request too large, content: { application/json: { schema: { $ref: '#/components/schemas/Problem413' } } } }
+        '415': { description: Unsupported media type, content: { application/json: { schema: { $ref: '#/components/schemas/Problem415' } } } }
+        '404': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPortfolioGet' }, { $ref: '#/components/schemas/Failed404' }] } } } }
+        '422': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPortfolioGet' }, { $ref: '#/components/schemas/Failed422' }] } } } }
+        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPortfolioGet' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPortfolioGet' }, { $ref: '#/components/schemas/Failed503' }] } } } }
+components:
+  parameters:
+    RequestId:
+      name: X-Request-ID
+      in: header
+      required: true
+      schema: { $ref: '#/components/schemas/UUID' }
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: true
+      schema: { $ref: '#/components/schemas/UUID' }
+    RequestedAt:
+      name: X-Requested-At
+      in: header
+      required: true
+      schema: { $ref: '#/components/schemas/UTCInstant' }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { $ref: '#/components/schemas/UUID' }
+    InstrumentId:
+      name: instrumentId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    JobId:
+      name: jobId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/UUID' }
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/UUID' }
+    PortfolioId:
+      name: portfolioId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/UUID' }
+    PublicationTargetId:
+      name: publicationTargetId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/UUID' }
+    EvidenceId:
+      name: evidenceId
+      in: query
+      required: true
+      allowEmptyValue: false
+      schema: { type: string, minLength: 1 }
+      x-etf-pass-unchanged: true
+    ExpectedVersion:
+      name: expectedVersion
+      in: query
+      required: true
+      schema: { $ref: '#/components/schemas/UInt' }
+    AsOf:
+      name: asOf
+      in: query
+      required: true
+      schema: { $ref: '#/components/schemas/UTCInstant' }
+  requestBodies:
+    WatchlistPutBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/WatchlistPutBody' }
+    WatchlistReorderBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/WatchlistReorderBody' }
+    FixtureIngestionStartBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/FixtureIngestionStartBody' }
+    AnalyticsRunBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/AnalyticsRunBody' }
+    PaperOrderDraftCreateBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/PaperOrderDraftCreateBody' }
+    PaperOrderTransitionBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/PaperOrderTransitionBody' }
+    DiagnosticsExportCreateBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/DiagnosticsExportCreateBody' }
+  responses:
+    WatchlistPutSuccess: { description: Succeeded, content: { application/json: { schema: { $ref: '#/components/schemas/WatchlistPutResult' } } } }
+    VersionSuccess: { description: Succeeded, content: { application/json: { schema: { $ref: '#/components/schemas/VersionResult' } } } }
+    WatchlistReorderSuccess: { description: Succeeded, content: { application/json: { schema: { $ref: '#/components/schemas/WatchlistReorderResult' } } } }
+    WatchlistGetSuccess: { description: Succeeded, content: { application/json: { schema: { $ref: '#/components/schemas/WatchlistGetResult' } } } }
+    FixtureIngestionStartSuccess: { description: Succeeded, content: { application/json: { schema: { $ref: '#/components/schemas/FixtureIngestionStartResult' } } } }
+    JobRestartSuccess: { description: Succeeded, content: { application/json: { schema: { $ref: '#/components/schemas/JobRestartResult' } } } }
+    AnalyticsRunSuccess: { description: Succeeded, content: { application/json: { schema: { $ref: '#/components/schemas/AnalyticsRunResult' } } } }
+    JobGetSuccess: { description: Succeeded, content: { application/json: { schema: { $ref: '#/components/schemas/JobGetResult' } } } }
+    ReadinessSuccess: { description: Succeeded, content: { application/json: { schema: { $ref: '#/components/schemas/ReadinessResult' } } } }
+    PaperOrderDraftCreateSuccess: { description: Succeeded, content: { application/json: { schema: { $ref: '#/components/schemas/PaperOrderDraftCreateResult' } } } }
+    PaperOrderTransitionSuccess: { description: Succeeded, content: { application/json: { schema: { $ref: '#/components/schemas/PaperOrderTransitionResult' } } } }
+    PaperOrderGetSuccess: { description: Succeeded, content: { application/json: { schema: { $ref: '#/components/schemas/PaperOrderGetResult' } } } }
+    PortfolioSuccess: { description: Succeeded, content: { application/json: { schema: { $ref: '#/components/schemas/PortfolioResult' } } } }
+    AnalyticsResultSuccess: { description: Succeeded, content: { application/json: { schema: { $ref: '#/components/schemas/AnalyticsResultEnvelope' } } } }
+    EvidenceSuccess: { description: Succeeded, content: { application/json: { schema: { $ref: '#/components/schemas/EvidenceResult' } } } }
+    DiagnosticExportSuccess: { description: Succeeded, content: { application/json: { schema: { $ref: '#/components/schemas/DiagnosticExportResult' } } } }
+  schemas:
+    UUID: { type: string, format: uuid }
+    UInt: { type: string, pattern: '^(0|[1-9][0-9]*)$' }
+    Date: { type: string, format: date, pattern: '^\d{4}-\d{2}-\d{2}$' }
+    UTCInstant: { type: string, format: date-time, pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$' }
+    Sha256: { type: string, pattern: '^[0-9a-f]{64}$' }
+    Quantity: { type: string, pattern: '^(0|[1-9][0-9]*)\.[0-9]{10}$' }
+    UnitPrice: { $ref: '#/components/schemas/Quantity' }
+    Money: { type: string, pattern: '^-?(0|[1-9][0-9]*)\.[0-9]{8}$' }
+    Rate: { type: string, pattern: '^-?(0|[1-9][0-9]*)\.[0-9]{12}$' }
+    WatchlistPutBody:
+      type: object
+      additionalProperties: false
+      required: [displayName, expectedVersion]
+      properties:
+        displayName: { type: string, minLength: 1 }
+        expectedVersion: { $ref: '#/components/schemas/UInt' }
+    WatchlistReorderBody:
+      type: object
+      additionalProperties: false
+      required: [orderedInstrumentIds, expectedVersion]
+      properties:
+        orderedInstrumentIds: { type: array, uniqueItems: true, items: { type: string, minLength: 1 } }
+        expectedVersion: { $ref: '#/components/schemas/UInt' }
+    FixtureIngestionStartBody:
+      type: object
+      additionalProperties: false
+      required: [jobId, datasetId, datasetVersion, fixturePackageHash]
+      properties:
+        jobId: { $ref: '#/components/schemas/UUID' }
+        datasetId: { type: string, minLength: 1 }
+        datasetVersion: { type: string, minLength: 1 }
+        fixturePackageHash: { $ref: '#/components/schemas/Sha256' }
+    AnalyticsRunBody:
+      type: object
+      additionalProperties: false
+      required: [jobId, evidenceCommandId, asOfDate, configurationHash, inputEvidenceIds]
+      properties:
+        jobId: { $ref: '#/components/schemas/UUID' }
+        evidenceCommandId: { $ref: '#/components/schemas/UUID' }
+        asOfDate: { $ref: '#/components/schemas/Date' }
+        configurationHash: { $ref: '#/components/schemas/Sha256' }
+        inputEvidenceIds: { type: array, uniqueItems: true, items: { $ref: '#/components/schemas/UUID' } }
+    PaperOrderDraftCreateBody:
+      type: object
+      additionalProperties: false
+      required: [orderId, researchEvidenceId, side, quantity, unitPrice, tradeDate]
+      properties:
+        orderId: { $ref: '#/components/schemas/UUID' }
+        researchEvidenceId: { $ref: '#/components/schemas/UUID' }
+        side: { type: string, enum: [Buy, Sell] }
+        quantity: { $ref: '#/components/schemas/Quantity' }
+        unitPrice: { $ref: '#/components/schemas/UnitPrice' }
+        tradeDate: { $ref: '#/components/schemas/Date' }
+    Confirmation:
+      type: object
+      additionalProperties: false
+      required: [actorId, confirmedAt, confirmationText]
+      properties:
+        actorId: { const: local-user }
+        confirmedAt: { $ref: '#/components/schemas/UTCInstant' }
+        confirmationText: { type: string, minLength: 1 }
+    PaperOrderTransitionBody:
+      type: object
+      additionalProperties: false
+      required: [transitionCommandId, expectedVersion, transition, transitionPayload]
+      properties:
+        transitionCommandId: { $ref: '#/components/schemas/UUID' }
+        expectedVersion: { $ref: '#/components/schemas/UInt' }
+        transition: { type: string, enum: [OT-02, OT-03, OT-04, OT-05, OT-06, OT-07, OT-08, OT-09, OT-10] }
+        transitionPayload: { type: object }
+      allOf:
+        - if: { properties: { transition: { const: OT-02 } } }
+          then: { properties: { transitionPayload: { $ref: '#/components/schemas/ConfirmationTransitionPayload' } } }
+        - if: { properties: { transition: { const: OT-03 } } }
+          then: { properties: { transitionPayload: { $ref: '#/components/schemas/PortfolioValidationPayload' } } }
+        - if: { properties: { transition: { const: OT-04 } } }
+          then: { properties: { transitionPayload: { $ref: '#/components/schemas/RejectionPayload' } } }
+        - if: { properties: { transition: { enum: [OT-05, OT-06, OT-09] } } }
+          then: { properties: { transitionPayload: { $ref: '#/components/schemas/FillPayload' } } }
+        - if: { properties: { transition: { enum: [OT-07, OT-10] } } }
+          then: { properties: { transitionPayload: { $ref: '#/components/schemas/ReasonPayload' } } }
+        - if: { properties: { transition: { const: OT-08 } } }
+          then: { properties: { transitionPayload: { $ref: '#/components/schemas/ExpiryPayload' } } }
+    ConfirmationTransitionPayload:
+      type: object
+      additionalProperties: false
+      required: [confirmation]
+      properties: { confirmation: { $ref: '#/components/schemas/Confirmation' } }
+    PortfolioValidationPayload:
+      type: object
+      additionalProperties: false
+      required: [portfolioId, validationSnapshotId, expectedPortfolioVersion]
+      properties:
+        portfolioId: { $ref: '#/components/schemas/UUID' }
+        validationSnapshotId: { $ref: '#/components/schemas/UUID' }
+        expectedPortfolioVersion: { $ref: '#/components/schemas/UInt' }
+    RejectionPayload:
+      type: object
+      additionalProperties: false
+      required: [rejectionCode]
+      properties: { rejectionCode: { type: string, minLength: 1 } }
+    FillPayload:
+      type: object
+      additionalProperties: false
+      required: [portfolioId, transactionId, fillId, expectedPortfolioVersion, quantity, unitPrice, fee]
+      properties:
+        portfolioId: { $ref: '#/components/schemas/UUID' }
+        transactionId: { $ref: '#/components/schemas/UUID' }
+        fillId: { $ref: '#/components/schemas/UUID' }
+        expectedPortfolioVersion: { $ref: '#/components/schemas/UInt' }
+        quantity: { $ref: '#/components/schemas/Quantity' }
+        unitPrice: { $ref: '#/components/schemas/UnitPrice' }
+        fee: { $ref: '#/components/schemas/Money' }
+    ReasonPayload:
+      type: object
+      additionalProperties: false
+      required: [reasonCode]
+      properties: { reasonCode: { type: string, minLength: 1 } }
+    ExpiryPayload:
+      type: object
+      additionalProperties: false
+      required: [expiresAt]
+      properties: { expiresAt: { $ref: '#/components/schemas/UTCInstant' } }
+    DiagnosticsExportCreateBody:
+      type: object
+      additionalProperties: false
+      required: [exportId, from, through, requestedCodes]
+      properties:
+        exportId: { $ref: '#/components/schemas/UUID' }
+        from: { $ref: '#/components/schemas/UTCInstant' }
+        through: { $ref: '#/components/schemas/UTCInstant' }
+        requestedCodes: { type: array, uniqueItems: true, items: { type: string, minLength: 1 } }
+    WatchlistItem:
+      type: object
+      additionalProperties: false
+      required: [instrumentId, displayName, validationState, position]
+      properties:
+        instrumentId: { type: string }
+        displayName: { type: string }
+        validationState: { type: string, enum: [Valid, Invalid] }
+        position: { $ref: '#/components/schemas/UInt' }
+    Error:
+      type: object
+      additionalProperties: false
+      required: [code, message, boundedIdentifiers, recovery]
+      properties:
+        code: { type: string, minLength: 1 }
+        message: { type: string, minLength: 1 }
+        boundedIdentifiers:
+          type: object
+          propertyNames: { enum: [requestId, correlationId, jobId, orderId, evidenceId, datasetId, datasetVersion] }
+          additionalProperties: { type: string }
+        recovery:
+          oneOf:
+            - $ref: '#/components/schemas/Recovery'
+            - type: 'null'
+    Error400:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          properties:
+            code: { enum: [APPLICATION_OPERATION_UNKNOWN, APPLICATION_REQUEST_INVALID, FIXTURE_MANIFEST_INVALID, FIXTURE_FILE_INTEGRITY_FAILED, FIXTURE_DATASET_HASH_MISMATCH, FIXTURE_TEMPORAL_INVALID, FIXTURE_DECIMAL_INVALID, FIXTURE_PROVENANCE_INVALID, FIXTURE_UNDECLARED_INPUT, FIXTURE_REQUIRED_MISSING, ANALYTICS_NUMERIC_CLASS_INVALID, ORDER_UNKNOWN_STATE, LEDGER_INVALID_DECIMAL, LEDGER_EXCESS_SCALE] }
+    Error403:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          properties:
+            code: { enum: [APPLICATION_UNAUTHORIZED, ANALYTICS_EVIDENCE_ACCESS_DENIED, ANALYTICS_RIGHTS_RESTRICTED] }
+    Error404:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          properties: { code: { const: APPLICATION_JOB_NOT_FOUND } }
+    Error409:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          properties:
+            code: { enum: [APPLICATION_IDEMPOTENCY_CONFLICT, ANALYTICS_IDEMPOTENCY_CONFLICT, ANALYTICS_PUBLICATION_VERSION_CONFLICT, ORDER_IDEMPOTENCY_CONFLICT, ORDER_VERSION_CONFLICT, FIXTURE_IDEMPOTENCY_CONFLICT, LEDGER_IDEMPOTENCY_CONFLICT, LEDGER_VERSION_CONFLICT] }
+    Error422:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          properties:
+            code: { enum: [APPLICATION_JOB_NOT_RESTARTABLE, ANALYTICS_INPUT_INCOMPLETE, ANALYTICS_INPUT_STALE, ANALYTICS_INPUT_QUARANTINED, ANALYTICS_AMBIGUOUS_VINTAGE, ANALYTICS_AMBIGUOUS_MARKET_REVISION, ANALYTICS_INTEGRITY_FAILED, ORDER_INVALID_TRANSITION, ORDER_GUARD_FAILED, ORDER_TERMINAL_STATE, FIXTURE_REQUIRED_PARTIAL, FIXTURE_REQUIRED_STALE, FIXTURE_REQUIRED_QUARANTINED, LEDGER_INSUFFICIENT_CASH, LEDGER_INSUFFICIENT_POSITION, LEDGER_REVERSAL_DEPENDENCY, LEDGER_ALREADY_REVERSED, LEDGER_BOUND_EXCEEDED] }
+    Error500:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          properties:
+            code: { enum: [APPLICATION_PERSISTENCE_FAILED, APPLICATION_REDACTION_FAILED, ANALYTICS_EVIDENCE_COMMIT_FAILED, ANALYTICS_DETERMINISM_FAILED, LEDGER_INTEGRITY_FAILED, LEDGER_FIFO_MISMATCH, LEDGER_RECONCILIATION_FAILED] }
+    Error503:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          properties:
+            code: { enum: [APPLICATION_DATABASE_UNAVAILABLE, APPLICATION_MIGRATIONS_INCOMPLETE, APPLICATION_CONFIGURATION_INVALID, APPLICATION_DEPENDENCY_UNAVAILABLE, ANALYTICS_CAPACITY_BLOCKED, ANALYTICS_ACCESS_DENIAL_AUDIT_FAILED] }
+    Recovery:
+      type: object
+      additionalProperties: false
+      required: [actionId, label, targetOperation, focusTarget, requiresConfirmation]
+      properties:
+        actionId: { type: string, minLength: 1 }
+        label: { type: string, minLength: 1 }
+        targetOperation: { $ref: '#/components/schemas/ApplicationOperation' }
+        focusTarget: { type: string, minLength: 1 }
+        requiresConfirmation: { type: boolean }
+    Presentation:
+      type: object
+      additionalProperties: false
+      required: [statusText, announcement, warningText, researchWarningRequired]
+      properties:
+        statusText: { type: string, minLength: 1 }
+        announcement: { type: string, enum: [None, PoliteStatus, AssertiveAlert] }
+        warningText: { type: [string, 'null'] }
+        researchWarningRequired: { type: boolean }
+      allOf:
+        - if: { properties: { researchWarningRequired: { const: true } } }
+          then: { properties: { warningText: { const: 'Research only — hypothetical — user makes all investment decisions.' } } }
+        - if: { properties: { researchWarningRequired: { const: false } } }
+          then: { properties: { warningText: { type: 'null' } } }
+    ResearchWarningResultConstraint:
+      type: object
+      required: [presentation]
+      properties:
+        presentation:
+          type: object
+          required: [warningText, researchWarningRequired]
+          properties:
+            warningText: { const: 'Research only — hypothetical — user makes all investment decisions.' }
+            researchWarningRequired: { const: true }
+    NoResearchWarningResultConstraint:
+      type: object
+      required: [presentation]
+      properties:
+        presentation:
+          type: object
+          required: [warningText, researchWarningRequired]
+          properties:
+            warningText: { type: 'null' }
+            researchWarningRequired: { const: false }
+    ApplicationOperation:
+      type: string
+      enum: [WatchlistPut, WatchlistRemove, WatchlistReorder, FixtureIngestionStart, JobRestart, AnalyticsRun, PaperOrderDraftCreate, PaperOrderTransition, DiagnosticsExportCreate, WatchlistGet, JobGet, ReadinessGet, AnalyticsResultGet, EvidenceGet, PaperOrderGet, PortfolioGet]
+    ResultBase:
+      type: object
+      required: [operation, requestId, correlationId, outcome, completedAt, warnings, presentation]
+      properties:
+        operation: { $ref: '#/components/schemas/ApplicationOperation' }
+        requestId: { $ref: '#/components/schemas/UUID' }
+        correlationId: { $ref: '#/components/schemas/UUID' }
+        outcome: { type: string, enum: [Succeeded, Failed] }
+        completedAt: { $ref: '#/components/schemas/UTCInstant' }
+        warnings: { type: array, uniqueItems: true, items: { type: string } }
+        presentation: { $ref: '#/components/schemas/Presentation' }
+    FailedResult:
+      allOf:
+        - $ref: '#/components/schemas/ResultBase'
+        - type: object
+          required: [error]
+          properties:
+            outcome: { const: Failed }
+            error: { $ref: '#/components/schemas/Error' }
+      unevaluatedProperties: false
+      x-etf-operation-must-match-endpoint: true
+    Failed400: { $ref: '#/components/schemas/FailedResult400' }
+    FailedResult400:
+      allOf:
+        - $ref: '#/components/schemas/FailedResult'
+        - type: object
+          properties: { error: { $ref: '#/components/schemas/Error400' } }
+    Failed403:
+      allOf:
+        - $ref: '#/components/schemas/FailedResult'
+        - type: object
+          properties: { error: { $ref: '#/components/schemas/Error403' } }
+    Failed404:
+      allOf:
+        - $ref: '#/components/schemas/FailedResult'
+        - type: object
+          properties: { error: { $ref: '#/components/schemas/Error404' } }
+    Failed409:
+      allOf:
+        - $ref: '#/components/schemas/FailedResult'
+        - type: object
+          properties: { error: { $ref: '#/components/schemas/Error409' } }
+    Failed422:
+      allOf:
+        - $ref: '#/components/schemas/FailedResult'
+        - type: object
+          properties: { error: { $ref: '#/components/schemas/Error422' } }
+    Failed500:
+      allOf:
+        - $ref: '#/components/schemas/FailedResult'
+        - type: object
+          properties: { error: { $ref: '#/components/schemas/Error500' } }
+    Failed503:
+      allOf:
+        - $ref: '#/components/schemas/FailedResult'
+        - type: object
+          properties: { error: { $ref: '#/components/schemas/Error503' } }
+    FailedWatchlistPut: { allOf: [{ $ref: '#/components/schemas/FailedResult' }, { $ref: '#/components/schemas/NoResearchWarningResultConstraint' }, { properties: { operation: { const: WatchlistPut } } }] }
+    FailedWatchlistRemove: { allOf: [{ $ref: '#/components/schemas/FailedResult' }, { $ref: '#/components/schemas/NoResearchWarningResultConstraint' }, { properties: { operation: { const: WatchlistRemove } } }] }
+    FailedWatchlistReorder: { allOf: [{ $ref: '#/components/schemas/FailedResult' }, { $ref: '#/components/schemas/NoResearchWarningResultConstraint' }, { properties: { operation: { const: WatchlistReorder } } }] }
+    FailedFixtureIngestionStart: { allOf: [{ $ref: '#/components/schemas/FailedResult' }, { $ref: '#/components/schemas/NoResearchWarningResultConstraint' }, { properties: { operation: { const: FixtureIngestionStart } } }] }
+    FailedJobRestart: { allOf: [{ $ref: '#/components/schemas/FailedResult' }, { $ref: '#/components/schemas/NoResearchWarningResultConstraint' }, { properties: { operation: { const: JobRestart } } }] }
+    FailedAnalyticsRun: { allOf: [{ $ref: '#/components/schemas/FailedResult' }, { $ref: '#/components/schemas/NoResearchWarningResultConstraint' }, { properties: { operation: { const: AnalyticsRun } } }] }
+    FailedPaperOrderDraftCreate: { allOf: [{ $ref: '#/components/schemas/FailedResult' }, { $ref: '#/components/schemas/ResearchWarningResultConstraint' }, { properties: { operation: { const: PaperOrderDraftCreate } } }] }
+    FailedPaperOrderTransition: { allOf: [{ $ref: '#/components/schemas/FailedResult' }, { $ref: '#/components/schemas/ResearchWarningResultConstraint' }, { properties: { operation: { const: PaperOrderTransition } } }] }
+    FailedDiagnosticsExportCreate: { allOf: [{ $ref: '#/components/schemas/FailedResult' }, { $ref: '#/components/schemas/NoResearchWarningResultConstraint' }, { properties: { operation: { const: DiagnosticsExportCreate } } }] }
+    FailedWatchlistGet: { allOf: [{ $ref: '#/components/schemas/FailedResult' }, { $ref: '#/components/schemas/NoResearchWarningResultConstraint' }, { properties: { operation: { const: WatchlistGet } } }] }
+    FailedJobGet: { allOf: [{ $ref: '#/components/schemas/FailedResult' }, { $ref: '#/components/schemas/NoResearchWarningResultConstraint' }, { properties: { operation: { const: JobGet } } }] }
+    FailedReadinessGet: { allOf: [{ $ref: '#/components/schemas/FailedResult' }, { $ref: '#/components/schemas/NoResearchWarningResultConstraint' }, { properties: { operation: { const: ReadinessGet } } }] }
+    FailedAnalyticsResultGet: { allOf: [{ $ref: '#/components/schemas/FailedResult' }, { $ref: '#/components/schemas/ResearchWarningResultConstraint' }, { properties: { operation: { const: AnalyticsResultGet } } }] }
+    FailedEvidenceGet: { allOf: [{ $ref: '#/components/schemas/FailedResult' }, { $ref: '#/components/schemas/ResearchWarningResultConstraint' }, { properties: { operation: { const: EvidenceGet } } }] }
+    FailedPaperOrderGet: { allOf: [{ $ref: '#/components/schemas/FailedResult' }, { $ref: '#/components/schemas/NoResearchWarningResultConstraint' }, { properties: { operation: { const: PaperOrderGet } } }] }
+    FailedPortfolioGet: { allOf: [{ $ref: '#/components/schemas/FailedResult' }, { $ref: '#/components/schemas/NoResearchWarningResultConstraint' }, { properties: { operation: { const: PortfolioGet } } }] }
+    SucceededResultBase:
+      allOf:
+        - $ref: '#/components/schemas/ResultBase'
+        - type: object
+          required: [data]
+          properties:
+            outcome: { const: Succeeded }
+    WatchlistPutData:
+      type: object
+      additionalProperties: false
+      required: [item, version]
+      properties:
+        item: { $ref: '#/components/schemas/WatchlistItem' }
+        version: { $ref: '#/components/schemas/UInt' }
+    VersionData:
+      type: object
+      additionalProperties: false
+      required: [version]
+      properties: { version: { $ref: '#/components/schemas/UInt' } }
+    WatchlistReorderData:
+      type: object
+      additionalProperties: false
+      required: [orderedItems, version]
+      properties:
+        orderedItems: { type: array, items: { $ref: '#/components/schemas/WatchlistItem' } }
+        version: { $ref: '#/components/schemas/UInt' }
+    WatchlistGetData:
+      type: object
+      additionalProperties: false
+      required: [orderedItems, version]
+      properties:
+        orderedItems: { type: array, items: { $ref: '#/components/schemas/WatchlistItem' } }
+        version: { $ref: '#/components/schemas/UInt' }
+    FixtureInputIdentity:
+      type: object
+      additionalProperties: false
+      required: [datasetId, datasetVersion, fixturePackageHash]
+      properties:
+        datasetId: { type: string }
+        datasetVersion: { type: string }
+        fixturePackageHash: { $ref: '#/components/schemas/Sha256' }
+    AnalyticsInputIdentity:
+      type: object
+      additionalProperties: false
+      required: [evidenceCommandId, asOfDate, configurationHash, inputEvidenceIds]
+      properties:
+        evidenceCommandId: { $ref: '#/components/schemas/UUID' }
+        asOfDate: { $ref: '#/components/schemas/Date' }
+        configurationHash: { $ref: '#/components/schemas/Sha256' }
+        inputEvidenceIds: { type: array, uniqueItems: true, items: { $ref: '#/components/schemas/UUID' } }
+    JobCheckpoint:
+      type: object
+      additionalProperties: false
+      required: [checkpointId, attempt, sequence, committedAt, contentHash]
+      properties:
+        checkpointId: { $ref: '#/components/schemas/UUID' }
+        attempt: { $ref: '#/components/schemas/UInt' }
+        sequence: { $ref: '#/components/schemas/UInt' }
+        committedAt: { $ref: '#/components/schemas/UTCInstant' }
+        contentHash: { $ref: '#/components/schemas/Sha256' }
+    Job:
+      type: object
+      additionalProperties: false
+      required: [jobId, jobType, status, restartability, attempt, operation, originalCommandId, inputIdentity, createdAt, startedAt, completedAt, checkpoint, acceptedCount, rejectedCount, controllingError]
+      properties:
+        jobId: { $ref: '#/components/schemas/UUID' }
+        jobType: { type: string, enum: [FixtureIngestion, Analytics] }
+        status: { type: string, enum: [Pending, Running, Succeeded, Failed] }
+        restartability: { type: string, enum: [Restartable, NotRestartable] }
+        attempt: { $ref: '#/components/schemas/UInt' }
+        operation: { type: string, enum: [FixtureIngestionStart, AnalyticsRun] }
+        originalCommandId: { $ref: '#/components/schemas/UUID' }
+        inputIdentity:
+          oneOf:
+            - $ref: '#/components/schemas/FixtureInputIdentity'
+            - $ref: '#/components/schemas/AnalyticsInputIdentity'
+        createdAt: { $ref: '#/components/schemas/UTCInstant' }
+        startedAt: { oneOf: [{ $ref: '#/components/schemas/UTCInstant' }, { type: 'null' }] }
+        completedAt: { oneOf: [{ $ref: '#/components/schemas/UTCInstant' }, { type: 'null' }] }
+        checkpoint: { oneOf: [{ $ref: '#/components/schemas/JobCheckpoint' }, { type: 'null' }] }
+        acceptedCount: { $ref: '#/components/schemas/UInt' }
+        rejectedCount: { $ref: '#/components/schemas/UInt' }
+        controllingError: { oneOf: [{ $ref: '#/components/schemas/Error' }, { type: 'null' }] }
+      allOf:
+        - if: { properties: { jobType: { const: FixtureIngestion } } }
+          then:
+            properties:
+              operation: { const: FixtureIngestionStart }
+              inputIdentity: { $ref: '#/components/schemas/FixtureInputIdentity' }
+        - if: { properties: { jobType: { const: Analytics } } }
+          then:
+            properties:
+              operation: { const: AnalyticsRun }
+              inputIdentity: { $ref: '#/components/schemas/AnalyticsInputIdentity' }
+    ReadinessDependency:
+      type: object
+      additionalProperties: false
+      required: [dependency, state, checkedAt, code]
+      properties:
+        dependency: { type: string, enum: [PostgreSQL, Migrations, FixturePolicy, LocalDependency, DenialAudit, LedgerIntegrity] }
+        state: { type: string, enum: [Ready, NotReady] }
+        checkedAt: { $ref: '#/components/schemas/UTCInstant' }
+        code: { type: [string, 'null'] }
+    Readiness:
+      type: object
+      additionalProperties: false
+      required: [state, checkedAt, displayTimezone, liveness, dependencies, controllingError]
+      properties:
+        state: { type: string, enum: [Ready, NotReady] }
+        checkedAt: { $ref: '#/components/schemas/UTCInstant' }
+        displayTimezone: { const: UTC }
+        liveness: { type: string, enum: [Live, NotLive] }
+        dependencies: { type: array, items: { $ref: '#/components/schemas/ReadinessDependency' } }
+        controllingError: { oneOf: [{ $ref: '#/components/schemas/Error' }, { type: 'null' }] }
+      allOf:
+        - if: { properties: { state: { const: Ready } } }
+          then: { properties: { controllingError: { type: 'null' } } }
+        - if: { properties: { state: { const: NotReady } } }
+          then: { properties: { controllingError: { $ref: '#/components/schemas/Error' } } }
+    ConfirmationResult:
+      type: object
+      additionalProperties: false
+      required: [actorId, confirmedAt, confirmationText]
+      properties:
+        actorId: { const: local-user }
+        confirmedAt: { $ref: '#/components/schemas/UTCInstant' }
+        confirmationText: { type: string }
+    OrderTransitionRecord:
+      type: object
+      additionalProperties: false
+      required: [transitionCommandId, transition, sourceState, targetState, trigger, occurredAt, actorId, correlationId, priorVersion, resultingVersion, baselineVersion]
+      properties:
+        transitionCommandId: { $ref: '#/components/schemas/UUID' }
+        transition: { type: string, enum: [OT-01, OT-02, OT-03, OT-04, OT-05, OT-06, OT-07, OT-08, OT-09, OT-10] }
+        sourceState: { type: string, enum: [Initial, Draft, Submitted, Accepted, Partial, Filled, Rejected, Canceled, Expired] }
+        targetState: { type: string, enum: [Draft, Submitted, Accepted, Partial, Filled, Rejected, Canceled, Expired] }
+        trigger: { type: string }
+        occurredAt: { $ref: '#/components/schemas/UTCInstant' }
+        actorId: { const: local-user }
+        correlationId: { $ref: '#/components/schemas/UUID' }
+        priorVersion: { $ref: '#/components/schemas/UInt' }
+        resultingVersion: { $ref: '#/components/schemas/UInt' }
+        baselineVersion: { const: v1.0.0 }
+    PaperOrder:
+      type: object
+      additionalProperties: false
+      required: [orderId, state, aggregateVersion, researchEvidenceId, side, requestedQuantity, filledQuantity, openQuantity, unitPrice, tradeDate, confirmation, transitionHistory]
+      properties:
+        orderId: { $ref: '#/components/schemas/UUID' }
+        state: { type: string, enum: [Draft, Submitted, Accepted, Partial, Filled, Rejected, Canceled, Expired] }
+        aggregateVersion: { $ref: '#/components/schemas/UInt' }
+        researchEvidenceId: { $ref: '#/components/schemas/UUID' }
+        side: { type: string, enum: [Buy, Sell] }
+        requestedQuantity: { $ref: '#/components/schemas/Quantity' }
+        filledQuantity: { $ref: '#/components/schemas/Quantity' }
+        openQuantity: { $ref: '#/components/schemas/Quantity' }
+        unitPrice: { $ref: '#/components/schemas/UnitPrice' }
+        tradeDate: { $ref: '#/components/schemas/Date' }
+        confirmation: { oneOf: [{ $ref: '#/components/schemas/ConfirmationResult' }, { type: 'null' }] }
+        transitionHistory: { type: array, items: { $ref: '#/components/schemas/OrderTransitionRecord' } }
+    PortfolioLot:
+      type: object
+      additionalProperties: false
+      required: [lotId, instrumentId, acquiredAt, ledgerSequence, openQuantity, openBasis]
+      properties:
+        lotId: { $ref: '#/components/schemas/UUID' }
+        instrumentId: { type: string }
+        acquiredAt: { $ref: '#/components/schemas/UTCInstant' }
+        ledgerSequence: { $ref: '#/components/schemas/UInt' }
+        openQuantity: { $ref: '#/components/schemas/Quantity' }
+        openBasis: { $ref: '#/components/schemas/Money' }
+    PortfolioPosition:
+      type: object
+      additionalProperties: false
+      required: [instrumentId, quantity, basis, valuation, unrealizedPnL]
+      properties:
+        instrumentId: { type: string }
+        quantity: { $ref: '#/components/schemas/Quantity' }
+        basis: { $ref: '#/components/schemas/Money' }
+        valuation: { $ref: '#/components/schemas/Money' }
+        unrealizedPnL: { $ref: '#/components/schemas/Money' }
+    Portfolio:
+      type: object
+      additionalProperties: false
+      required: [portfolioId, portfolioVersion, asOf, valuationSnapshotId, precisionPolicyVersion, baselineVersion, cash, lots, positions, realizedPnL, totalEquity, reconciliationState]
+      properties:
+        portfolioId: { $ref: '#/components/schemas/UUID' }
+        portfolioVersion: { $ref: '#/components/schemas/UInt' }
+        asOf: { $ref: '#/components/schemas/UTCInstant' }
+        valuationSnapshotId: { $ref: '#/components/schemas/UUID' }
+        precisionPolicyVersion: { const: DEC-014 }
+        baselineVersion: { const: v1.0.0 }
+        cash: { $ref: '#/components/schemas/Money' }
+        lots: { type: array, items: { $ref: '#/components/schemas/PortfolioLot' } }
+        positions: { type: array, items: { $ref: '#/components/schemas/PortfolioPosition' } }
+        realizedPnL: { $ref: '#/components/schemas/Money' }
+        totalEquity: { $ref: '#/components/schemas/Money' }
+        reconciliationState: { type: string, enum: [Reconciled, IntegrityBlocked] }
+    DiagnosticExport:
+      type: object
+      additionalProperties: false
+      required: [exportId, createdAt, codes, itemCount, contentHash]
+      properties:
+        exportId: { $ref: '#/components/schemas/UUID' }
+        createdAt: { $ref: '#/components/schemas/UTCInstant' }
+        codes: { type: array, uniqueItems: true, items: { type: string } }
+        itemCount: { $ref: '#/components/schemas/UInt' }
+        contentHash: { $ref: '#/components/schemas/Sha256' }
+    AnalyticsResult:
+      type: object
+      additionalProperties: false
+      required: [domain, resultSchemaVersion, configurationHash, signals, trades, metrics, warnings]
+      properties:
+        configurationHash: { $ref: '#/components/schemas/Sha256' }
+        domain: { const: etf.analytics.result.v1 }
+        resultSchemaVersion: { const: 1.0.0 }
+        signals:
+          type: array
+          items: { $ref: '#/components/schemas/AnalyticsSignal' }
+          x-etf-order: instrumentId-ascending
+        trades:
+          type: array
+          items: { $ref: '#/components/schemas/AnalyticsTrade' }
+          x-etf-order: tradeOrdinal-zero-based-contiguous
+        metrics:
+          type: array
+          items: { $ref: '#/components/schemas/AnalyticsMetric' }
+          x-etf-order: metricId-ascending
+        warnings:
+          type: array
+          items: { $ref: '#/components/schemas/AnalyticsWarning' }
+          x-etf-order: subjectId-null-first-then-warningCode
+      x-etf-canonical-property-order: [configurationHash, domain, metrics, resultSchemaVersion, signals, trades, warnings]
+    AnalyticsSignal:
+      type: object
+      additionalProperties: false
+      required: [instrumentId, label, score]
+      properties:
+        instrumentId: { type: string, minLength: 1 }
+        label: { type: string, minLength: 1 }
+        score: { $ref: '#/components/schemas/Rate' }
+    AnalyticsTrade:
+      type: object
+      additionalProperties: false
+      required: [tradeOrdinal, instrumentId, side, quantity, unitPrice, grossValue, fee, effectiveAt]
+      properties:
+        tradeOrdinal: { $ref: '#/components/schemas/UInt' }
+        instrumentId: { type: string, minLength: 1 }
+        side: { type: string, enum: [Buy, Sell] }
+        quantity: { $ref: '#/components/schemas/Quantity' }
+        unitPrice: { $ref: '#/components/schemas/UnitPrice' }
+        grossValue: { $ref: '#/components/schemas/Money' }
+        fee: { $ref: '#/components/schemas/Money' }
+        effectiveAt: { $ref: '#/components/schemas/UTCInstant' }
+    AnalyticsMetric:
+      type: object
+      additionalProperties: false
+      required: [metricId, numericClass, value]
+      properties:
+        metricId: { type: string, minLength: 1 }
+        numericClass: { type: string, enum: [Quantity, Money, Rate] }
+        value: { type: string }
+      allOf:
+        - if: { properties: { numericClass: { const: Quantity } } }
+          then: { properties: { value: { $ref: '#/components/schemas/Quantity' } } }
+        - if: { properties: { numericClass: { const: Money } } }
+          then: { properties: { value: { $ref: '#/components/schemas/Money' } } }
+        - if: { properties: { numericClass: { const: Rate } } }
+          then: { properties: { value: { $ref: '#/components/schemas/Rate' } } }
+    AnalyticsWarning:
+      type: object
+      additionalProperties: false
+      required: [warningCode, subjectId]
+      properties:
+        warningCode: { type: string, minLength: 1 }
+        subjectId: { type: [string, 'null'] }
+    RuleParameters:
+      type: object
+      additionalProperties: false
+      required: [lookbackSessions]
+      properties:
+        lookbackSessions: { $ref: '#/components/schemas/UInt' }
+    Benchmark:
+      type: object
+      additionalProperties: false
+      required: [instrumentId, version]
+      properties:
+        instrumentId: { type: string, minLength: 1 }
+        version: { type: string, minLength: 1 }
+    AnalyticsEnvironment:
+      type: object
+      additionalProperties: false
+      required: [dependencyLockHash, runtime]
+      properties:
+        dependencyLockHash: { $ref: '#/components/schemas/Sha256' }
+        runtime: { type: string, minLength: 1 }
+    AnalyticsAssumptions:
+      type: object
+      additionalProperties: false
+      required: [costRate, fillTiming, slippageRate]
+      properties:
+        costRate: { $ref: '#/components/schemas/Rate' }
+        fillTiming: { type: string, minLength: 1 }
+        slippageRate: { $ref: '#/components/schemas/Rate' }
+    Evidence:
+      type: object
+      additionalProperties: false
+      required: [assumptions, baselineVersion, benchmark, bundleHash, codeHash, configurationHash, domain, environment, evaluationAt, evidenceId, evidenceSchemaVersion, inputHash, inputSetId, parameters, providerPolicyReferences, reproducibilityReason, reproducibilityStatus, result, resultHash, retentionEpoch, retentionPolicyVersion, ruleId, ruleVersion, seed]
+      properties:
+        assumptions: { $ref: '#/components/schemas/AnalyticsAssumptions' }
+        baselineVersion: { const: v1.0.0 }
+        benchmark: { $ref: '#/components/schemas/Benchmark' }
+        bundleHash: { $ref: '#/components/schemas/Sha256' }
+        codeHash: { $ref: '#/components/schemas/Sha256' }
+        configurationHash: { $ref: '#/components/schemas/Sha256' }
+        domain: { const: etf.analytics.bundle.v1 }
+        environment: { $ref: '#/components/schemas/AnalyticsEnvironment' }
+        evaluationAt: { $ref: '#/components/schemas/UTCInstant' }
+        evidenceId: { type: string, minLength: 1 }
+        evidenceSchemaVersion: { const: 1.0.0 }
+        inputHash: { $ref: '#/components/schemas/Sha256' }
+        inputSetId: { type: string, minLength: 1 }
+        parameters: { $ref: '#/components/schemas/RuleParameters' }
+        providerPolicyReferences: { type: array, uniqueItems: true, items: { type: string, minLength: 1 } }
+        reproducibilityReason: { type: [string, 'null'] }
+        reproducibilityStatus: { type: string, enum: [Complete, Degraded] }
+        result: { $ref: '#/components/schemas/AnalyticsResult' }
+        resultHash: { $ref: '#/components/schemas/Sha256' }
+        retentionEpoch: { $ref: '#/components/schemas/UTCInstant' }
+        retentionPolicyVersion: { const: RET-A-1.0 }
+        ruleId: { type: string, minLength: 1 }
+        ruleVersion: { type: string, minLength: 1 }
+        seed: { type: string }
+      allOf:
+        - if: { properties: { reproducibilityStatus: { const: Complete } } }
+          then: { properties: { reproducibilityReason: { type: 'null' } } }
+        - if: { properties: { reproducibilityStatus: { const: Degraded } } }
+          then: { properties: { reproducibilityReason: { type: string, minLength: 1, maxLength: 128, pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$' } } }
+      x-etf-owner-import:
+        contract: docs/Planning/contracts/analytics-evidence-contract.md
+        candidate: 1.0.0-candidate.2
+        mode: complete-byte-preserving-record-after-authorization-redaction-and-hash-verification
+        ownerConstraintsAreCumulativeAndControlling: true
+      x-etf-canonical-property-order: [assumptions, baselineVersion, benchmark, bundleHash, codeHash, configurationHash, domain, environment, evaluationAt, evidenceId, evidenceSchemaVersion, inputHash, inputSetId, parameters, providerPolicyReferences, reproducibilityReason, reproducibilityStatus, result, resultHash, retentionEpoch, retentionPolicyVersion, ruleId, ruleVersion, seed]
+    WatchlistPutResult: { $ref: '#/components/schemas/SucceededWatchlistPut' }
+    SucceededWatchlistPut:
+      allOf:
+        - $ref: '#/components/schemas/SucceededResultBase'
+        - $ref: '#/components/schemas/NoResearchWarningResultConstraint'
+        - type: object
+          properties: { operation: { const: WatchlistPut }, data: { $ref: '#/components/schemas/WatchlistPutData' } }
+      unevaluatedProperties: false
+    VersionResult:
+      allOf:
+        - $ref: '#/components/schemas/SucceededResultBase'
+        - $ref: '#/components/schemas/NoResearchWarningResultConstraint'
+        - type: object
+          properties: { operation: { const: WatchlistRemove }, data: { $ref: '#/components/schemas/VersionData' } }
+      unevaluatedProperties: false
+    WatchlistReorderResult:
+      allOf:
+        - $ref: '#/components/schemas/SucceededResultBase'
+        - $ref: '#/components/schemas/NoResearchWarningResultConstraint'
+        - type: object
+          properties: { operation: { const: WatchlistReorder }, data: { $ref: '#/components/schemas/WatchlistReorderData' } }
+      unevaluatedProperties: false
+    WatchlistGetResult:
+      allOf:
+        - $ref: '#/components/schemas/SucceededResultBase'
+        - $ref: '#/components/schemas/NoResearchWarningResultConstraint'
+        - type: object
+          properties: { operation: { const: WatchlistGet }, data: { $ref: '#/components/schemas/WatchlistGetData' } }
+      unevaluatedProperties: false
+    JobData:
+      type: object
+      additionalProperties: false
+      required: [job]
+      properties: { job: { $ref: '#/components/schemas/Job' } }
+    JobResult:
+      allOf:
+        - $ref: '#/components/schemas/SucceededResultBase'
+        - $ref: '#/components/schemas/NoResearchWarningResultConstraint'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/JobData' } }
+      unevaluatedProperties: false
+      x-etf-operation-must-match-endpoint: true
+    FixtureIngestionStartResult: { allOf: [{ $ref: '#/components/schemas/JobResult' }, { properties: { operation: { const: FixtureIngestionStart } } }] }
+    JobRestartResult: { allOf: [{ $ref: '#/components/schemas/JobResult' }, { properties: { operation: { const: JobRestart } } }] }
+    AnalyticsRunResult: { allOf: [{ $ref: '#/components/schemas/JobResult' }, { properties: { operation: { const: AnalyticsRun } } }] }
+    JobGetResult: { allOf: [{ $ref: '#/components/schemas/JobResult' }, { properties: { operation: { const: JobGet } } }] }
+    ReadinessData:
+      type: object
+      additionalProperties: false
+      required: [readiness]
+      properties: { readiness: { $ref: '#/components/schemas/Readiness' } }
+    ReadinessResult:
+      allOf:
+        - $ref: '#/components/schemas/SucceededResultBase'
+        - $ref: '#/components/schemas/NoResearchWarningResultConstraint'
+        - type: object
+          properties: { operation: { const: ReadinessGet }, data: { $ref: '#/components/schemas/ReadinessData' } }
+      unevaluatedProperties: false
+    PaperOrderData:
+      type: object
+      additionalProperties: false
+      required: [order]
+      properties: { order: { $ref: '#/components/schemas/PaperOrder' } }
+    PaperOrderResult:
+      allOf:
+        - $ref: '#/components/schemas/SucceededResultBase'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/PaperOrderData' } }
+      unevaluatedProperties: false
+      x-etf-operation-must-match-endpoint: true
+    PaperOrderDraftCreateResult: { allOf: [{ $ref: '#/components/schemas/PaperOrderResult' }, { $ref: '#/components/schemas/ResearchWarningResultConstraint' }, { properties: { operation: { const: PaperOrderDraftCreate } } }] }
+    PaperOrderTransitionResult: { allOf: [{ $ref: '#/components/schemas/PaperOrderResult' }, { $ref: '#/components/schemas/ResearchWarningResultConstraint' }, { properties: { operation: { const: PaperOrderTransition } } }] }
+    PaperOrderGetResult: { allOf: [{ $ref: '#/components/schemas/PaperOrderResult' }, { $ref: '#/components/schemas/NoResearchWarningResultConstraint' }, { properties: { operation: { const: PaperOrderGet } } }] }
+    PortfolioData:
+      type: object
+      additionalProperties: false
+      required: [portfolio]
+      properties: { portfolio: { $ref: '#/components/schemas/Portfolio' } }
+    PortfolioResult:
+      allOf:
+        - $ref: '#/components/schemas/SucceededResultBase'
+        - $ref: '#/components/schemas/NoResearchWarningResultConstraint'
+        - type: object
+          properties: { operation: { const: PortfolioGet }, data: { $ref: '#/components/schemas/PortfolioData' } }
+      unevaluatedProperties: false
+    AnalyticsResultData:
+      type: object
+      additionalProperties: false
+      required: [result]
+      properties: { result: { $ref: '#/components/schemas/AnalyticsResult' } }
+    AnalyticsResultEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SucceededResultBase'
+        - $ref: '#/components/schemas/ResearchWarningResultConstraint'
+        - type: object
+          properties: { operation: { const: AnalyticsResultGet }, data: { $ref: '#/components/schemas/AnalyticsResultData' } }
+      unevaluatedProperties: false
+    EvidenceData:
+      type: object
+      additionalProperties: false
+      required: [evidence]
+      properties: { evidence: { $ref: '#/components/schemas/Evidence' } }
+    EvidenceResult:
+      allOf:
+        - $ref: '#/components/schemas/SucceededResultBase'
+        - $ref: '#/components/schemas/ResearchWarningResultConstraint'
+        - type: object
+          properties: { operation: { const: EvidenceGet }, data: { $ref: '#/components/schemas/EvidenceData' } }
+      unevaluatedProperties: false
+    DiagnosticExportData:
+      type: object
+      additionalProperties: false
+      required: [export]
+      properties: { export: { $ref: '#/components/schemas/DiagnosticExport' } }
+    DiagnosticExportResult:
+      allOf:
+        - $ref: '#/components/schemas/SucceededResultBase'
+        - $ref: '#/components/schemas/NoResearchWarningResultConstraint'
+        - type: object
+          properties: { operation: { const: DiagnosticsExportCreate }, data: { $ref: '#/components/schemas/DiagnosticExportData' } }
+      unevaluatedProperties: false
+    Problem:
+      type: object
+      additionalProperties: false
+      required: [type, title, status, detail]
+      properties:
+        type: { type: string, enum: [invalid-host, disallowed-origin, malformed-json, unsupported-media-type, unacceptable-response-type, request-too-large] }
+        title: { type: string, minLength: 1 }
+        status: { type: integer, enum: [400, 403, 406, 413, 415] }
+        detail: { type: string, minLength: 1 }
+      x-etf-no-application-envelope-fabrication: true
+    Problem400:
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          properties:
+            type: { enum: [invalid-host, malformed-json] }
+            status: { const: 400 }
+    Problem403:
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          properties: { type: { const: disallowed-origin }, status: { const: 403 } }
+    Problem406:
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          properties: { type: { const: unacceptable-response-type }, status: { const: 406 } }
+    Problem413:
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          properties: { type: { const: request-too-large }, status: { const: 413 } }
+    Problem415:
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          properties: { type: { const: unsupported-media-type }, status: { const: 415 } }

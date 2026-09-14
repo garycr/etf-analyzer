@@ -10,3 +10,4 @@
 
 | Timestamp | Operation | Subject | Target | Notes | Prev | This |
 |-----------|-----------|---------|--------|-------|------|------|
+| 2026-09-10T15:46:20.175Z | register-monitored-folder | workspace-root | . | Registered watch monitored folder (local-agent-repository). | GENESIS | 10679b0bc28e94619c12716a77bbc74507c8463ed39721bd6e603607aee3e32a |

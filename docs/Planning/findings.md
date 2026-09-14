@@ -3,14 +3,14 @@
 > **Purpose:** CVP briefing artifact. Updated at each Ring completion to reflect what was explored, decided, and delivered. This document does not control ring execution.
 
 **Project:** ETF Analyzer  
-**Last Updated:** 2026-09-10  
-**Current Ring:** Ring 0 - Intake (ready for human exit gate)
+**Last Updated:** 2026-09-11
+**Current Ring:** Ring 2 - Development (WP-1 ready, not started)
 
 ---
 
 ## 1. Executive Overview
 
-Ring 0 converted the authorized ETF requirements PDF and legacy .NET evidence into a canonical research-only objective, four BDD feature groups, eleven Proposed architecture views, and a reviewed strategy decision. The Workspace Owner selected MAI-ST, a shortest-time parallel decomposition, while retaining all canonical lifecycle, provider, accounting, data-truth, security, accessibility, and operability floors. Architecture coverage is a reviewed CONDITIONAL PASS: documentation is complete for Ring 0, while concrete values, tests, provider approvals, and implementation choices remain Ring 1 work.
+Ring 1 converted the selected MAI-ST strategy into one sequential Tier 1 delivery stream, completed the prototype's design-time application, PostgreSQL, and OpenAPI contract resolution, and approved the WP-1..WP-8 WBS, 16-week schedule, and cost/token baselines. DEC-023 closed Ring 1 and opened Ring 2 at WP-1 only. Architecture remains Proposed, WP-1 has not started, and executable proof remains Ring 2 work.
 
 ---
 
@@ -71,9 +71,9 @@ No application implementation exists yet; production readiness is not claimed.
 ## 6. Recommendation
 
 **Production Readiness:** Not Ready - planning only  
-**Ring Recommendation:** Conditional Go to Ring 1, subject to the human Ring 0 exit gate
+**Ring Recommendation:** Execute Ring 2 sequentially, beginning with WP-1 only
 
-Proceed with MAI-ST as the Ring 1 planning input. Treat issues #14, #15, #17, #20, #21, and #22 as mandatory accepted decision-review work alongside existing issues #3-#5 and #9-#12. Do not start parallel implementation until issue #21's schema-custody and contract-freeze criteria are satisfied.
+Begin WP-1 under the approved WBS when implementation is explicitly started. Do not overlap WP-2, activate a product baseline, accept Proposed architecture, connect a live provider or broker, deploy, release, or take production action.
 
 ### Lessons Learned
 
@@ -102,3 +102,4 @@ Proceed with MAI-ST as the Ring 1 planning input. Treat issues #14, #15, #17, #2
 | Date | Ring | Summary |
 | --- | --- | --- |
 | 2026-09-10 | Ring 0 | Objective, BDD requirements, MAI-ST selection, eleven Proposed architecture views, dual decision reviews, architecture gate review, and Ring 1 issue traceability completed; Conditional PASS approved in DEC-012. |
+| 2026-09-11 | Ring 1 | Prototype design-time contracts, sequential WP-1..WP-8 WBS, 16-week schedule, cost/token baselines, and lessons learned approved; DEC-023 closed Ring 1 and opened Ring 2 at WP-1 only. |

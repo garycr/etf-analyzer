@@ -19,6 +19,24 @@ permissions:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        # postgres:16-alpine, verified as PostgreSQL 16.15 on 2026-09-11.
+        image: postgres@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
+        env:
+          POSTGRES_DB: etf_analyzer
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_INITDB_ARGS: --locale=C --encoding=UTF8
+          TZ: UTC
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d etf_analyzer"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      ETF_TEST_POSTGRES_URL: postgresql://postgres@127.0.0.1:5432/etf_analyzer
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
@@ -32,13 +50,13 @@ jobs:
         run: npm ci
 
       - name: Lint
-        run: npm run lint --if-present
+        run: npm run lint
 
       - name: Build
-        run: npm run build --if-present
+        run: npm run build
 
       - name: Test
-        run: npm test --if-present
+        run: npm test
 
   # Tier 2+: Dependency audit
   security-audit:

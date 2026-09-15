@@ -6,6 +6,36 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-15 | WP-2 PT-FIX-001D/E human approval | Ring-2 | @workspace-owner
+
+**Type:** APPROVAL
+**Decision:** Approve the reviewed PT-FIX-001D/E temporal selection increment for bounded publication
+**Policy:** Human approval; WP-2; PT-FIX-001D/E; issue #70; REV-051
+**Authority:** Workspace Owner explicit approval
+**Accountability:** Solo Orchestrator publishes the approved increment and continues WP-2 sequentially
+**Result:** REV-051 PASS and validated evidence accepted for publication
+**authorization-boundary:** Approval covers only PT-FIX-001D/E temporal selection; WP-2 remains active and WP-3 through WP-8 remain blocked
+
+---
+
+## 2026-09-15 | REV-051 PT-FIX-001D/E temporal selection accepted | Ring-2 | @code-reviewer
+
+**Type:** REVIEW-RECHECK
+**review-type:** code-and-test-conformance
+**review-outcome:** PASS
+**severity-counts:** Critical 0 | Major 0 | Minor 0
+**Decision:** Accept the seventh bounded WP-2 increment for exact temporal cutoff and deterministic revision/vintage selection
+**Policy:** DEC-023; DEC-028; DEC-030; WP-2; PT-FIX-001D/E; issue #70; code review; test quality
+**Authority:** Alternate-model Code Reviewer PASS after precedence, ordering, and validation-reuse remediation
+**Accountability:** Solo Orchestrator for evidence reconciliation and sequential WP-2 continuation
+**Result:** Focused fixture tests 122/122; complete repository suite 221 discovered, 192 passed, 29 environment-skipped, 0 failed; build, lint, diagnostics, zero-vulnerability dependency audit, and diff check pass
+**remediation:** Validated packages before evaluation instants; sorted selection results by explicit UTF-8 tuples; added dual-defect, propagation, multi-group, precision, malformed-instant, and immutability regressions
+**Artifact:** docs/Governance/decisions/reviews/REV-051-wp-2-temporal-selection-review.md | docs/artifacts/gate-evidence/wp-2-temporal-selection.md | src/Application/fixture-package.ts | tests/Unit/fixture-package.test.mjs
+**authorization-boundary:** PT-FIX-001D/E only; no PT-FIX-001F/G, K, N, or O claim, persistence, provider/network access, legacy migration, WP-3 overlap, release, deployment, or production authority
+**selector:** delegated
+
+---
+
 ## 2026-09-15 | WP-2 observation schema and PT-FIX-001L/M human approval | Ring-2 | @workspace-owner
 
 **Type:** APPROVAL

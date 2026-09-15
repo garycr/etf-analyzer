@@ -44,6 +44,11 @@ export interface ValidatedFixturePackage {
   readonly marketObservationCount: number;
 }
 
+export interface FixturePackageSelection {
+  readonly economicVintages: readonly Readonly<Record<string, unknown>>[];
+  readonly marketObservations: readonly Readonly<Record<string, unknown>>[];
+}
+
 interface FileDescriptor {
   readonly byteLength: number;
   readonly mediaType: string;
@@ -230,6 +235,23 @@ function compareStringTuple(
   return compareUtf8(left[0], right[0]) || compareUtf8(left[1], right[1]);
 }
 
+function compareRecordFields(
+  left: Readonly<Record<string, unknown>>,
+  right: Readonly<Record<string, unknown>>,
+  fields: readonly string[],
+): number {
+  for (const field of fields) {
+    const comparison = compareUtf8(
+      requireString(left, field),
+      requireString(right, field),
+    );
+    if (comparison !== 0) {
+      return comparison;
+    }
+  }
+  return 0;
+}
+
 function requireStrictlySortedUnique<T>(
   values: readonly T[],
   compare: (left: T, right: T) => number,
@@ -266,6 +288,22 @@ function requireCanonicalDate(value: string): void {
   const daysInMonth = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
   if (year === 0 || month < 1 || month > 12 || day < 1 || day > (daysInMonth[month - 1] ?? 0)) {
     throw new FixtureConformanceError("FIXTURE_MANIFEST_INVALID");
+  }
+}
+
+function requireCanonicalTimestamp(value: string): void {
+  const match = /^(\d{4}-\d{2}-\d{2})T([01]\d|2[0-3]):[0-5]\d:[0-5]\d\.\d{3}Z$/u.exec(value);
+  if (match === null) {
+    throw new FixtureConformanceError("FIXTURE_TEMPORAL_INVALID");
+  }
+  try {
+    requireCanonicalDate(match[1] as string);
+  } catch {
+    throw new FixtureConformanceError("FIXTURE_TEMPORAL_INVALID");
+  }
+  const milliseconds = Date.parse(value);
+  if (!Number.isFinite(milliseconds) || new Date(milliseconds).toISOString() !== value) {
+    throw new FixtureConformanceError("FIXTURE_TEMPORAL_INVALID");
   }
 }
 
@@ -449,9 +487,15 @@ function validateObservationValues(parsedFiles: readonly ParsedFixtureFile[]): v
   );
 
   for (const record of marketFile.records) {
+    requireCanonicalDate(requireString(record, "tradingDate"));
+    requireCanonicalTimestamp(requireString(record, "sourceAvailableAt"));
     if (!/^(0|[1-9][0-9]*)$/u.test(requireString(record, "revision"))) {
       throw new FixtureConformanceError("FIXTURE_TEMPORAL_INVALID");
     }
+  }
+  for (const record of economicFile.records) {
+    requireCanonicalDate(requireString(record, "observationDate"));
+    requireCanonicalTimestamp(requireString(record, "releaseTimestamp"));
   }
 
   const numericClasses = new Set(["Money", "Quantity", "Rate", "UnitPrice"]);
@@ -572,9 +616,12 @@ function validateEconomicReplay(
   return { logicalCount: identityPayloads.size, replayCount };
 }
 
-export function validateFixturePackage(
+function validateFixturePackageContents(
   fixturePackage: FixturePackageBytes,
-): ValidatedFixturePackage {
+): {
+  readonly parsedFiles: readonly ParsedFixtureFile[];
+  readonly result: ValidatedFixturePackage;
+} {
   const manifest = parseManifest(fixturePackage.manifest);
   requireClosedRecord(manifest, manifestFields);
   validateManifestIdentity(manifest);
@@ -645,13 +692,95 @@ export function validateFixturePackage(
   validateRecordProvenance(parsedFiles, fileHashes);
 
   return {
-    datasetHash,
-    datasetId,
-    datasetVersion,
-    economicIdempotentReplayCount: economicReplay.replayCount,
-    economicVintageCount: economicReplay.logicalCount,
-    fileHashes,
-    marketIdempotentReplayCount: marketReplay.replayCount,
-    marketObservationCount: marketReplay.logicalCount,
+    parsedFiles,
+    result: {
+      datasetHash,
+      datasetId,
+      datasetVersion,
+      economicIdempotentReplayCount: economicReplay.replayCount,
+      economicVintageCount: economicReplay.logicalCount,
+      fileHashes,
+      marketIdempotentReplayCount: marketReplay.replayCount,
+      marketObservationCount: marketReplay.logicalCount,
+    },
+  };
+}
+
+export function validateFixturePackage(
+  fixturePackage: FixturePackageBytes,
+): ValidatedFixturePackage {
+  return validateFixturePackageContents(fixturePackage).result;
+}
+
+export function selectFixturePackageAt(
+  fixturePackage: FixturePackageBytes,
+  evaluationInstant: string,
+): FixturePackageSelection {
+  const { parsedFiles } = validateFixturePackageContents(fixturePackage);
+  requireCanonicalTimestamp(evaluationInstant);
+  const marketFile = requireParsedFixtureFile(
+    parsedFiles,
+    "market-observations.jsonl",
+  );
+  const economicFile = requireParsedFixtureFile(
+    parsedFiles,
+    "economic-vintages.jsonl",
+  );
+
+  const selectedMarket = new Map<string, Readonly<Record<string, unknown>>>();
+  for (const record of marketFile.records) {
+    const sourceAvailableAt = requireString(record, "sourceAvailableAt");
+    if (sourceAvailableAt > evaluationInstant) {
+      continue;
+    }
+    const selectionKey = canonicalizeJson([
+      requireString(record, "instrumentId"),
+      requireString(record, "tradingDate"),
+      requireString(record, "providerId"),
+      requireString(record, "adjustmentPolicy"),
+    ]);
+    const selected = selectedMarket.get(selectionKey);
+    if (
+      selected === undefined ||
+      BigInt(requireString(record, "revision")) > BigInt(requireString(selected, "revision"))
+    ) {
+      selectedMarket.set(selectionKey, record);
+    }
+  }
+
+  const selectedEconomic = new Map<string, Readonly<Record<string, unknown>>>();
+  for (const record of economicFile.records) {
+    const releaseTimestamp = requireString(record, "releaseTimestamp");
+    if (releaseTimestamp > evaluationInstant) {
+      continue;
+    }
+    const selectionKey = canonicalizeJson([
+      requireString(record, "providerId"),
+      requireString(record, "seriesId"),
+      requireString(record, "observationDate"),
+    ]);
+    const selected = selectedEconomic.get(selectionKey);
+    if (
+      selected === undefined ||
+      releaseTimestamp > requireString(selected, "releaseTimestamp")
+    ) {
+      selectedEconomic.set(selectionKey, record);
+    }
+  }
+
+  const economicVintages = [...selectedEconomic.values()].sort((left, right) =>
+    compareRecordFields(left, right, ["providerId", "seriesId", "observationDate"]),
+  );
+  const marketObservations = [...selectedMarket.values()].sort((left, right) =>
+    compareRecordFields(left, right, [
+      "instrumentId",
+      "tradingDate",
+      "providerId",
+      "adjustmentPolicy",
+    ]),
+  );
+  return {
+    economicVintages,
+    marketObservations,
   };
 }

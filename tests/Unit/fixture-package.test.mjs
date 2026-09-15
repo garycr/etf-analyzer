@@ -5,6 +5,7 @@ import test from "node:test";
 import { canonicalizeJson } from "../../dist/Infrastructure/CanonicalJson/canonical-json.js";
 import {
   FixtureConformanceError,
+  selectFixturePackageAt,
   validateFixturePackage,
 } from "../../dist/Application/fixture-package.js";
 
@@ -298,6 +299,196 @@ test("PT-FIX-001J reports identity conflict before an earlier release collision"
 
   assertFixtureError(fixturePackage, "FIXTURE_IDEMPOTENCY_CONFLICT");
 });
+
+test("PT-FIX-001D includes an economic vintage released exactly at T", () => {
+  const fixturePackage = packageWithRecordMutation(
+    "economic-vintages.jsonl",
+    (records) => {
+      records[0].releaseTimestamp = "2026-01-15T13:29:59.999Z";
+      records[0].vintageId = "before";
+      records.push({
+        ...structuredClone(records[0]),
+        releaseTimestamp: "2026-01-15T13:30:00.000Z",
+        vintageId: "at",
+      });
+      records.push({
+        ...structuredClone(records[0]),
+        releaseTimestamp: "2026-01-15T13:30:00.001Z",
+        vintageId: "after",
+      });
+    },
+  );
+  const originalBytes = Buffer.from(fixturePackage.files["economic-vintages.jsonl"]);
+
+  const selection = selectFixturePackageAt(
+    fixturePackage,
+    "2026-01-15T13:30:00.000Z",
+  );
+
+  assert.equal(selection.economicVintages.length, 1);
+  assert.equal(selection.economicVintages[0].vintageId, "at");
+  assert.equal(selection.economicVintages[0].releaseTimestamp, "2026-01-15T13:30:00.000Z");
+  assert.deepEqual(fixturePackage.files["economic-vintages.jsonl"], originalBytes);
+});
+
+test("PT-FIX-001E filters future market revisions before numeric ordering", () => {
+  const fixturePackage = packageWithRecordMutation(
+    "market-observations.jsonl",
+    (records) => {
+      records[0].revision = "9";
+      records[0].sourceAvailableAt = "2026-01-30T21:59:59.999Z";
+      records.push({
+        ...structuredClone(records[0]),
+        revision: "10",
+        sourceAvailableAt: "2026-01-30T22:00:00.000Z",
+      });
+      records.push({
+        ...structuredClone(records[0]),
+        revision: "11",
+        sourceAvailableAt: "2026-01-30T22:00:00.001Z",
+      });
+    },
+  );
+  const originalBytes = Buffer.from(fixturePackage.files["market-observations.jsonl"]);
+
+  const selection = selectFixturePackageAt(
+    fixturePackage,
+    "2026-01-30T22:00:00.000Z",
+  );
+
+  assert.equal(selection.marketObservations.length, 1);
+  assert.equal(selection.marketObservations[0].revision, "10");
+  assert.equal(selection.marketObservations[0].sourceAvailableAt, "2026-01-30T22:00:00.000Z");
+  assert.deepEqual(fixturePackage.files["market-observations.jsonl"], originalBytes);
+});
+
+test("PT-FIX-001D/E selection preserves package validation precedence", () => {
+  const fixturePackage = packageWithRecordMutation(
+    "market-observations.jsonl",
+    ([record]) => {
+      record.unknown = true;
+    },
+  );
+
+  assert.throws(
+    () => selectFixturePackageAt(fixturePackage, "not-an-instant"),
+    (error) =>
+      error instanceof FixtureConformanceError &&
+      error.code === "FIXTURE_MANIFEST_INVALID",
+  );
+});
+
+test("PT-FIX-001D/E selection propagates market replay conflicts", () => {
+  const fixturePackage = packageWithRecordMutation(
+    "market-observations.jsonl",
+    (records) => {
+      records.push({ ...structuredClone(records[0]), value: "101.0000000000" });
+    },
+  );
+
+  assert.throws(
+    () => selectFixturePackageAt(fixturePackage, "2026-01-30T22:00:00.000Z"),
+    (error) =>
+      error instanceof FixtureConformanceError &&
+      error.code === "FIXTURE_IDEMPOTENCY_CONFLICT",
+  );
+});
+
+test("PT-FIX-001D/E selection propagates economic provenance failures", () => {
+  const fixturePackage = packageWithRecordMutation(
+    "economic-vintages.jsonl",
+    ([record]) => {
+      delete record.rawSourceRef;
+    },
+  );
+
+  assert.throws(
+    () => selectFixturePackageAt(fixturePackage, "2026-01-30T22:00:00.000Z"),
+    (error) =>
+      error instanceof FixtureConformanceError &&
+      error.code === "FIXTURE_PROVENANCE_INVALID",
+  );
+});
+
+test("PT-FIX-001E compares revisions beyond the safe integer range exactly", () => {
+  const fixturePackage = packageWithRecordMutation(
+    "market-observations.jsonl",
+    (records) => {
+      records[0].revision = "9007199254740992";
+      records.push({
+        ...structuredClone(records[0]),
+        revision: "9007199254740993",
+      });
+    },
+  );
+
+  const selection = selectFixturePackageAt(
+    fixturePackage,
+    "2026-01-30T22:00:00.000Z",
+  );
+
+  assert.equal(selection.marketObservations[0].revision, "9007199254740993");
+});
+
+test("PT-FIX-001D/E returns market groups in canonical tuple order", () => {
+  const fixturePackage = packageWithRecordMutation(
+    "market-observations.jsonl",
+    (records) => {
+      records.unshift({
+        ...structuredClone(records[0]),
+        instrumentId: "ZZZ",
+      });
+    },
+  );
+
+  const selection = selectFixturePackageAt(
+    fixturePackage,
+    "2026-01-30T22:00:00.000Z",
+  );
+
+  assert.deepEqual(
+    selection.marketObservations.map(({ instrumentId }) => instrumentId),
+    ["ETF-1", "ZZZ"],
+  );
+});
+
+test("PT-FIX-001D/E returns economic groups in canonical tuple order", () => {
+  const fixturePackage = packageWithRecordMutation(
+    "economic-vintages.jsonl",
+    (records) => {
+      records.unshift({
+        ...structuredClone(records[0]),
+        providerId: "TREASURY_FISCAL_DATA",
+        seriesId: "ZZZ",
+      });
+    },
+  );
+
+  const selection = selectFixturePackageAt(
+    fixturePackage,
+    "2026-01-30T22:00:00.000Z",
+  );
+
+  assert.deepEqual(
+    selection.economicVintages.map(({ providerId, seriesId }) => [providerId, seriesId]),
+    [["FRED", "CPI"], ["TREASURY_FISCAL_DATA", "ZZZ"]],
+  );
+});
+
+for (const evaluationInstant of [
+  "2026-01-30T22:00:00Z",
+  "2026-01-30T22:00:00.000+00:00",
+  "2026-02-30T22:00:00.000Z",
+]) {
+  test(`PT-FIX-001D/E rejects malformed evaluation instant ${evaluationInstant}`, () => {
+    assert.throws(
+      () => selectFixturePackageAt(goldenPackage(), evaluationInstant),
+      (error) =>
+        error instanceof FixtureConformanceError &&
+        error.code === "FIXTURE_TEMPORAL_INVALID",
+    );
+  });
+}
 
 for (const relativePath of [
   "market-observations.jsonl",

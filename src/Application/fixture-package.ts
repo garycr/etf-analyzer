@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { canonicalizeJson } from "../Infrastructure/CanonicalJson/canonical-json.js";
 
 export type FixtureConformanceCode =
+  | "FIXTURE_DECIMAL_INVALID"
   | "FIXTURE_DATASET_HASH_MISMATCH"
   | "FIXTURE_FILE_INTEGRITY_FAILED"
   | "FIXTURE_IDEMPOTENCY_CONFLICT"
@@ -88,6 +89,47 @@ const economicCoverageFields = [
   "providerId",
   "seriesId",
 ] as const;
+
+const marketObservationFields = [
+  "adjustmentPolicy",
+  "currency",
+  "ingestionJobId",
+  "instrumentId",
+  "normalizationId",
+  "numericClass",
+  "providerId",
+  "qualityCodes",
+  "qualityState",
+  "rawSourceHash",
+  "rawSourceRef",
+  "revision",
+  "sourceAvailableAt",
+  "tradingDate",
+  "value",
+] as const;
+
+const economicVintageFields = [
+  "ingestionJobId",
+  "normalizationId",
+  "numericClass",
+  "observationDate",
+  "providerId",
+  "qualityCodes",
+  "qualityState",
+  "rawSourceHash",
+  "rawSourceRef",
+  "releaseTimestamp",
+  "seriesId",
+  "value",
+  "vintageId",
+] as const;
+
+const provenanceFields = new Set([
+  "ingestionJobId",
+  "normalizationId",
+  "rawSourceHash",
+  "rawSourceRef",
+]);
 
 function sha256(bytes: Uint8Array | string): string {
   return createHash("sha256").update(bytes).digest("hex");
@@ -351,15 +393,90 @@ function validateRecordProvenance(
   }
 }
 
+function requireParsedFixtureFile(
+  parsedFiles: readonly ParsedFixtureFile[],
+  relativePath: string,
+): ParsedFixtureFile {
+  const parsedFile = parsedFiles.find(
+    ({ descriptor }) => descriptor.relativePath === relativePath,
+  );
+  if (parsedFile === undefined) {
+    throw new FixtureConformanceError("FIXTURE_FILE_INTEGRITY_FAILED");
+  }
+  return parsedFile;
+}
+
+function validateClosedObservationRecords(
+  parsedFiles: readonly ParsedFixtureFile[],
+): void {
+  const marketFile = requireParsedFixtureFile(
+    parsedFiles,
+    "market-observations.jsonl",
+  );
+  const economicFile = requireParsedFixtureFile(
+    parsedFiles,
+    "economic-vintages.jsonl",
+  );
+  const requireObservationFields = (
+    record: Readonly<Record<string, unknown>>,
+    fields: readonly string[],
+  ): void => {
+    const expectedFields = new Set(fields);
+    const actualFields = new Set(Object.keys(record));
+    if (
+      [...actualFields].some((field) => !expectedFields.has(field)) ||
+      fields.some((field) => !provenanceFields.has(field) && !actualFields.has(field))
+    ) {
+      throw new FixtureConformanceError("FIXTURE_MANIFEST_INVALID");
+    }
+  };
+  marketFile.records.forEach((record) => {
+    requireObservationFields(record, marketObservationFields);
+  });
+  economicFile.records.forEach((record) => {
+    requireObservationFields(record, economicVintageFields);
+  });
+}
+
+function validateObservationValues(parsedFiles: readonly ParsedFixtureFile[]): void {
+  const marketFile = requireParsedFixtureFile(
+    parsedFiles,
+    "market-observations.jsonl",
+  );
+  const economicFile = requireParsedFixtureFile(
+    parsedFiles,
+    "economic-vintages.jsonl",
+  );
+
+  for (const record of marketFile.records) {
+    if (!/^(0|[1-9][0-9]*)$/u.test(requireString(record, "revision"))) {
+      throw new FixtureConformanceError("FIXTURE_TEMPORAL_INVALID");
+    }
+  }
+
+  const numericClasses = new Set(["Money", "Quantity", "Rate", "UnitPrice"]);
+  for (const record of [...marketFile.records, ...economicFile.records]) {
+    if (!numericClasses.has(requireString(record, "numericClass"))) {
+      throw new FixtureConformanceError("FIXTURE_DECIMAL_INVALID");
+    }
+  }
+  for (const record of marketFile.records) {
+    const numericClass = requireString(record, "numericClass");
+    const currency = requireString(record, "currency");
+    const requiresUsd = numericClass === "Money" || numericClass === "UnitPrice";
+    if ((requiresUsd && currency !== "USD") || (!requiresUsd && currency !== "")) {
+      throw new FixtureConformanceError("FIXTURE_DECIMAL_INVALID");
+    }
+  }
+}
+
 function validateMarketReplay(
   parsedFiles: readonly ParsedFixtureFile[],
 ): { readonly logicalCount: number; readonly replayCount: number } {
-  const marketFile = parsedFiles.find(
-    ({ descriptor }) => descriptor.relativePath === "market-observations.jsonl",
+  const marketFile = requireParsedFixtureFile(
+    parsedFiles,
+    "market-observations.jsonl",
   );
-  if (marketFile === undefined) {
-    throw new FixtureConformanceError("FIXTURE_FILE_INTEGRITY_FAILED");
-  }
 
   const businessPayloads = new Map<string, string>();
   let replayCount = 0;
@@ -397,12 +514,10 @@ function validateMarketReplay(
 function validateEconomicReplay(
   parsedFiles: readonly ParsedFixtureFile[],
 ): { readonly logicalCount: number; readonly replayCount: number } {
-  const economicFile = parsedFiles.find(
-    ({ descriptor }) => descriptor.relativePath === "economic-vintages.jsonl",
+  const economicFile = requireParsedFixtureFile(
+    parsedFiles,
+    "economic-vintages.jsonl",
   );
-  if (economicFile === undefined) {
-    throw new FixtureConformanceError("FIXTURE_FILE_INTEGRITY_FAILED");
-  }
 
   const identityPayloads = new Map<string, string>();
   let replayCount = 0;
@@ -503,6 +618,8 @@ export function validateFixturePackage(
     fileHashes[descriptor.relativePath] = contentHash;
   }
 
+  validateClosedObservationRecords(parsedFiles);
+
   const datasetHash = requireString(manifest, "datasetHash");
   const { datasetHash: ignoredDatasetHash, ...hashMembers } = manifest;
   void ignoredDatasetHash;
@@ -524,6 +641,7 @@ export function validateFixturePackage(
 
   const marketReplay = validateMarketReplay(parsedFiles);
   const economicReplay = validateEconomicReplay(parsedFiles);
+  validateObservationValues(parsedFiles);
   validateRecordProvenance(parsedFiles, fileHashes);
 
   return {

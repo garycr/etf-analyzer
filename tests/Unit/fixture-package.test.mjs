@@ -299,6 +299,80 @@ test("PT-FIX-001J reports identity conflict before an earlier release collision"
   assertFixtureError(fixturePackage, "FIXTURE_IDEMPOTENCY_CONFLICT");
 });
 
+for (const relativePath of [
+  "market-observations.jsonl",
+  "economic-vintages.jsonl",
+]) {
+  test(`PT-FIX-001H rejects an unknown field in ${relativePath}`, () => {
+    const fixturePackage = packageWithRecordMutation(relativePath, ([record]) => {
+      record.unknown = true;
+    });
+
+    assertManifestInvalid(fixturePackage);
+  });
+
+  test(`PT-FIX-001H rejects a missing field in ${relativePath}`, () => {
+    const fixturePackage = packageWithRecordMutation(relativePath, ([record]) => {
+      delete record.qualityCodes;
+    });
+
+    assertManifestInvalid(fixturePackage);
+  });
+}
+
+test("PT-FIX-001H structural failure controls over a dataset hash mismatch", () => {
+  const fixturePackage = packageWithRecordMutation(
+    "market-observations.jsonl",
+    ([record]) => {
+      record.unknown = true;
+    },
+  );
+  const changedManifest = JSON.parse(fixturePackage.manifest.toString("utf8"));
+  changedManifest.datasetHash = "0".repeat(64);
+  fixturePackage.manifest = Buffer.from(canonicalizeJson(changedManifest), "utf8");
+
+  assertManifestInvalid(fixturePackage);
+});
+
+for (const revision of ["01", "-1", "+1", "1.0", ""]) {
+  test(`PT-FIX-001L rejects malformed market revision ${JSON.stringify(revision)}`, () => {
+    const fixturePackage = packageWithRecordMutation(
+      "market-observations.jsonl",
+      ([record]) => {
+        record.revision = revision;
+      },
+    );
+
+    assertFixtureError(fixturePackage, "FIXTURE_TEMPORAL_INVALID");
+  });
+}
+
+for (const [numericClass, currency, expectedCode] of [
+  ["UnitPrice", "USD", undefined],
+  ["Money", "USD", undefined],
+  ["Quantity", "", undefined],
+  ["Rate", "", undefined],
+  ["UnitPrice", "", "FIXTURE_DECIMAL_INVALID"],
+  ["Quantity", "USD", "FIXTURE_DECIMAL_INVALID"],
+  ["Unknown", "", "FIXTURE_DECIMAL_INVALID"],
+]) {
+  test(`PT-FIX-001M validates ${numericClass} with currency ${JSON.stringify(currency)}`, () => {
+    const fixturePackage = packageWithRecordMutation(
+      "market-observations.jsonl",
+      ([record]) => {
+        record.numericClass = numericClass;
+        record.currency = currency;
+      },
+    );
+
+    if (expectedCode === undefined) {
+      validateFixturePackage(fixturePackage);
+    } else {
+      assertFixtureError(fixturePackage, expectedCode);
+    }
+  });
+}
+
 test("PT-FIX-001H rejects duplicate JSON members before hashing", () => {
   const duplicateMemberManifest = manifest
     .toString("utf8")
@@ -609,6 +683,12 @@ for (const [name, mutate] of [
   }],
   ["mismatched source reference", (record) => {
     record.rawSourceRef = `raw-sources/${"1".repeat(64)}`;
+  }],
+  ["missing source hash", (record) => {
+    delete record.rawSourceHash;
+  }],
+  ["missing source reference", (record) => {
+    delete record.rawSourceRef;
   }],
   ["missing normalization identifier", (record) => {
     delete record.normalizationId;

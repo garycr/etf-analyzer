@@ -6,6 +6,36 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-15 | WP-2 observation schema and PT-FIX-001L/M human approval | Ring-2 | @workspace-owner
+
+**Type:** APPROVAL
+**Decision:** Approve the reviewed closed observation schema and PT-FIX-001L/M increment for bounded publication
+**Policy:** Human approval; WP-2; PT-FIX-001H/L/M; issue #70; REV-050
+**Authority:** Workspace Owner explicit approval
+**Accountability:** Solo Orchestrator publishes the approved increment and continues WP-2 sequentially
+**Result:** REV-050 PASS and validated evidence accepted for publication
+**authorization-boundary:** Approval covers only closed observation schemas and PT-FIX-001L/M; WP-2 remains active and WP-3 through WP-8 remain blocked
+
+---
+
+## 2026-09-15 | REV-050 observation schema and PT-FIX-001L/M accepted | Ring-2 | @code-reviewer
+
+**Type:** REVIEW-RECHECK
+**review-type:** code-and-test-conformance
+**review-outcome:** PASS
+**severity-counts:** Critical 0 | Major 0 | Minor 0
+**Decision:** Accept the sixth bounded WP-2 increment for closed observation records, canonical revision grammar, and numeric-class/currency pairing
+**Policy:** DEC-023; DEC-028; DEC-030; WP-2; PT-FIX-001H/L/M; issue #70; code review; test quality
+**Authority:** Alternate-model Code Reviewer PASS after precedence and provenance-test remediation
+**Accountability:** Solo Orchestrator for evidence reconciliation and sequential WP-2 continuation
+**Result:** Focused fixture tests 111/111; complete repository suite 210 discovered, 181 passed, 29 environment-skipped, 0 failed; build, lint, diagnostics, zero-vulnerability dependency audit, and diff check pass
+**remediation:** Moved closed-record validation before dataset identity checks; added combined structural/hash precedence and absent raw-source provenance regressions
+**Artifact:** docs/Governance/decisions/reviews/REV-050-wp-2-observation-validation-review.md | docs/artifacts/gate-evidence/wp-2-observation-validation.md | src/Application/fixture-package.ts | tests/Unit/fixture-package.test.mjs
+**authorization-boundary:** Closed observation schemas and PT-FIX-001L/M only; no PT-FIX-001D..G, K, N, or O claim, persistence, provider/network access, legacy migration, WP-3 overlap, release, deployment, or production authority
+**selector:** delegated
+
+---
+
 ## 2026-09-15 | WP-2 PT-FIX-001J human approval | Ring-2 | @workspace-owner
 
 **Type:** APPROVAL

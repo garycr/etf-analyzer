@@ -42,6 +42,44 @@ function goldenPackage() {
   };
 }
 
+function packageWithManifestMutation(mutate, moveFile) {
+  const fixturePackage = goldenPackage();
+  const changedManifest = JSON.parse(manifest.toString("utf8"));
+  mutate(changedManifest);
+  if (moveFile !== undefined) {
+    const [from, to] = moveFile;
+    fixturePackage.files[to] = fixturePackage.files[from];
+    delete fixturePackage.files[from];
+  }
+  updateManifest(fixturePackage, changedManifest);
+  return fixturePackage;
+}
+
+function updateManifest(fixturePackage, changedManifest) {
+  const { datasetHash: ignoredDatasetHash, ...hashMembers } = changedManifest;
+  void ignoredDatasetHash;
+  changedManifest.datasetHash = sha256(
+    Buffer.from(
+      canonicalizeJson({ ...hashMembers, domain: "etf.fixture.dataset.v1" }),
+      "utf8",
+    ),
+  );
+  fixturePackage.manifest = Buffer.from(canonicalizeJson(changedManifest), "utf8");
+}
+
+function assertFixtureError(fixturePackage, code) {
+  assert.throws(
+    () => validateFixturePackage(fixturePackage),
+    (error) =>
+      error instanceof FixtureConformanceError &&
+      error.code === code,
+  );
+}
+
+function assertManifestInvalid(fixturePackage) {
+  assertFixtureError(fixturePackage, "FIXTURE_MANIFEST_INVALID");
+}
+
 test("PT-FIX-001A validates the exact golden package identity", () => {
   const result = validateFixturePackage(goldenPackage());
 
@@ -101,4 +139,217 @@ test("PT-FIX-001A rejects self-consistent replacement of the golden version", ()
       error instanceof FixtureConformanceError &&
       error.code === "FIXTURE_IDEMPOTENCY_CONFLICT",
   );
+});
+
+test("PT-FIX-001H rejects duplicate JSON members before hashing", () => {
+  const duplicateMemberManifest = manifest
+    .toString("utf8")
+    .replace(
+      '"datasetId":"etf-prototype-core",',
+      '"datasetId":"etf-prototype-core","datasetId":"etf-prototype-core",',
+    );
+
+  assertManifestInvalid({
+    ...goldenPackage(),
+    manifest: Buffer.from(duplicateMemberManifest, "utf8"),
+  });
+});
+
+test("PT-FIX-001H rejects nested duplicate JSON members before hashing", () => {
+  const duplicateMemberManifest = manifest
+    .toString("utf8")
+    .replace('"byteLength":489,', '"byteLength":489,"byteLength":489,');
+
+  assertManifestInvalid({
+    ...goldenPackage(),
+    manifest: Buffer.from(duplicateMemberManifest, "utf8"),
+  });
+});
+
+for (const [name, mutate] of [
+  ["manifest", (value) => { value.unknown = true; }],
+  ["descriptor", (value) => { value.files[0].unknown = true; }],
+  ["market coverage", (value) => { value.marketCoverage[0].unknown = true; }],
+  ["economic coverage", (value) => { value.economicCoverage[0].unknown = true; }],
+]) {
+  test(`PT-FIX-001H rejects an unknown ${name} field`, () => {
+    assertManifestInvalid(packageWithManifestMutation(mutate));
+  });
+}
+
+test("PT-FIX-001H rejects duplicate file descriptors", () => {
+  assertManifestInvalid(
+    packageWithManifestMutation((value) => {
+      value.files.splice(1, 0, structuredClone(value.files[0]));
+    }),
+  );
+});
+
+for (const [name, mutate] of [
+  ["market", (value) => { value.marketCoverage.push(structuredClone(value.marketCoverage[0])); }],
+  ["economic", (value) => { value.economicCoverage.push(structuredClone(value.economicCoverage[0])); }],
+]) {
+  test(`PT-FIX-001H rejects a duplicate ${name} coverage identity`, () => {
+    assertManifestInvalid(packageWithManifestMutation(mutate));
+  });
+}
+
+for (const relativePath of [
+  "/economic-vintages.jsonl",
+  "./economic-vintages.jsonl",
+  "fixtures/../economic-vintages.jsonl",
+  "fixtures//economic-vintages.jsonl",
+  "fixtures/",
+  "fixtures\\economic-vintages.jsonl",
+  "C:/economic-vintages.jsonl",
+]) {
+  test(`PT-FIX-001H rejects unsafe path ${relativePath}`, () => {
+    assertManifestInvalid(
+      packageWithManifestMutation(
+        (value) => {
+          value.files[0].relativePath = relativePath;
+        },
+        ["economic-vintages.jsonl", relativePath],
+      ),
+    );
+  });
+}
+
+for (const [name, mutate] of [
+  ["dataset ID", (value) => { value.datasetId = "ETF Prototype"; }],
+  ["dataset version", (value) => { value.datasetVersion = "2026.1.0"; }],
+  ["schema version", (value) => { value.schemaVersion = "1.0.1"; }],
+  ["contract version", (value) => { value.contractVersion = "1.0.0"; }],
+  ["prototype candidate", (value) => { value.prototypeCandidate = "v1.0.0"; }],
+  ["fixture policy", (value) => { value.fixturePolicyId = "fixture-policy-2"; }],
+  ["descriptor digest", (value) => { value.files[0].sha256 = "A".repeat(64); }],
+  ["descriptor byte length", (value) => { value.files[0].byteLength = -1; }],
+  ["fractional descriptor byte length", (value) => { value.files[0].byteLength = 1.5; }],
+  ["descriptor record count", (value) => { value.files[0].recordCount = 0; }],
+  ["string descriptor record count", (value) => { value.files[0].recordCount = "1"; }],
+  ["JSONL media type", (value) => { value.files[0].mediaType = "application/json"; }],
+  ["raw-source media type", (value) => { value.files[2].mediaType = "application/x-ndjson"; }],
+  ["raw-source record count", (value) => { value.files[2].recordCount = 2; }],
+  ["descriptor order", (value) => { value.files.reverse(); }],
+  ["market coverage order", (value) => {
+    value.marketCoverage.unshift({
+      adjustmentPolicy: "split-adjusted",
+      instrumentId: "ZZZ",
+      requiredTradingDates: ["2026-01-30"],
+    });
+  }],
+  ["economic coverage order", (value) => {
+    value.economicCoverage.unshift({
+      observationDates: ["2025-12-01"],
+      providerId: "ZZZ",
+      seriesId: "CPI",
+    });
+  }],
+  ["duplicate market date", (value) => { value.marketCoverage[0].requiredTradingDates.push("2026-01-30"); }],
+  ["duplicate economic date", (value) => { value.economicCoverage[0].observationDates.push("2025-12-01"); }],
+  ["descending market dates", (value) => {
+    value.marketCoverage[0].requiredTradingDates = ["2026-01-31", "2026-01-30"];
+  }],
+  ["descending economic dates", (value) => {
+    value.economicCoverage[0].observationDates = ["2025-12-02", "2025-12-01"];
+  }],
+  ["invalid market date", (value) => { value.marketCoverage[0].requiredTradingDates[0] = "2026-02-30"; }],
+  ["invalid economic date", (value) => { value.economicCoverage[0].observationDates[0] = "2025-13-01"; }],
+  ["missing required manifest field", (value) => { delete value.fixturePolicyId; }],
+  ["null required manifest field", (value) => { value.datasetId = null; }],
+  ["non-array files", (value) => { value.files = {}; }],
+  ["non-array market coverage", (value) => { value.marketCoverage = {}; }],
+  ["non-array economic coverage", (value) => { value.economicCoverage = {}; }],
+]) {
+  test(`PT-FIX-001H rejects invalid ${name}`, () => {
+    assertManifestInvalid(packageWithManifestMutation(mutate));
+  });
+}
+
+test("PT-FIX-001H rejects invalid dataset digest", () => {
+  const fixturePackage = goldenPackage();
+  const changedManifest = JSON.parse(manifest.toString("utf8"));
+  changedManifest.datasetHash = "A".repeat(64);
+  fixturePackage.manifest = Buffer.from(canonicalizeJson(changedManifest), "utf8");
+
+  assertManifestInvalid(fixturePackage);
+});
+
+test("PT-FIX-001H compares coverage identities as unambiguous tuples", () => {
+  const fixturePackage = packageWithManifestMutation((value) => {
+    value.marketCoverage = [
+      {
+        adjustmentPolicy: "B\u0000C",
+        instrumentId: "A",
+        requiredTradingDates: [],
+      },
+      {
+        adjustmentPolicy: "C",
+        instrumentId: "A\u0000B",
+        requiredTradingDates: [],
+      },
+    ];
+  });
+
+  assertFixtureError(fixturePackage, "FIXTURE_IDEMPOTENCY_CONFLICT");
+});
+
+test("PT-FIX-001H orders coverage identities by UTF-8 bytes", () => {
+  const fixturePackage = packageWithManifestMutation((value) => {
+    value.marketCoverage = [
+      {
+        adjustmentPolicy: "split-adjusted",
+        instrumentId: "\uE000",
+        requiredTradingDates: [],
+      },
+      {
+        adjustmentPolicy: "split-adjusted",
+        instrumentId: "\u{10000}",
+        requiredTradingDates: [],
+      },
+    ];
+  });
+
+  assertFixtureError(fixturePackage, "FIXTURE_IDEMPOTENCY_CONFLICT");
+});
+
+test("PT-FIX-001H accepts empty coverage date arrays structurally", () => {
+  const fixturePackage = packageWithManifestMutation((value) => {
+    value.marketCoverage[0].requiredTradingDates = [];
+    value.economicCoverage[0].observationDates = [];
+  });
+
+  assertFixtureError(fixturePackage, "FIXTURE_IDEMPOTENCY_CONFLICT");
+});
+
+test("PT-FIX-001H rejects a missing required observation descriptor", () => {
+  const fixturePackage = packageWithManifestMutation((value) => {
+    value.files.splice(0, 1);
+  });
+  delete fixturePackage.files["economic-vintages.jsonl"];
+
+  assertManifestInvalid(fixturePackage);
+});
+
+test("PT-FIX-001H rejects a renamed required observation descriptor", () => {
+  assertManifestInvalid(
+    packageWithManifestMutation(
+      (value) => {
+        value.files[0].relativePath = "economic-data.jsonl";
+      },
+      ["economic-vintages.jsonl", "economic-data.jsonl"],
+    ),
+  );
+});
+
+test("PT-FIX-001H rejects an extra observation descriptor", () => {
+  const fixturePackage = packageWithManifestMutation((value) => {
+    value.files.splice(2, 0, {
+      ...structuredClone(value.files[1]),
+      relativePath: "other-observations.jsonl",
+    });
+  });
+  fixturePackage.files["other-observations.jsonl"] = market;
+
+  assertManifestInvalid(fixturePackage);
 });

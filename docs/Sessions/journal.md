@@ -6,6 +6,35 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-15 | REV-046 final recheck and evidence correction | Ring-2 | @code-reviewer
+
+**Type:** REVIEW-RECHECK
+**review-type:** code-and-test-conformance
+**review-outcome:** PASS
+**severity-counts:** Critical 0 | Major 0 | Minor 0
+**Decision:** Close REV-046 after exact observation-member remediation and correct the prior checkpoint's superseded validation counts
+**Policy:** DEC-023; DEC-028; DEC-030; WP-2; PT-FIX-001H; issue #70; code review; append-only journal correction
+**Authority:** Alternate-model Code Reviewer final recheck
+**Accountability:** Solo Orchestrator for evidence reconciliation and bounded publication
+**Result:** Focused tests 54/54; complete clean-state serial PostgreSQL 16.15 suite 153/153; build, lint, low dependency audit, diagnostics, and diff check pass
+**remediation:** Replaced ambiguous coverage keys with UTF-8 tuple comparison; enforced the exact two observation descriptors; added nested duplicate, ordering, empty-date, missing, renamed, and extra-member vectors
+**Artifact:** docs/Governance/decisions/reviews/REV-046-wp-2-fixture-manifest-conformance-review.md | docs/artifacts/gate-evidence/wp-2-fixture-manifest-conformance.md | src/Application/fixture-package.ts | tests/Unit/fixture-package.test.mjs
+**authorization-boundary:** Structural in-memory manifest conformance only; no PT-FIX-001B..G or I..O claim, JSONL loading, database mutation, provider/network access, legacy migration, WP-3 overlap, release, deployment, or production authority
+**selector:** delegated
+
+---
+
+## 2026-09-15 | REV-046 PT-FIX-001H manifest conformance accepted | Ring-2 | @code-reviewer
+
+**Decision:** Accept the second bounded WP-2 increment for closed manifest, descriptor, and coverage structure
+**Policy:** DEC-023; DEC-028; DEC-030; WP-2; PT-FIX-001H; issue #70; code review; test quality
+**Authority:** Alternate-model Code Reviewer PASS after both initial minor ordering findings were repaired and rechecked
+**Accountability:** Solo Orchestrator publishes only PT-FIX-001H and continues sequentially within WP-2
+**Result:** Focused tests 51/51; complete clean-state serial PostgreSQL 16.15 suite 150/150; build, lint, low dependency audit, diagnostics, and diff check pass
+**authorization-boundary:** Structural in-memory manifest conformance only; no PT-FIX-001B..G or I..O claim, JSONL loading, database mutation, provider/network access, legacy migration, WP-3 overlap, release, deployment, or production authority
+
+---
+
 ## 2026-09-15 | REV-045 PT-FIX-001A fixture identity accepted | Ring-2 | @code-reviewer
 
 **Decision:** Accept the first WP-2 increment for exact golden package integrity and immutable approved dataset identity

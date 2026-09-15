@@ -7,12 +7,16 @@
 ## Canonical Artifacts
 
 - Migration identity: `0004-fixtures`, sequence 4
-- Exact SQL-byte SHA-256: `8f73d86024e38c043328c3ac3102dffb627df579757009f150f789bba1bb5b60`
-- Resulting manifest SHA-256: `897c67ad05bb35c602c74d412172c8cc0aff398b5448711af25a43974017fda6`
+- Exact SQL-byte SHA-256: `bd34aa3c5701ef42267fccf797284507db25a9319342a1553898d2f84af1cc56`
+- Resulting manifest SHA-256: `cb0955c4952e7e3994a224c390cc8b41bb0a3a7c63a28e522051b0cd29467f69`
 - PostgreSQL baseline: `16.15|UTF8|UTC|on|C`
 - Autonomous work-item trace: GitHub issue #67
 
-The 2026-09-15 WP-1 closure recomputed this cumulative manifest with the final sequence-6 projector and corrected sequence-3 authority. This hash supersedes the earlier incremental projection; no sequence-4 SQL bytes changed.
+The 2026-09-15 PT-FIX-001F re-baseline supersedes the earlier sequence-4 hashes. It expands the Money input grammar and table bound from 18 to the DEC-014 capacity of 20 integer digits while preserving exact scale-8 rejection before casts. This empty-database prototype has no released or production migration ledger; sequences 5 and 6 retain their SQL bytes and receive new cumulative manifest hashes.
+
+## 2026-09-15 PT-FIX-001F Re-baseline Verification
+
+PostgreSQL `16.15|C|UTF8|UTC|on` accepted exact 18-, 19-, and 20-integer-digit Money values across market and economic observations, including both signs at the 20-digit maximum. Readback preserved every scale-8 string exactly. A 21-integer-digit value and a scale-9 value failed with `FIXTURE_DECIMAL_INVALID` before casts, so ingestion did not round. The fixture migration suite passed 5/5; the affected sequence-4-through-6 chain passed 12/12; and the complete serial PostgreSQL-backed repository suite passed 248/248 with zero skips or failures.
 
 ## Executed Behavior
 

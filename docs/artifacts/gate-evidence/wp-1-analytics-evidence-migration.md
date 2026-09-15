@@ -8,11 +8,15 @@
 
 - Migration identity: `0005-analytics-evidence`, sequence 5
 - Exact SQL-byte SHA-256: `638fdcb40695be04a30c56807e529f753fd37c80ccfdcd6ad58f04e603287cc4`
-- Resulting manifest SHA-256: `92f3a9dcf71e61ae42977d2a2c009130ec4b622f1370239e65a6d5fdc8e54d46`
+- Resulting manifest SHA-256: `fa108eee32e09d81829c175e68387a896b99b210193c3feaad2f30cccaf34366`
 - PostgreSQL baseline: `16.15|UTF8|UTC|on|C`
 - Autonomous work-item trace: GitHub issue #68
 
-The 2026-09-15 WP-1 closure recomputed this cumulative manifest with the final sequence-6 projector and corrected sequence-3 authority. This hash supersedes the earlier incremental projection; no sequence-5 SQL bytes changed.
+The 2026-09-15 PT-FIX-001F re-baseline changed only the cumulative manifest inherited from the corrected sequence-4 DEC-014 Money bounds. No sequence-5 SQL bytes changed.
+
+## 2026-09-15 PT-FIX-001F Re-baseline Verification
+
+PostgreSQL `16.15|C|UTF8|UTC|on` projected the updated cumulative sequence-5 manifest while preserving the exact sequence-5 SQL hash. The analytics-evidence migration suite passed 5/5; the affected sequence-4-through-6 chain passed 12/12; and the complete serial PostgreSQL-backed repository suite passed 248/248 with zero skips or failures.
 
 ## Executed Behavior
 

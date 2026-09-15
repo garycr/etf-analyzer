@@ -89,7 +89,7 @@ CREATE TABLE etf.market_observations (
   CONSTRAINT ck_market_observations__revision_nonnegative CHECK (revision >= 0),
   CONSTRAINT ck_market_observations__numeric_class CHECK (numeric_class IN ('Quantity', 'UnitPrice', 'Money', 'Rate')),
   CONSTRAINT ck_market_observations__value_class CHECK ((numeric_class IN ('Quantity', 'UnitPrice') AND value_quantity IS NOT NULL AND value_money IS NULL AND value_rate IS NULL) OR (numeric_class = 'Money' AND value_quantity IS NULL AND value_money IS NOT NULL AND value_rate IS NULL) OR (numeric_class = 'Rate' AND value_quantity IS NULL AND value_money IS NULL AND value_rate IS NOT NULL)),
-  CONSTRAINT ck_market_observations__value_bound CHECK (COALESCE(abs(value_quantity), abs(value_money), abs(value_rate)) < 1000000000000000000),
+  CONSTRAINT ck_market_observations__value_bound CHECK ((value_quantity IS NULL OR abs(value_quantity) < 1000000000000000000) AND (value_money IS NULL OR abs(value_money) < 100000000000000000000) AND (value_rate IS NULL OR abs(value_rate) < 10000000000000000)),
   CONSTRAINT ck_market_observations__currency CHECK ((numeric_class IN ('UnitPrice', 'Money') AND currency = 'USD') OR (numeric_class IN ('Quantity', 'Rate') AND currency = '')),
   CONSTRAINT ck_market_observations__raw_source_ref CHECK (raw_source_ref = 'raw-sources/' || raw_source_hash),
   CONSTRAINT ck_market_observations__normalization_id_nonempty CHECK (length(normalization_id) > 0),
@@ -127,7 +127,7 @@ CREATE TABLE etf.economic_observations (
   CONSTRAINT ck_economic_observations__vintage_id CHECK (vintage_id ~ '^[\\x20-\\x7e]{1,128}$'),
   CONSTRAINT ck_economic_observations__numeric_class CHECK (numeric_class IN ('Quantity', 'UnitPrice', 'Money', 'Rate')),
   CONSTRAINT ck_economic_observations__value_class CHECK ((numeric_class IN ('Quantity', 'UnitPrice') AND value_quantity IS NOT NULL AND value_money IS NULL AND value_rate IS NULL) OR (numeric_class = 'Money' AND value_quantity IS NULL AND value_money IS NOT NULL AND value_rate IS NULL) OR (numeric_class = 'Rate' AND value_quantity IS NULL AND value_money IS NULL AND value_rate IS NOT NULL)),
-  CONSTRAINT ck_economic_observations__value_bound CHECK (COALESCE(abs(value_quantity), abs(value_money), abs(value_rate)) < 1000000000000000000),
+  CONSTRAINT ck_economic_observations__value_bound CHECK ((value_quantity IS NULL OR abs(value_quantity) < 1000000000000000000) AND (value_money IS NULL OR abs(value_money) < 100000000000000000000) AND (value_rate IS NULL OR abs(value_rate) < 10000000000000000)),
   CONSTRAINT ck_economic_observations__raw_source_ref CHECK (raw_source_ref = 'raw-sources/' || raw_source_hash),
   CONSTRAINT ck_economic_observations__normalization_id_nonempty CHECK (length(normalization_id) > 0),
   CONSTRAINT ck_economic_observations__ingestion_job_id_nonempty CHECK (length(ingestion_job_id) > 0),
@@ -234,7 +234,7 @@ BEGIN
         OR CASE observation ->> 'numericClass'
              WHEN 'Quantity' THEN observation ->> 'value' !~ '^-?(0|[1-9][0-9]{0,17})\\.[0-9]{10}$'
              WHEN 'UnitPrice' THEN observation ->> 'value' !~ '^-?(0|[1-9][0-9]{0,17})\\.[0-9]{10}$'
-             WHEN 'Money' THEN observation ->> 'value' !~ '^-?(0|[1-9][0-9]{0,17})\\.[0-9]{8}$'
+             WHEN 'Money' THEN observation ->> 'value' !~ '^-?(0|[1-9][0-9]{0,19})\\.[0-9]{8}$'
              WHEN 'Rate' THEN observation ->> 'value' !~ '^-?(0|[1-9][0-9]{0,15})\\.[0-9]{12}$'
              ELSE true
            END

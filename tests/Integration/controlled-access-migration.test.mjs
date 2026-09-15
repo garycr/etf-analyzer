@@ -29,7 +29,7 @@ const lockSql =
 const unlockSql =
   "SELECT pg_catalog.pg_advisory_unlock(pg_catalog.hashtextextended('etf:test:role-bootstrap', 0))";
 const controlledAccessContentHash = "62d4c23bcb89cbf26d58af8a994c765d74cf64e2267c0ae52e240f2632be0235";
-const controlledAccessManifestHash = "10feee5e5a5a58137767a9a9803ee5659b56a5feca9b8fb9f9ae45da3cedbf01";
+const controlledAccessManifestHash = "cac533a25d652e9bd3da840632f8b131ba98b82ed6898d0115acc56228412d02";
 
 async function cleanBootstrap(client) {
   await client.query("ROLLBACK").catch(() => undefined);

@@ -6,7 +6,7 @@
 **Owner:** Team Lead
 **Conformance check:** `PT-FIX-001`
 **Architecture status:** Proposed
-**Implementation status:** Ring 2 in progress; PT-FIX-001A..E, PT-FIX-001H..J, and PT-FIX-001L..M implemented and reviewed; PT-FIX-001F application validation reviewed, aggregate closure open on PostgreSQL Money precision reconciliation; all other scenarios open
+**Implementation status:** Ring 2 in progress; PT-FIX-001A..F, PT-FIX-001H..J, and PT-FIX-001L..M implemented, reviewed, and approved for bounded publication; all other scenarios open
 
 ## Scope and Authority
 

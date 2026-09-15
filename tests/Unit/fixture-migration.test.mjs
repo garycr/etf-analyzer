@@ -86,3 +86,21 @@ test("0004 fixtures uses exact PostgreSQL-compatible catalog names", () => {
   assert.match(sql, /CREATE INDEX ix_market_observations__inst_date_prov_adj_available_rev ON/);
   assert.match(sql, /CREATE INDEX ix_economic_observations__prov_series_date_release_vintage ON/);
 });
+
+test("0004 fixtures preserves DEC-014 class-specific PostgreSQL precision", () => {
+  const { sql } = fixtureMigration;
+
+  assert.ok(
+    sql.includes(
+      "WHEN 'Money' THEN observation ->> 'value' !~ '^-?(0|[1-9][0-9]{0,19})\\.[0-9]{8}$'",
+    ),
+  );
+  assert.doesNotMatch(
+    sql,
+    /COALESCE\(abs\(value_quantity\), abs\(value_money\), abs\(value_rate\)\)/u,
+  );
+  assert.equal(
+    (sql.match(/value_money IS NULL OR abs\(value_money\) < 100000000000000000000/gu) ?? []).length,
+    2,
+  );
+});

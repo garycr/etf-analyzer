@@ -6,6 +6,36 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-15 | WP-2 aggregate PT-FIX-001F human approval | Ring-2 | @workspace-owner
+
+**Type:** APPROVAL
+**Decision:** Approve the reviewed PostgreSQL DEC-014 remediation and aggregate PT-FIX-001F for bounded publication
+**Policy:** Human approval; DEC-014; WP-2; PT-FIX-001F; issue #70; REV-053
+**Authority:** Workspace Owner explicit approval
+**Accountability:** Solo Orchestrator publishes the approved aggregate decimal-validation increment and continues WP-2 sequentially
+**Result:** REV-053 PASS, exact PostgreSQL boundary evidence, and the inactive empty-database re-baseline accepted for publication
+**authorization-boundary:** Aggregate PT-FIX-001F only; no mutation of an applied release migration ledger, PT-FIX-001G, K, N, or O, complete WP-2, legacy migration, release, deployment, or production action is authorized
+
+---
+
+## 2026-09-15 | REV-053 PT-FIX-001F PostgreSQL decimal validation accepted | Ring-2 | @code-reviewer
+
+**Type:** REVIEW-RECHECK
+**review-type:** code-test-and-evidence-conformance
+**review-outcome:** PASS; publication pending human approval
+**severity-counts:** Critical 0 | Major 0 | Minor 0 technical
+**Decision:** Accept the PostgreSQL DEC-014 remediation and aggregate PT-FIX-001F as technically implemented and reviewed
+**Policy:** DEC-014; DEC-023; DEC-028; DEC-030; WP-2; PT-FIX-001F; issue #70; code review; test quality
+**Authority:** Alternate-model Code Reviewer final recheck closed both prior Major evidence findings
+**Accountability:** Solo Orchestrator preserves the inactive empty-database re-baseline boundary and awaits Workspace Owner approval before publication
+**Result:** Fixture migration 5/5; affected sequence-4-through-6 chain 12/12; serial and CI-equivalent complete PostgreSQL 16.15 suites 248/248 with zero skips or failures; build, lint, diagnostics, audit, and diff checks pass
+**remediation:** Expanded Money admission to 20 integer digits, enforced class-specific PostgreSQL bounds, pinned C-locale cumulative hashes, and published current execution evidence
+**Artifact:** docs/Governance/decisions/reviews/REV-053-wp-2-postgresql-decimal-validation-review.md | docs/artifacts/gate-evidence/wp-2-postgresql-decimal-validation.md | src/Infrastructure/PostgreSQL/migrations/fixtures.ts | tests/Integration/fixture-migration.test.mjs
+**authorization-boundary:** Technical aggregate PT-FIX-001F only; bounded publication awaits Workspace Owner approval; no applied release migration mutation, PT-FIX-001G, K, N, or O, complete WP-2, legacy migration, release, deployment, or production authority
+**selector:** delegated
+
+---
+
 ## 2026-09-15 | WP-2 PT-FIX-001F application validation human approval | Ring-2 | @workspace-owner
 
 **Type:** APPROVAL

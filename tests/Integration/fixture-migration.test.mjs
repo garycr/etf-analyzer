@@ -290,11 +290,11 @@ test(
       );
       assert.equal(
         applied.contentHash,
-        "8f73d86024e38c043328c3ac3102dffb627df579757009f150f789bba1bb5b60",
+        "bd34aa3c5701ef42267fccf797284507db25a9319342a1553898d2f84af1cc56",
       );
       assert.equal(
         applied.schemaManifestHash,
-        "897c67ad05bb35c602c74d412172c8cc0aff398b5448711af25a43974017fda6",
+        "cb0955c4952e7e3994a224c390cc8b41bb0a3a7c63a28e522051b0cd29467f69",
       );
 
       const owners = await client.query(
@@ -513,6 +513,14 @@ test(
         [(payload) => { payload.marketObservations[0].unknown = true; }, "FIXTURE_MANIFEST_INVALID"],
         [(payload) => { payload.marketObservations[0].revision = "01"; }, "FIXTURE_TEMPORAL_INVALID"],
         [(payload) => { payload.marketObservations[0].value = "100.00000000001"; }, "FIXTURE_DECIMAL_INVALID"],
+        [(payload) => {
+          payload.marketObservations[0].numericClass = "Money";
+          payload.marketObservations[0].value = "100.000000000";
+        }, "FIXTURE_DECIMAL_INVALID"],
+        [(payload) => {
+          payload.marketObservations[0].numericClass = "Money";
+          payload.marketObservations[0].value = "100000000000000000000.00000000";
+        }, "FIXTURE_DECIMAL_INVALID"],
         [(payload) => { payload.marketObservations[0].value = "-0.0000000000"; }, "FIXTURE_DECIMAL_INVALID"],
         [(payload) => { payload.marketObservations[0].tradingDate = "2026-02-30"; }, "FIXTURE_TEMPORAL_INVALID"],
         [(payload) => { payload.marketObservations[0].sourceAvailableAt = "2026-01-30 22:00:00+00"; }, "FIXTURE_TEMPORAL_INVALID"],
@@ -530,6 +538,62 @@ test(
         "SELECT count(*)::integer AS package_count FROM etf.fixture_packages",
       );
       assert.deepEqual(remaining.rows, [{ package_count: 0 }]);
+    } finally {
+      try {
+        await cleanBootstrap(client);
+      } finally {
+        await client.query(fixtureUnlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
+  "0004 preserves DEC-014 Money boundaries without rounding",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    await client.connect();
+    await client.query(fixtureLockSql);
+    try {
+      await cleanBootstrap(client);
+      await applyPrerequisites(client);
+      await applyMigration(
+        client,
+        fixtureMigration,
+        "2026-09-14T00:03:00.000Z",
+        projectPostgresSchemaManifest,
+      );
+      await client.query("GRANT USAGE ON SCHEMA etf TO app_runtime");
+
+      const payload = fixturePayload();
+      const values = [
+        "999999999999999999.99999999",
+        "-9999999999999999999.99999999",
+        "99999999999999999999.99999999",
+        "-99999999999999999999.99999999",
+      ];
+      for (const [index, observation] of payload.marketObservations.entries()) {
+        observation.numericClass = "Money";
+        observation.value = values[index];
+      }
+      for (const [index, observation] of payload.economicObservations.entries()) {
+        observation.numericClass = "Money";
+        observation.value = values[index + payload.marketObservations.length];
+      }
+
+      await ingest(client, payload);
+      const stored = await client.query(
+        `SELECT value_money::text AS value FROM etf.market_observations
+         UNION ALL
+         SELECT value_money::text AS value FROM etf.economic_observations
+         ORDER BY value`,
+      );
+      assert.deepEqual(
+        stored.rows.map(({ value }) => value).sort(),
+        [...values].sort(),
+      );
     } finally {
       try {
         await cleanBootstrap(client);

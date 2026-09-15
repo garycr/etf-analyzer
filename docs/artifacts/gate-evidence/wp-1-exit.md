@@ -11,9 +11,15 @@
 | 1 | `0001-foundation` | `a604802a67bed66c6ce79d2f2f856b48e184ae5b4f76803ab8ead3a135c85291` | `3ba3b63c429cf051378ce3eb4adafe0db697dec487d070669a6bc47dba2f8f7c` |
 | 2 | `0002-application` | `9865cd75bd6249b4a567daf840f95ad3d7b52bbf534060e87a34516fd0867fdb` | `405d4e276efbf43f40c4856be1c7536b7cc0d8d37329416d8df7e8ed24bb34cc` |
 | 3 | `0003-domain-ledger` | `d514c7f3b75c6ed83dfdbd9b54b406b14814b2bf8f40bd1e04a9d70a303346a3` | `61008ff4dd4898afb0f0b168c4d063dae4894fb8257f9ee77db3af95fdde54d4` |
-| 4 | `0004-fixtures` | `8f73d86024e38c043328c3ac3102dffb627df579757009f150f789bba1bb5b60` | `897c67ad05bb35c602c74d412172c8cc0aff398b5448711af25a43974017fda6` |
-| 5 | `0005-analytics-evidence` | `638fdcb40695be04a30c56807e529f753fd37c80ccfdcd6ad58f04e603287cc4` | `92f3a9dcf71e61ae42977d2a2c009130ec4b622f1370239e65a6d5fdc8e54d46` |
-| 6 | `0006-controlled-access` | `62d4c23bcb89cbf26d58af8a994c765d74cf64e2267c0ae52e240f2632be0235` | `10feee5e5a5a58137767a9a9803ee5659b56a5feca9b8fb9f9ae45da3cedbf01` |
+| 4 | `0004-fixtures` | `bd34aa3c5701ef42267fccf797284507db25a9319342a1553898d2f84af1cc56` | `cb0955c4952e7e3994a224c390cc8b41bb0a3a7c63a28e522051b0cd29467f69` |
+| 5 | `0005-analytics-evidence` | `638fdcb40695be04a30c56807e529f753fd37c80ccfdcd6ad58f04e603287cc4` | `fa108eee32e09d81829c175e68387a896b99b210193c3feaad2f30cccaf34366` |
+| 6 | `0006-controlled-access` | `62d4c23bcb89cbf26d58af8a994c765d74cf64e2267c0ae52e240f2632be0235` | `cac533a25d652e9bd3da840632f8b131ba98b82ed6898d0115acc56228412d02` |
+
+The 2026-09-15 PT-FIX-001F re-baseline corrected sequence 4 to admit the full DEC-014 Money coefficient supported by `NUMERIC(28,8)`. PostgreSQL 16.15 recomputed all cumulative manifests; sequence 5 and 6 SQL hashes remain unchanged. The prototype has no released or production migration ledger.
+
+## 2026-09-15 PT-FIX-001F Re-baseline Verification
+
+The affected sequence-4-through-6 migration chain passed 12/12 against PostgreSQL `16.15|C|UTF8|UTC|on`. The complete serial PostgreSQL-backed repository suite passed 248/248 with zero skips or failures. Exact Money boundary vectors covered 18, 19, and 20 integer digits, both signs at the maximum, exact scale-8 readback, 21-digit rejection, and excess-scale rejection before casts. Lint, editor diagnostics, dependency audit, and diff checks passed.
 
 Every value is pinned by the corresponding PostgreSQL integration test. Sequence 1 through 5 evidence was recomputed with the final sequence-6 catalog projector so cumulative grant-option and column ACL state is represented consistently.
 
@@ -21,7 +27,7 @@ Every value is pinned by the corresponding PostgreSQL integration test. Sequence
 
 | Criterion | Result | Evidence |
 | --- | --- | --- |
-| Build, lint, and test pipeline | PASS | Root Node 20 scripts and pinned PostgreSQL CI service; complete local suite 99/99 |
+| Build, lint, and test pipeline | PASS | Root Node 20 scripts and pinned PostgreSQL CI service; initial WP-1 suite 99/99 and PT-FIX-001F re-baseline suite 248/248 |
 | Dependency review | PASS | `pg` and TypeScript dependency set unchanged; `npm audit --audit-level=low` reported zero vulnerabilities |
 | Configuration, logging, and health primitives | PASS | Fail-closed fixture-only configuration, credential redaction, structured logging, liveness, ordered readiness, and stable failure checks |
 | PostgreSQL baseline | PASS | PostgreSQL `16.15|UTF8|UTC|on|C`; externally provisioned `pgcrypto 1.3` and system `plpgsql 1.0` |

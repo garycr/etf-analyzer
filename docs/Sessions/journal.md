@@ -6,6 +6,36 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-15 | WP-2 PT-FIX-001G human approval | Ring-2 | @workspace-owner
+
+**Type:** APPROVAL
+**Decision:** Approve the reviewed PT-FIX-001G required-input suppression increment for bounded publication
+**Policy:** Human approval; WP-2; PT-FIX-001G; issue #70; REV-054
+**Authority:** Workspace Owner explicit approval
+**Accountability:** Solo Orchestrator publishes the approved increment and continues WP-2 sequentially
+**Result:** REV-054 PASS and validated missing/non-Valid suppression evidence accepted for publication
+**authorization-boundary:** PT-FIX-001G only; no PT-FIX-001K/N, undeclared-input, provider-egress, complete WP-2, legacy migration, release, deployment, or production action is authorized
+
+---
+
+## 2026-09-15 | REV-054 PT-FIX-001G required-input suppression accepted | Ring-2 | @code-reviewer
+
+**Type:** REVIEW-RECHECK
+**review-type:** code-and-test-conformance
+**review-outcome:** PASS; publication pending human approval
+**severity-counts:** Critical 0 | Major 0 | Minor 0
+**Decision:** Accept PT-FIX-001G structural quality validation and required-input suppression after mixed-precedence remediation
+**Policy:** DEC-023; DEC-028; DEC-030; WP-2; PT-FIX-001G; issue #70; code review; test quality
+**Authority:** Alternate-model Code Reviewer final recheck closed the sole Major test-evidence finding
+**Accountability:** Solo Orchestrator publishes only after Workspace Owner approval and retains PT-FIX-001K/N as separate open increments
+**Result:** Focused fixture tests 170/170; complete repository suite 271 discovered, 241 passed, 30 environment-skipped, 0 failed; build, lint, diagnostics, audit, and diff checks pass
+**remediation:** Added missing/non-Valid and Partial/Stale/Quarantined mixed-defect precedence vectors; production logic required no review repair
+**Artifact:** docs/Governance/decisions/reviews/REV-054-wp-2-required-input-suppression-review.md | docs/artifacts/gate-evidence/wp-2-required-input-suppression.md | src/Application/fixture-package.ts | tests/Unit/fixture-package.test.mjs
+**authorization-boundary:** PT-FIX-001G only; no PT-FIX-001K/N, undeclared-input, provider-egress, complete WP-2, legacy migration, release, deployment, or production authority
+**selector:** delegated
+
+---
+
 ## 2026-09-15 | WP-2 aggregate PT-FIX-001F human approval | Ring-2 | @workspace-owner
 
 **Type:** APPROVAL

@@ -9,6 +9,10 @@ export type FixtureConformanceCode =
   | "FIXTURE_IDEMPOTENCY_CONFLICT"
   | "FIXTURE_MANIFEST_INVALID"
   | "FIXTURE_PROVENANCE_INVALID"
+  | "FIXTURE_REQUIRED_MISSING"
+  | "FIXTURE_REQUIRED_PARTIAL"
+  | "FIXTURE_REQUIRED_QUARANTINED"
+  | "FIXTURE_REQUIRED_STALE"
   | "FIXTURE_TEMPORAL_INVALID";
 
 const approvedDatasetHashes = new Map<string, string>([
@@ -135,6 +139,8 @@ const provenanceFields = new Set([
   "rawSourceHash",
   "rawSourceRef",
 ]);
+
+const qualityStates = new Set(["Valid", "Partial", "Stale", "Quarantined"]);
 
 function sha256(bytes: Uint8Array | string): string {
   return createHash("sha256").update(bytes).digest("hex");
@@ -468,11 +474,26 @@ function validateClosedObservationRecords(
       throw new FixtureConformanceError("FIXTURE_MANIFEST_INVALID");
     }
   };
+  const validateQualityMetadata = (
+    record: Readonly<Record<string, unknown>>,
+  ): void => {
+    const qualityState = requireString(record, "qualityState");
+    const qualityCodes = requireStringArray(record.qualityCodes);
+    requireStrictlySortedUnique(qualityCodes, compareUtf8);
+    if (
+      !qualityStates.has(qualityState) ||
+      (qualityState === "Valid") !== (qualityCodes.length === 0)
+    ) {
+      throw new FixtureConformanceError("FIXTURE_MANIFEST_INVALID");
+    }
+  };
   marketFile.records.forEach((record) => {
     requireObservationFields(record, marketObservationFields);
+    validateQualityMetadata(record);
   });
   economicFile.records.forEach((record) => {
     requireObservationFields(record, economicVintageFields);
+    validateQualityMetadata(record);
   });
 }
 
@@ -639,6 +660,7 @@ function validateEconomicReplay(
 function validateFixturePackageContents(
   fixturePackage: FixturePackageBytes,
 ): {
+  readonly manifest: Readonly<Record<string, unknown>>;
   readonly parsedFiles: readonly ParsedFixtureFile[];
   readonly result: ValidatedFixturePackage;
 } {
@@ -712,6 +734,7 @@ function validateFixturePackageContents(
   validateRecordProvenance(parsedFiles, fileHashes);
 
   return {
+    manifest,
     parsedFiles,
     result: {
       datasetHash,
@@ -732,11 +755,80 @@ export function validateFixturePackage(
   return validateFixturePackageContents(fixturePackage).result;
 }
 
+function validateRequiredSelection(
+  manifest: Readonly<Record<string, unknown>>,
+  marketObservations: readonly Readonly<Record<string, unknown>>[],
+  economicVintages: readonly Readonly<Record<string, unknown>>[],
+): void {
+  if (!Array.isArray(manifest.marketCoverage) || !Array.isArray(manifest.economicCoverage)) {
+    throw new FixtureConformanceError("FIXTURE_MANIFEST_INVALID");
+  }
+
+  let missing = false;
+  const selectedQualityStates = new Set<string>();
+  const recordQualityState = (record: Readonly<Record<string, unknown>>): string => {
+    const qualityState = requireString(record, "qualityState");
+    if (!qualityStates.has(qualityState)) {
+      throw new FixtureConformanceError("FIXTURE_MANIFEST_INVALID");
+    }
+    return qualityState;
+  };
+
+  for (const item of manifest.marketCoverage) {
+    const coverage = requireClosedRecord(item, marketCoverageFields);
+    const instrumentId = requireString(coverage, "instrumentId");
+    const adjustmentPolicy = requireString(coverage, "adjustmentPolicy");
+    for (const tradingDate of requireStringArray(coverage.requiredTradingDates)) {
+      const selected = marketObservations.find((record) =>
+        record.instrumentId === instrumentId &&
+        record.adjustmentPolicy === adjustmentPolicy &&
+        record.tradingDate === tradingDate
+      );
+      if (selected === undefined) {
+        missing = true;
+      } else {
+        selectedQualityStates.add(recordQualityState(selected));
+      }
+    }
+  }
+
+  for (const item of manifest.economicCoverage) {
+    const coverage = requireClosedRecord(item, economicCoverageFields);
+    const providerId = requireString(coverage, "providerId");
+    const seriesId = requireString(coverage, "seriesId");
+    for (const observationDate of requireStringArray(coverage.observationDates)) {
+      const selected = economicVintages.find((record) =>
+        record.providerId === providerId &&
+        record.seriesId === seriesId &&
+        record.observationDate === observationDate
+      );
+      if (selected === undefined) {
+        missing = true;
+      } else {
+        selectedQualityStates.add(recordQualityState(selected));
+      }
+    }
+  }
+
+  if (missing) {
+    throw new FixtureConformanceError("FIXTURE_REQUIRED_MISSING");
+  }
+  for (const [qualityState, code] of [
+    ["Partial", "FIXTURE_REQUIRED_PARTIAL"],
+    ["Stale", "FIXTURE_REQUIRED_STALE"],
+    ["Quarantined", "FIXTURE_REQUIRED_QUARANTINED"],
+  ] as const) {
+    if (selectedQualityStates.has(qualityState)) {
+      throw new FixtureConformanceError(code);
+    }
+  }
+}
+
 export function selectFixturePackageAt(
   fixturePackage: FixturePackageBytes,
   evaluationInstant: string,
 ): FixturePackageSelection {
-  const { parsedFiles } = validateFixturePackageContents(fixturePackage);
+  const { manifest, parsedFiles } = validateFixturePackageContents(fixturePackage);
   requireCanonicalTimestamp(evaluationInstant);
   const marketFile = requireParsedFixtureFile(
     parsedFiles,
@@ -799,6 +891,7 @@ export function selectFixturePackageAt(
       "adjustmentPolicy",
     ]),
   );
+  validateRequiredSelection(manifest, marketObservations, economicVintages);
   return {
     economicVintages,
     marketObservations,

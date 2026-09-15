@@ -318,6 +318,9 @@ test("PT-FIX-001D includes an economic vintage released exactly at T", () => {
       });
     },
   );
+  const changedManifest = JSON.parse(fixturePackage.manifest.toString("utf8"));
+  changedManifest.marketCoverage[0].requiredTradingDates = [];
+  updateManifest(fixturePackage, changedManifest);
   const originalBytes = Buffer.from(fixturePackage.files["economic-vintages.jsonl"]);
 
   const selection = selectFixturePackageAt(
@@ -361,6 +364,154 @@ test("PT-FIX-001E filters future market revisions before numeric ordering", () =
   assert.equal(selection.marketObservations[0].sourceAvailableAt, "2026-01-30T22:00:00.000Z");
   assert.deepEqual(fixturePackage.files["market-observations.jsonl"], originalBytes);
 });
+
+test("PT-FIX-001G suppresses selection when a required input is unavailable", () => {
+  assert.throws(
+    () => selectFixturePackageAt(
+      goldenPackage(),
+      "2026-01-15T13:30:00.000Z",
+    ),
+    (error) =>
+      error instanceof FixtureConformanceError &&
+      error.code === "FIXTURE_REQUIRED_MISSING",
+  );
+});
+
+test("PT-FIX-001G suppresses selection when required economic input is unavailable", () => {
+  const fixturePackage = packageWithManifestMutation((value) => {
+    value.datasetVersion = "2026.01.1";
+    value.marketCoverage[0].requiredTradingDates = [];
+  });
+
+  assert.throws(
+    () => selectFixturePackageAt(
+      fixturePackage,
+      "2026-01-15T13:29:59.999Z",
+    ),
+    (error) =>
+      error instanceof FixtureConformanceError &&
+      error.code === "FIXTURE_REQUIRED_MISSING",
+  );
+});
+
+test("PT-FIX-001G reports missing before a selected non-Valid input", () => {
+  const fixturePackage = packageWithRecordMutation(
+    "market-observations.jsonl",
+    ([record]) => {
+      record.qualityState = "Partial";
+      record.qualityCodes = ["SOURCE_PARTIAL"];
+    },
+  );
+  const changedManifest = JSON.parse(fixturePackage.manifest.toString("utf8"));
+  changedManifest.economicCoverage[0].observationDates.push("2025-12-02");
+  updateManifest(fixturePackage, changedManifest);
+
+  assert.throws(
+    () => selectFixturePackageAt(fixturePackage, "2026-01-30T22:00:00.000Z"),
+    (error) =>
+      error instanceof FixtureConformanceError &&
+      error.code === "FIXTURE_REQUIRED_MISSING",
+  );
+});
+
+for (const [firstState, secondState, expectedCode] of [
+  ["Partial", "Quarantined", "FIXTURE_REQUIRED_PARTIAL"],
+  ["Stale", "Quarantined", "FIXTURE_REQUIRED_STALE"],
+]) {
+  test(`PT-FIX-001G reports ${firstState} before ${secondState}`, () => {
+    const fixturePackage = packageWithRecordMutation(
+      "market-observations.jsonl",
+      (records) => {
+        records[0].qualityState = firstState;
+        records[0].qualityCodes = [`SOURCE_${firstState.toUpperCase()}`];
+        records.push({
+          ...structuredClone(records[0]),
+          instrumentId: "ZZZ",
+          qualityState: secondState,
+          qualityCodes: [`SOURCE_${secondState.toUpperCase()}`],
+        });
+      },
+    );
+    const changedManifest = JSON.parse(fixturePackage.manifest.toString("utf8"));
+    changedManifest.marketCoverage.push({
+      adjustmentPolicy: "split-adjusted",
+      instrumentId: "ZZZ",
+      requiredTradingDates: ["2026-01-30"],
+    });
+    updateManifest(fixturePackage, changedManifest);
+
+    assert.throws(
+      () => selectFixturePackageAt(fixturePackage, "2026-01-30T22:00:00.000Z"),
+      (error) =>
+        error instanceof FixtureConformanceError &&
+        error.code === expectedCode,
+    );
+  });
+}
+
+for (const [name, mutate] of [
+  ["an unknown quality state", (record) => {
+    record.qualityState = "Unknown";
+  }],
+  ["quality codes on a Valid record", (record) => {
+    record.qualityCodes = ["UNEXPECTED_CODE"];
+  }],
+  ["empty quality codes on a non-Valid record", (record) => {
+    record.qualityState = "Partial";
+  }],
+  ["unsorted quality codes", (record) => {
+    record.qualityState = "Stale";
+    record.qualityCodes = ["Z_CODE", "A_CODE"];
+  }],
+  ["duplicate quality codes", (record) => {
+    record.qualityState = "Quarantined";
+    record.qualityCodes = ["A_CODE", "A_CODE"];
+  }],
+  ["a non-array quality code value", (record) => {
+    record.qualityCodes = "A_CODE";
+  }],
+]) {
+  for (const relativePath of [
+    "market-observations.jsonl",
+    "economic-vintages.jsonl",
+  ]) {
+    test(`PT-FIX-001G rejects ${name} in ${relativePath}`, () => {
+      const fixturePackage = packageWithRecordMutation(relativePath, ([record]) => {
+        mutate(record);
+      });
+
+      assertFixtureError(fixturePackage, "FIXTURE_MANIFEST_INVALID");
+    });
+  }
+}
+
+for (const [qualityState, expectedCode] of [
+  ["Partial", "FIXTURE_REQUIRED_PARTIAL"],
+  ["Stale", "FIXTURE_REQUIRED_STALE"],
+  ["Quarantined", "FIXTURE_REQUIRED_QUARANTINED"],
+]) {
+  for (const relativePath of [
+    "market-observations.jsonl",
+    "economic-vintages.jsonl",
+  ]) {
+    test(`PT-FIX-001G suppresses selected ${relativePath} input in ${qualityState} state`, () => {
+      const fixturePackage = packageWithRecordMutation(relativePath, ([record]) => {
+        record.qualityState = qualityState;
+        record.qualityCodes = [`SOURCE_${qualityState.toUpperCase()}`];
+      });
+
+      assert.throws(
+        () => selectFixturePackageAt(
+          fixturePackage,
+          "2026-01-30T22:00:00.000Z",
+        ),
+        (error) =>
+          error instanceof FixtureConformanceError &&
+          error.code === expectedCode,
+      );
+    });
+  }
+}
 
 test("PT-FIX-001D/E selection preserves package validation precedence", () => {
   const fixturePackage = packageWithRecordMutation(

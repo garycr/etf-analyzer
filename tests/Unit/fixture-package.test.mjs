@@ -553,6 +553,11 @@ for (const [numericClass, currency, expectedCode] of [
       ([record]) => {
         record.numericClass = numericClass;
         record.currency = currency;
+        record.value = numericClass === "Money"
+          ? "100.00000000"
+          : numericClass === "Rate"
+            ? "100.000000000000"
+            : "100.0000000000";
       },
     );
 
@@ -563,6 +568,61 @@ for (const [numericClass, currency, expectedCode] of [
     }
   });
 }
+
+for (const [numericClass, value, accepted] of [
+  ["Quantity", "1.2300000000", true],
+  ["UnitPrice", "100.0000000000", true],
+  ["Money", "1000.00000000", true],
+  ["Rate", "0.012500000000", true],
+  ["UnitPrice", "999999999999999999.0000000000", true],
+  ["UnitPrice", "-999999999999999999.0000000000", true],
+  ["Money", "99999999999999999999.00000000", true],
+  ["Rate", "9999999999999999.000000000000", true],
+  ["UnitPrice", "0.0000000000", true],
+  ["UnitPrice", "1000000000000000000.0000000000", false],
+  ["Money", "100000000000000000000.00000000", false],
+  ["Rate", "10000000000000000.000000000000", false],
+  ["UnitPrice", "100.00000000001", false],
+  ["UnitPrice", "100.0", false],
+  ["UnitPrice", "1e2", false],
+  ["UnitPrice", "0100.0000000000", false],
+  ["UnitPrice", "+100.0000000000", false],
+  ["UnitPrice", "-0.0000000000", false],
+  ["Quantity", "-0.0000000000", false],
+  ["Money", "-0.00000000", false],
+  ["Rate", "-0.000000000000", false],
+  ["Rate", "NaN", false],
+  ["Rate", "Infinity", false],
+  ["Rate", "-Infinity", false],
+]) {
+  test(`PT-FIX-001F validates ${numericClass} decimal ${value}`, () => {
+    const fixturePackage = packageWithRecordMutation(
+      "market-observations.jsonl",
+      ([record]) => {
+        record.numericClass = numericClass;
+        record.value = value;
+        record.currency = numericClass === "Money" || numericClass === "UnitPrice" ? "USD" : "";
+      },
+    );
+
+    if (accepted) {
+      validateFixturePackage(fixturePackage);
+    } else {
+      assertFixtureError(fixturePackage, "FIXTURE_DECIMAL_INVALID");
+    }
+  });
+}
+
+test("PT-FIX-001F validates economic decimal values with the same exact rules", () => {
+  const fixturePackage = packageWithRecordMutation(
+    "economic-vintages.jsonl",
+    ([record]) => {
+      record.value = "0.01250000000";
+    },
+  );
+
+  assertFixtureError(fixturePackage, "FIXTURE_DECIMAL_INVALID");
+});
 
 test("PT-FIX-001H rejects duplicate JSON members before hashing", () => {
   const duplicateMemberManifest = manifest

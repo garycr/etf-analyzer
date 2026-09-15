@@ -498,9 +498,29 @@ function validateObservationValues(parsedFiles: readonly ParsedFixtureFile[]): v
     requireCanonicalTimestamp(requireString(record, "releaseTimestamp"));
   }
 
-  const numericClasses = new Set(["Money", "Quantity", "Rate", "UnitPrice"]);
+  const numericScales = new Map([
+    ["Money", 8],
+    ["Quantity", 10],
+    ["Rate", 12],
+    ["UnitPrice", 10],
+  ]);
   for (const record of [...marketFile.records, ...economicFile.records]) {
-    if (!numericClasses.has(requireString(record, "numericClass"))) {
+    const numericClass = requireString(record, "numericClass");
+    const scale = numericScales.get(numericClass);
+    const value = requireString(record, "value");
+    const decimal = /^(-?)(0|[1-9][0-9]*)\.([0-9]+)$/u.exec(value);
+    if (scale === undefined || decimal === null) {
+      throw new FixtureConformanceError("FIXTURE_DECIMAL_INVALID");
+    }
+    const sign = decimal[1] as string;
+    const integer = decimal[2] as string;
+    const fraction = decimal[3] as string;
+    const integerDigits = integer === "0" ? 0 : integer.length;
+    if (
+      fraction.length !== scale ||
+      integerDigits + fraction.length > 28 ||
+      (sign === "-" && integer === "0" && /^0+$/u.test(fraction))
+    ) {
       throw new FixtureConformanceError("FIXTURE_DECIMAL_INVALID");
     }
   }

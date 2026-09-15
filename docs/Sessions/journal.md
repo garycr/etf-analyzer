@@ -6,6 +6,37 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-15 | WP-2 PT-FIX-001F application validation human approval | Ring-2 | @workspace-owner
+
+**Type:** APPROVAL
+**Decision:** Approve the reviewed PT-FIX-001F application-layer decimal validation increment for bounded publication
+**Policy:** Human approval; DEC-014; WP-2; PT-FIX-001F; issue #70; REV-052
+**Authority:** Workspace Owner explicit approval
+**Accountability:** Solo Orchestrator publishes the application increment and remediates the PostgreSQL Money boundary before aggregate PT-FIX-001F closure
+**Result:** REV-052 application PASS and validated bounded evidence accepted for publication
+**authorization-boundary:** Application-layer PT-FIX-001F only; aggregate F remains open and no database migration, PT-FIX-001G, K, N, or O, WP-3 overlap, release, deployment, or production action is authorized
+
+---
+
+## 2026-09-15 | REV-052 PT-FIX-001F application decimal validation accepted | Ring-2 | @code-reviewer
+
+**Type:** REVIEW-RECHECK
+**review-type:** code-and-test-conformance
+**review-outcome:** PASS application scope; aggregate OPEN
+**severity-counts:** Critical 0 | Major 0 application | Major 1 cross-layer open
+**Decision:** Accept bounded application decimal validation while retaining aggregate PT-FIX-001F as open
+**Policy:** DEC-014; DEC-023; DEC-028; DEC-030; WP-2; PT-FIX-001F; issue #70; code review; test quality
+**Authority:** Alternate-model Code Reviewer PASS after decimal boundary and regression recheck
+**Accountability:** Solo Orchestrator publishes only the application result and reconciles PostgreSQL Money precision before aggregate F closure
+**Result:** Focused fixture tests 147/147; complete repository suite 246 discovered, 217 passed, 29 environment-skipped, 0 failed; build, lint, diagnostics, zero-vulnerability dependency audit, and diff check pass
+**remediation:** Enforced string-only decimal grammar, exact class scales and precision 28; added class boundaries, all negative-zero forms, non-finite spellings, and economic parity vectors
+**open-major:** PostgreSQL fixture ingestion limits Money to 18 integer digits instead of DEC-014's required 20; integration boundary coverage is absent
+**Artifact:** docs/Governance/decisions/reviews/REV-052-wp-2-decimal-validation-review.md | docs/artifacts/gate-evidence/wp-2-decimal-validation.md | src/Application/fixture-package.ts | tests/Unit/fixture-package.test.mjs
+**authorization-boundary:** Application-layer PT-FIX-001F only; no aggregate F, PT-FIX-001G, K, N, or O claim, database migration change, persistence, provider/network access, legacy migration, WP-3 overlap, release, deployment, or production authority
+**selector:** delegated
+
+---
+
 ## 2026-09-15 | WP-2 PT-FIX-001D/E human approval | Ring-2 | @workspace-owner
 
 **Type:** APPROVAL

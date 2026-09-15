@@ -7,7 +7,8 @@ export type FixtureConformanceCode =
   | "FIXTURE_FILE_INTEGRITY_FAILED"
   | "FIXTURE_IDEMPOTENCY_CONFLICT"
   | "FIXTURE_MANIFEST_INVALID"
-  | "FIXTURE_PROVENANCE_INVALID";
+  | "FIXTURE_PROVENANCE_INVALID"
+  | "FIXTURE_TEMPORAL_INVALID";
 
 const approvedDatasetHashes = new Map<string, string>([
   [
@@ -35,6 +36,8 @@ export interface ValidatedFixturePackage {
   readonly datasetHash: string;
   readonly datasetId: string;
   readonly datasetVersion: string;
+  readonly economicIdempotentReplayCount: number;
+  readonly economicVintageCount: number;
   readonly fileHashes: Readonly<Record<string, string>>;
   readonly marketIdempotentReplayCount: number;
   readonly marketObservationCount: number;
@@ -391,6 +394,69 @@ function validateMarketReplay(
   return { logicalCount: businessPayloads.size, replayCount };
 }
 
+function validateEconomicReplay(
+  parsedFiles: readonly ParsedFixtureFile[],
+): { readonly logicalCount: number; readonly replayCount: number } {
+  const economicFile = parsedFiles.find(
+    ({ descriptor }) => descriptor.relativePath === "economic-vintages.jsonl",
+  );
+  if (economicFile === undefined) {
+    throw new FixtureConformanceError("FIXTURE_FILE_INTEGRITY_FAILED");
+  }
+
+  const identityPayloads = new Map<string, string>();
+  let replayCount = 0;
+
+  for (const record of economicFile.records) {
+    const providerId = requireString(record, "providerId");
+    const seriesId = requireString(record, "seriesId");
+    const observationDate = requireString(record, "observationDate");
+    const releaseTimestamp = requireString(record, "releaseTimestamp");
+    const vintageId = requireString(record, "vintageId");
+    const payload = canonicalizeJson(record);
+    const identityKey = canonicalizeJson([
+      providerId,
+      seriesId,
+      observationDate,
+      releaseTimestamp,
+      vintageId,
+    ]);
+    const identityPayload = identityPayloads.get(identityKey);
+
+    if (identityPayload !== undefined && identityPayload !== payload) {
+      throw new FixtureConformanceError("FIXTURE_IDEMPOTENCY_CONFLICT");
+    }
+    if (identityPayload !== undefined) {
+      replayCount += 1;
+      continue;
+    }
+
+    identityPayloads.set(identityKey, payload);
+  }
+
+  const releaseVintageIds = new Map<string, string>();
+  for (const record of economicFile.records) {
+    const providerId = requireString(record, "providerId");
+    const seriesId = requireString(record, "seriesId");
+    const observationDate = requireString(record, "observationDate");
+    const releaseTimestamp = requireString(record, "releaseTimestamp");
+    const vintageId = requireString(record, "vintageId");
+    const releaseKey = canonicalizeJson([
+      providerId,
+      seriesId,
+      observationDate,
+      releaseTimestamp,
+    ]);
+    const releaseVintageId = releaseVintageIds.get(releaseKey);
+    if (releaseVintageId !== undefined && releaseVintageId !== vintageId) {
+      throw new FixtureConformanceError("FIXTURE_TEMPORAL_INVALID");
+    }
+    releaseVintageIds.set(releaseKey, vintageId);
+  }
+
+  return { logicalCount: identityPayloads.size, replayCount };
+}
+
 export function validateFixturePackage(
   fixturePackage: FixturePackageBytes,
 ): ValidatedFixturePackage {
@@ -457,12 +523,15 @@ export function validateFixturePackage(
   }
 
   const marketReplay = validateMarketReplay(parsedFiles);
+  const economicReplay = validateEconomicReplay(parsedFiles);
   validateRecordProvenance(parsedFiles, fileHashes);
 
   return {
     datasetHash,
     datasetId,
     datasetVersion,
+    economicIdempotentReplayCount: economicReplay.replayCount,
+    economicVintageCount: economicReplay.logicalCount,
     fileHashes,
     marketIdempotentReplayCount: marketReplay.replayCount,
     marketObservationCount: marketReplay.logicalCount,

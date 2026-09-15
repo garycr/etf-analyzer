@@ -123,6 +123,8 @@ test("PT-FIX-001A validates the exact golden package identity", () => {
     datasetHash,
     datasetId: "etf-prototype-core",
     datasetVersion: "2026.01.0",
+    economicIdempotentReplayCount: 0,
+    economicVintageCount: 1,
     fileHashes: {
       "economic-vintages.jsonl": economicHash,
       "market-observations.jsonl": marketHash,
@@ -215,6 +217,81 @@ test("PT-FIX-001C rejects a changed job ID under one market business identity", 
       records.push({
         ...structuredClone(records[0]),
         ingestionJobId: "fixture-build-2",
+      });
+    },
+  );
+
+  assertFixtureError(fixturePackage, "FIXTURE_IDEMPOTENCY_CONFLICT");
+});
+
+test("PT-FIX-001J collapses byte-identical economic replay to one logical vintage", () => {
+  const fixturePackage = packageWithRecordMutation(
+    "economic-vintages.jsonl",
+    (records) => {
+      records.push(structuredClone(records[0]));
+      records.push(structuredClone(records[0]));
+    },
+  );
+
+  const result = validateFixturePackage(fixturePackage);
+
+  assert.equal(result.economicVintageCount, 1);
+  assert.equal(result.economicIdempotentReplayCount, 2);
+});
+
+test("PT-FIX-001J rejects a conflicting economic replay", () => {
+  const fixturePackage = packageWithRecordMutation(
+    "economic-vintages.jsonl",
+    (records) => {
+      records.push({
+        ...structuredClone(records[0]),
+        value: "4.000000000000",
+      });
+    },
+  );
+
+  assertFixtureError(fixturePackage, "FIXTURE_IDEMPOTENCY_CONFLICT");
+});
+
+test("PT-FIX-001J rejects a changed job ID under one economic identity", () => {
+  const fixturePackage = packageWithRecordMutation(
+    "economic-vintages.jsonl",
+    (records) => {
+      records.push({
+        ...structuredClone(records[0]),
+        ingestionJobId: "fixture-build-2",
+      });
+    },
+  );
+
+  assertFixtureError(fixturePackage, "FIXTURE_IDEMPOTENCY_CONFLICT");
+});
+
+test("PT-FIX-001J rejects competing vintages at one release instant", () => {
+  const fixturePackage = packageWithRecordMutation(
+    "economic-vintages.jsonl",
+    (records) => {
+      records.push({
+        ...structuredClone(records[0]),
+        vintageId: "2026-01-15-corrected",
+      });
+    },
+  );
+
+  assertFixtureError(fixturePackage, "FIXTURE_TEMPORAL_INVALID");
+});
+
+test("PT-FIX-001J reports identity conflict before an earlier release collision", () => {
+  const fixturePackage = packageWithRecordMutation(
+    "economic-vintages.jsonl",
+    (records) => {
+      records.push({
+        ...structuredClone(records[0]),
+        vintageId: "2026-01-15-corrected",
+      });
+      records.push({
+        ...structuredClone(records[0]),
+        value: "4.000000000000",
       });
     },
   );

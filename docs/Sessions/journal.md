@@ -6,6 +6,36 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-15 | WP-2 PT-FIX-001B/C human approval | Ring-2 | @workspace-owner
+
+**Type:** APPROVAL
+**Decision:** Approve the reviewed PT-FIX-001B/C market replay increment for bounded publication
+**Policy:** Human approval; WP-2; PT-FIX-001B/C; issue #70; REV-048
+**Authority:** Workspace Owner explicit approval
+**Accountability:** Solo Orchestrator publishes the approved increment and continues WP-2 sequentially
+**Result:** REV-048 PASS and validated evidence accepted for publication
+**authorization-boundary:** Approval covers only in-memory PT-FIX-001B/C; WP-2 remains active and WP-3 through WP-8 remain blocked
+
+---
+
+## 2026-09-15 | REV-048 PT-FIX-001B/C market replay accepted | Ring-2 | @code-reviewer
+
+**Type:** REVIEW-RECHECK
+**review-type:** code-and-test-conformance
+**review-outcome:** PASS
+**severity-counts:** Critical 0 | Major 0 | Minor 0 blocking
+**Decision:** Accept the fourth bounded WP-2 increment for five-part market identity and deterministic replay
+**Policy:** DEC-023; DEC-028; DEC-030; WP-2; PT-FIX-001B/C; issue #70; code review; test quality
+**Authority:** Alternate-model Code Reviewer PASS after remediation and final recheck
+**Accountability:** Solo Orchestrator for evidence reconciliation and sequential WP-2 continuation
+**Result:** Focused fixture tests 85/85; complete repository suite 184 discovered, 155 passed, 29 environment-skipped, 0 failed; build, lint, diagnostics, zero-vulnerability dependency audit, and diff check pass
+**remediation:** Removed a redundant job-key map and proved cumulative byte-identical replay, changed-value conflict, and changed-job conflict under the five-part identity
+**Artifact:** docs/Governance/decisions/reviews/REV-048-wp-2-market-replay-review.md | docs/artifacts/gate-evidence/wp-2-market-replay.md | src/Application/fixture-package.ts | tests/Unit/fixture-package.test.mjs
+**authorization-boundary:** In-memory PT-FIX-001B/C only; no PT-FIX-001D..G or J..O claim, persistence, provider/network access, legacy migration, WP-3 overlap, release, deployment, or production authority
+**selector:** delegated
+
+---
+
 ## 2026-09-15 | REV-047 PT-FIX-001I provenance accepted | Ring-2 | @code-reviewer
 
 **Type:** REVIEW-RECHECK

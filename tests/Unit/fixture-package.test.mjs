@@ -128,6 +128,8 @@ test("PT-FIX-001A validates the exact golden package identity", () => {
       "market-observations.jsonl": marketHash,
       [`raw-sources/${rawSourceHash}`]: rawSourceHash,
     },
+    marketIdempotentReplayCount: 0,
+    marketObservationCount: 1,
   });
 });
 
@@ -175,6 +177,49 @@ test("PT-FIX-001A rejects self-consistent replacement of the golden version", ()
       error instanceof FixtureConformanceError &&
       error.code === "FIXTURE_IDEMPOTENCY_CONFLICT",
   );
+});
+
+test("PT-FIX-001B collapses byte-identical market replay to one logical observation", () => {
+  const fixturePackage = packageWithRecordMutation(
+    "market-observations.jsonl",
+    (records) => {
+      records.push(structuredClone(records[0]));
+      records.push(structuredClone(records[0]));
+    },
+  );
+
+  const result = validateFixturePackage(fixturePackage);
+
+  assert.equal(result.marketObservationCount, 1);
+  assert.equal(result.marketIdempotentReplayCount, 2);
+});
+
+test("PT-FIX-001C rejects a conflicting market replay", () => {
+  const fixturePackage = packageWithRecordMutation(
+    "market-observations.jsonl",
+    (records) => {
+      records.push({
+        ...structuredClone(records[0]),
+        value: "101.0000000000",
+      });
+    },
+  );
+
+  assertFixtureError(fixturePackage, "FIXTURE_IDEMPOTENCY_CONFLICT");
+});
+
+test("PT-FIX-001C rejects a changed job ID under one market business identity", () => {
+  const fixturePackage = packageWithRecordMutation(
+    "market-observations.jsonl",
+    (records) => {
+      records.push({
+        ...structuredClone(records[0]),
+        ingestionJobId: "fixture-build-2",
+      });
+    },
+  );
+
+  assertFixtureError(fixturePackage, "FIXTURE_IDEMPOTENCY_CONFLICT");
 });
 
 test("PT-FIX-001H rejects duplicate JSON members before hashing", () => {

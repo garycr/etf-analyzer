@@ -36,6 +36,8 @@ export interface ValidatedFixturePackage {
   readonly datasetId: string;
   readonly datasetVersion: string;
   readonly fileHashes: Readonly<Record<string, string>>;
+  readonly marketIdempotentReplayCount: number;
+  readonly marketObservationCount: number;
 }
 
 interface FileDescriptor {
@@ -346,6 +348,49 @@ function validateRecordProvenance(
   }
 }
 
+function validateMarketReplay(
+  parsedFiles: readonly ParsedFixtureFile[],
+): { readonly logicalCount: number; readonly replayCount: number } {
+  const marketFile = parsedFiles.find(
+    ({ descriptor }) => descriptor.relativePath === "market-observations.jsonl",
+  );
+  if (marketFile === undefined) {
+    throw new FixtureConformanceError("FIXTURE_FILE_INTEGRITY_FAILED");
+  }
+
+  const businessPayloads = new Map<string, string>();
+  let replayCount = 0;
+
+  for (const record of marketFile.records) {
+    const instrumentId = requireString(record, "instrumentId");
+    const tradingDate = requireString(record, "tradingDate");
+    const providerId = requireString(record, "providerId");
+    const adjustmentPolicy = requireString(record, "adjustmentPolicy");
+    const revision = requireString(record, "revision");
+    const payload = canonicalizeJson(record);
+    const businessKey = canonicalizeJson([
+      instrumentId,
+      tradingDate,
+      providerId,
+      adjustmentPolicy,
+      revision,
+    ]);
+    const businessPayload = businessPayloads.get(businessKey);
+
+    if (businessPayload !== undefined && businessPayload !== payload) {
+      throw new FixtureConformanceError("FIXTURE_IDEMPOTENCY_CONFLICT");
+    }
+    if (businessPayload !== undefined) {
+      replayCount += 1;
+      continue;
+    }
+
+    businessPayloads.set(businessKey, payload);
+  }
+
+  return { logicalCount: businessPayloads.size, replayCount };
+}
+
 export function validateFixturePackage(
   fixturePackage: FixturePackageBytes,
 ): ValidatedFixturePackage {
@@ -411,6 +456,7 @@ export function validateFixturePackage(
     throw new FixtureConformanceError("FIXTURE_IDEMPOTENCY_CONFLICT");
   }
 
+  const marketReplay = validateMarketReplay(parsedFiles);
   validateRecordProvenance(parsedFiles, fileHashes);
 
   return {
@@ -418,5 +464,7 @@ export function validateFixturePackage(
     datasetId,
     datasetVersion,
     fileHashes,
+    marketIdempotentReplayCount: marketReplay.replayCount,
+    marketObservationCount: marketReplay.logicalCount,
   };
 }

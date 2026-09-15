@@ -67,6 +67,42 @@ function updateManifest(fixturePackage, changedManifest) {
   fixturePackage.manifest = Buffer.from(canonicalizeJson(changedManifest), "utf8");
 }
 
+function packageWithRecordMutation(relativePath, mutate) {
+  const fixturePackage = goldenPackage();
+  const changedManifest = JSON.parse(manifest.toString("utf8"));
+  changedManifest.datasetVersion = "2026.01.1";
+  const records = fixturePackage.files[relativePath]
+    .toString("utf8")
+    .trimEnd()
+    .split("\n")
+    .map((line) => JSON.parse(line));
+  mutate(records);
+  const changedBytes = Buffer.from(
+    `${records.map((record) => canonicalizeJson(record)).join("\n")}\n`,
+    "utf8",
+  );
+  fixturePackage.files[relativePath] = changedBytes;
+  const descriptor = changedManifest.files.find((item) => item.relativePath === relativePath);
+  descriptor.byteLength = changedBytes.byteLength;
+  descriptor.recordCount = records.length;
+  descriptor.sha256 = sha256(changedBytes);
+  updateManifest(fixturePackage, changedManifest);
+  return fixturePackage;
+}
+
+function packageWithJsonlBytes(relativePath, changedBytes, recordCount = 1) {
+  const fixturePackage = goldenPackage();
+  const changedManifest = JSON.parse(manifest.toString("utf8"));
+  changedManifest.datasetVersion = "2026.01.1";
+  fixturePackage.files[relativePath] = changedBytes;
+  const descriptor = changedManifest.files.find((item) => item.relativePath === relativePath);
+  descriptor.byteLength = changedBytes.byteLength;
+  descriptor.recordCount = recordCount;
+  descriptor.sha256 = sha256(changedBytes);
+  updateManifest(fixturePackage, changedManifest);
+  return fixturePackage;
+}
+
 function assertFixtureError(fixturePackage, code) {
   assert.throws(
     () => validateFixturePackage(fixturePackage),
@@ -112,10 +148,10 @@ test("PT-FIX-001A rejects an altered governed file byte", () => {
 
 test("PT-FIX-001A rejects self-consistent replacement of the golden version", () => {
   const fixturePackage = goldenPackage();
-  const changedMarket = Buffer.concat([
-    market.subarray(0, market.length - 2),
-    Buffer.from(" \n", "utf8"),
-  ]);
+  const changedMarket = Buffer.from(
+    market.toString("utf8").replace('"value":"100.0000000000"', '"value":"101.0000000000"'),
+    "utf8",
+  );
   fixturePackage.files["market-observations.jsonl"] = changedMarket;
 
   const changedManifest = JSON.parse(manifest.toString("utf8"));
@@ -152,6 +188,13 @@ test("PT-FIX-001H rejects duplicate JSON members before hashing", () => {
   assertManifestInvalid({
     ...goldenPackage(),
     manifest: Buffer.from(duplicateMemberManifest, "utf8"),
+  });
+});
+
+test("PT-FIX-001H rejects a UTF-8 byte-order mark in the manifest", () => {
+  assertManifestInvalid({
+    ...goldenPackage(),
+    manifest: Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), manifest]),
   });
 });
 
@@ -353,3 +396,121 @@ test("PT-FIX-001H rejects an extra observation descriptor", () => {
 
   assertManifestInvalid(fixturePackage);
 });
+
+test("PT-FIX-001I rejects a raw-source path whose suffix differs from its bytes", () => {
+  const wrongHash = "0".repeat(64);
+  const wrongPath = `raw-sources/${wrongHash}`;
+  const fixturePackage = packageWithManifestMutation(
+    (value) => {
+      value.datasetVersion = "2026.01.1";
+      value.files[2].relativePath = wrongPath;
+    },
+    [`raw-sources/${rawSourceHash}`, wrongPath],
+  );
+
+  assertFixtureError(fixturePackage, "FIXTURE_FILE_INTEGRITY_FAILED");
+});
+
+for (const relativePath of [
+  "economic-vintages.jsonl",
+  "market-observations.jsonl",
+]) {
+  test(`PT-FIX-001I rejects a record-count mismatch for ${relativePath}`, () => {
+    const fixturePackage = packageWithManifestMutation((value) => {
+      value.datasetVersion = "2026.01.1";
+      const descriptor = value.files.find((item) => item.relativePath === relativePath);
+      descriptor.recordCount = 2;
+    });
+
+    assertFixtureError(fixturePackage, "FIXTURE_FILE_INTEGRITY_FAILED");
+  });
+}
+
+for (const [name, changedBytes, recordCount] of [
+  ["a missing trailing LF", market.subarray(0, market.length - 1), 1],
+  ["more than one trailing LF", Buffer.concat([market, Buffer.from("\n")]), 1],
+  ["CRLF line endings", Buffer.from(market.toString("utf8").replace("\n", "\r\n")), 1],
+  ["a UTF-8 byte-order mark", Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), market]), 1],
+  ["invalid UTF-8", Buffer.from([0xff, 0x0a]), 1],
+  ["a blank line", Buffer.concat([market, Buffer.from("\n"), market]), 2],
+  ["a noncanonical record", Buffer.from(` ${market.toString("utf8")}`), 1],
+  [
+    "a duplicate record member",
+    Buffer.from(
+      market.toString("utf8").replace(
+        '"instrumentId":"ETF-1",',
+        '"instrumentId":"ETF-1","instrumentId":"ETF-1",',
+      ),
+      "utf8",
+    ),
+    1,
+  ],
+]) {
+  test(`PT-FIX-001I rejects JSONL with ${name}`, () => {
+    assertManifestInvalid(
+      packageWithJsonlBytes("market-observations.jsonl", changedBytes, recordCount),
+    );
+  });
+}
+
+test("PT-FIX-001I rejects changed raw bytes under the original source path", () => {
+  const changedRawSource = Buffer.from("changed local fixture source\n", "utf8");
+  const fixturePackage = goldenPackage();
+  const changedManifest = JSON.parse(manifest.toString("utf8"));
+  changedManifest.datasetVersion = "2026.01.1";
+  fixturePackage.files[`raw-sources/${rawSourceHash}`] = changedRawSource;
+  changedManifest.files[2].byteLength = changedRawSource.byteLength;
+  changedManifest.files[2].sha256 = sha256(changedRawSource);
+  updateManifest(fixturePackage, changedManifest);
+
+  assertFixtureError(fixturePackage, "FIXTURE_FILE_INTEGRITY_FAILED");
+});
+
+test("PT-FIX-001I rejects a missing governed raw-source object", () => {
+  const fixturePackage = goldenPackage();
+  const changedManifest = JSON.parse(manifest.toString("utf8"));
+  changedManifest.datasetVersion = "2026.01.1";
+  changedManifest.files.splice(2, 1);
+  delete fixturePackage.files[`raw-sources/${rawSourceHash}`];
+  updateManifest(fixturePackage, changedManifest);
+
+  assertFixtureError(fixturePackage, "FIXTURE_PROVENANCE_INVALID");
+});
+
+for (const [name, mutate] of [
+  ["unresolved source", (record) => {
+    record.rawSourceHash = "1".repeat(64);
+    record.rawSourceRef = `raw-sources/${record.rawSourceHash}`;
+  }],
+  ["external source reference", (record) => {
+    record.rawSourceRef = "https://example.test/source?token=secret";
+  }],
+  ["mismatched source reference", (record) => {
+    record.rawSourceRef = `raw-sources/${"1".repeat(64)}`;
+  }],
+  ["missing normalization identifier", (record) => {
+    delete record.normalizationId;
+  }],
+  ["empty normalization identifier", (record) => {
+    record.normalizationId = "";
+  }],
+  ["missing ingestion job identifier", (record) => {
+    delete record.ingestionJobId;
+  }],
+  ["empty ingestion job identifier", (record) => {
+    record.ingestionJobId = "";
+  }],
+]) {
+  for (const relativePath of [
+    "market-observations.jsonl",
+    "economic-vintages.jsonl",
+  ]) {
+    test(`PT-FIX-001I rejects ${name} in ${relativePath}`, () => {
+      const fixturePackage = packageWithRecordMutation(relativePath, ([record]) => {
+        mutate(record);
+      });
+
+      assertFixtureError(fixturePackage, "FIXTURE_PROVENANCE_INVALID");
+    });
+  }
+}

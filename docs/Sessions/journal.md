@@ -6,6 +6,25 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-15 | REV-047 PT-FIX-001I provenance accepted | Ring-2 | @code-reviewer
+
+**Type:** REVIEW-RECHECK
+**review-type:** code-and-test-conformance
+**review-outcome:** PASS
+**severity-counts:** Critical 0 | Major 0 | Minor 0 blocking
+**Decision:** Accept the third bounded WP-2 increment for canonical JSONL handling and independently verified local raw-source provenance
+**Policy:** DEC-023; DEC-028; DEC-030; WP-2; PT-FIX-001I; issue #70; code review; test quality
+**Authority:** Alternate-model Code Reviewer PASS and final recheck PASS
+**Accountability:** Solo Orchestrator for evidence reconciliation and sequential WP-2 continuation
+**Result:** Focused tests 82/82; complete clean-state serial PostgreSQL 16.15 suite 181/181; build, lint, low dependency audit, diagnostics, and diff check pass
+**remediation:** Preserved BOM characters during fatal UTF-8 decoding, explicitly rejected manifest and JSONL BOMs, reconciled both JSONL record counts, bound raw paths to recomputed byte hashes, and resolved record provenance to retained local bytes
+**deferred-nonblocking:** PT-FIX-001N cross-file multi-defect collection and deterministic total precedence
+**Artifact:** docs/Governance/decisions/reviews/REV-047-wp-2-fixture-provenance-review.md | docs/artifacts/gate-evidence/wp-2-fixture-provenance.md | src/Application/fixture-package.ts | tests/Unit/fixture-package.test.mjs
+**authorization-boundary:** In-memory PT-FIX-001I only; no PT-FIX-001B..G or J..O claim, persistence, provider/network access, legacy migration, WP-3 overlap, release, deployment, or production authority
+**selector:** delegated
+
+---
+
 ## 2026-09-15 | REV-046 final recheck and evidence correction | Ring-2 | @code-reviewer
 
 **Type:** REVIEW-RECHECK
@@ -413,6 +432,22 @@
 **rejected-options:** Exclude legacy code | Convert every legacy file independently | Single combined feature | More granular feature split
 **rejection-reason:** Legacy evidence is required but should not override the Objective | File-by-file conversion would duplicate generated metadata | Combined output would weaken source boundaries | Additional granularity is not needed for Ring 0 extraction
 **selector:** human
+
+---
+
+## 2026-09-15T15:49:31Z | REV-048 | Ring-2 | @code-reviewer
+
+**Type:** REVIEW
+**review-type:** governance
+**reviewing-agent:** Code Reviewer
+**finding-count:** 1
+**critical-count:** 0
+**major-count:** 1
+**minor-count:** 0
+**nit-count:** 0
+**review-outcome:** rework-required
+**remediation:** Preserve the existing REV-047 record and physically append canonical REVIEW metadata with an ISO timestamp, typed review ID, individual severity counts, outcome, remediation, and reviewed artifacts; request a final governance recheck before publication
+**reviewed-artifact:** docs/Sessions/journal.md | docs/Governance/decisions/reviews/REV-047-wp-2-fixture-provenance-review.md | docs/artifacts/gate-evidence/wp-2-fixture-provenance.md
 
 ---
 
@@ -1806,5 +1841,37 @@
 **Artifact:** docs/Governance/decisions/reviews/REV-014-analytics-evidence-contract-test-review.md
 **authorization-boundary:** No implementation, dependencies, architecture acceptance, #15/#11 closure, baseline freeze, Ring 2 advancement, or parallel execution
 **selector:** human
+
+---
+
+## 2026-09-15T15:49:48Z | REV-049 | Ring-2 | @code-reviewer
+
+**Type:** REVIEW
+**review-type:** governance
+**reviewing-agent:** Code Reviewer
+**finding-count:** 1
+**critical-count:** 0
+**major-count:** 1
+**minor-count:** 0
+**nit-count:** 0
+**review-outcome:** approved-with-conditions
+**remediation:** The original REV-047 entry remains immutable; this canonical record is physically appended at EOF with the required timestamp, typed ID, review metadata, severity counts, outcome, remediation, and artifact references; final reviewer confirmation remains required before publication
+**reviewed-artifact:** docs/Sessions/journal.md | docs/Governance/decisions/reviews/REV-047-wp-2-fixture-provenance-review.md | docs/artifacts/gate-evidence/wp-2-fixture-provenance.md
+
+---
+
+## 2026-09-15T15:50:29Z | REV-050 | Ring-2 | @code-reviewer
+
+**Type:** REVIEW
+**review-type:** governance
+**reviewing-agent:** Code Reviewer
+**finding-count:** 0
+**critical-count:** 0
+**major-count:** 0
+**minor-count:** 0
+**nit-count:** 0
+**review-outcome:** approved
+**remediation:** REV-049 physically appended the canonical review metadata; governance recheck confirmed the journal finding closed and PT-FIX-001I publication authorized within its documented boundary
+**reviewed-artifact:** docs/Sessions/journal.md | docs/Governance/decisions/reviews/REV-047-wp-2-fixture-provenance-review.md | docs/artifacts/gate-evidence/wp-2-fixture-provenance.md
 
 ---

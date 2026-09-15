@@ -6,7 +6,8 @@ export type FixtureConformanceCode =
   | "FIXTURE_DATASET_HASH_MISMATCH"
   | "FIXTURE_FILE_INTEGRITY_FAILED"
   | "FIXTURE_IDEMPOTENCY_CONFLICT"
-  | "FIXTURE_MANIFEST_INVALID";
+  | "FIXTURE_MANIFEST_INVALID"
+  | "FIXTURE_PROVENANCE_INVALID";
 
 const approvedDatasetHashes = new Map<string, string>([
   [
@@ -43,6 +44,11 @@ interface FileDescriptor {
   readonly recordCount: number;
   readonly relativePath: string;
   readonly sha256: string;
+}
+
+interface ParsedFixtureFile {
+  readonly descriptor: FileDescriptor;
+  readonly records: readonly Readonly<Record<string, unknown>>[];
 }
 
 const manifestFields = [
@@ -84,7 +90,10 @@ function sha256(bytes: Uint8Array | string): string {
 
 function parseManifest(bytes: Uint8Array): Record<string, unknown> {
   try {
-    const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    const text = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
+    if (text.startsWith("\uFEFF")) {
+      throw new FixtureConformanceError("FIXTURE_MANIFEST_INVALID");
+    }
     const parsed: unknown = JSON.parse(text);
     if (parsed === null || Array.isArray(parsed) || typeof parsed !== "object") {
       throw new FixtureConformanceError("FIXTURE_MANIFEST_INVALID");
@@ -93,6 +102,35 @@ function parseManifest(bytes: Uint8Array): Record<string, unknown> {
       throw new FixtureConformanceError("FIXTURE_MANIFEST_INVALID");
     }
     return parsed as Record<string, unknown>;
+  } catch (error) {
+    if (error instanceof FixtureConformanceError) {
+      throw error;
+    }
+    throw new FixtureConformanceError("FIXTURE_MANIFEST_INVALID");
+  }
+}
+
+function parseJsonLines(bytes: Uint8Array): readonly Readonly<Record<string, unknown>>[] {
+  try {
+    const text = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
+    if (!text.endsWith("\n") || text.endsWith("\n\n") || text.startsWith("\uFEFF")) {
+      throw new FixtureConformanceError("FIXTURE_MANIFEST_INVALID");
+    }
+    return text.slice(0, -1).split("\n").map((line) => {
+      if (line.length === 0 || line.includes("\r")) {
+        throw new FixtureConformanceError("FIXTURE_MANIFEST_INVALID");
+      }
+      const parsed: unknown = JSON.parse(line);
+      if (
+        parsed === null ||
+        Array.isArray(parsed) ||
+        typeof parsed !== "object" ||
+        canonicalizeJson(parsed) !== line
+      ) {
+        throw new FixtureConformanceError("FIXTURE_MANIFEST_INVALID");
+      }
+      return parsed as Readonly<Record<string, unknown>>;
+    });
   } catch (error) {
     if (error instanceof FixtureConformanceError) {
       throw error;
@@ -281,6 +319,33 @@ function validateCoverage(manifest: Readonly<Record<string, unknown>>): void {
   requireStrictlySortedUnique(economicIdentities, compareStringTuple);
 }
 
+function validateRecordProvenance(
+  parsedFiles: readonly ParsedFixtureFile[],
+  fileHashes: Readonly<Record<string, string>>,
+): void {
+  for (const { records } of parsedFiles) {
+    for (const record of records) {
+      const rawSourceHash = record.rawSourceHash;
+      const rawSourceRef = record.rawSourceRef;
+      const normalizationId = record.normalizationId;
+      const ingestionJobId = record.ingestionJobId;
+      if (
+        typeof rawSourceHash !== "string" ||
+        !/^[0-9a-f]{64}$/u.test(rawSourceHash) ||
+        typeof rawSourceRef !== "string" ||
+        rawSourceRef !== `raw-sources/${rawSourceHash}` ||
+        fileHashes[rawSourceRef] !== rawSourceHash ||
+        typeof normalizationId !== "string" ||
+        normalizationId.length === 0 ||
+        typeof ingestionJobId !== "string" ||
+        ingestionJobId.length === 0
+      ) {
+        throw new FixtureConformanceError("FIXTURE_PROVENANCE_INVALID");
+      }
+    }
+  }
+}
+
 export function validateFixturePackage(
   fixturePackage: FixturePackageBytes,
 ): ValidatedFixturePackage {
@@ -301,6 +366,7 @@ export function validateFixturePackage(
   }
 
   const fileHashes: Record<string, string> = {};
+  const parsedFiles: ParsedFixtureFile[] = [];
   for (const descriptor of descriptors) {
     const bytes = fixturePackage.files[descriptor.relativePath];
     if (bytes === undefined) {
@@ -309,6 +375,19 @@ export function validateFixturePackage(
     const contentHash = sha256(bytes);
     if (bytes.byteLength !== descriptor.byteLength || contentHash !== descriptor.sha256) {
       throw new FixtureConformanceError("FIXTURE_FILE_INTEGRITY_FAILED");
+    }
+    if (
+      descriptor.relativePath.startsWith("raw-sources/") &&
+      descriptor.relativePath !== `raw-sources/${contentHash}`
+    ) {
+      throw new FixtureConformanceError("FIXTURE_FILE_INTEGRITY_FAILED");
+    }
+    if (!descriptor.relativePath.startsWith("raw-sources/")) {
+      const records = parseJsonLines(bytes);
+      if (records.length !== descriptor.recordCount) {
+        throw new FixtureConformanceError("FIXTURE_FILE_INTEGRITY_FAILED");
+      }
+      parsedFiles.push({ descriptor, records });
     }
     fileHashes[descriptor.relativePath] = contentHash;
   }
@@ -331,6 +410,8 @@ export function validateFixturePackage(
   if (approvedDatasetHash !== undefined && approvedDatasetHash !== datasetHash) {
     throw new FixtureConformanceError("FIXTURE_IDEMPOTENCY_CONFLICT");
   }
+
+  validateRecordProvenance(parsedFiles, fileHashes);
 
   return {
     datasetHash,

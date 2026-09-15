@@ -34,6 +34,7 @@ export interface ManifestGrant {
   objectKind: "database" | "schema" | "table" | "view" | "function";
   schema: string | null;
   object: string | null;
+  columns: readonly string[] | null;
   grantee: string;
   privilege: string;
   grantOption: boolean;
@@ -122,13 +123,18 @@ export function buildSchemaManifest(
     (left, right) =>
       compareText(left.role, right.role) || compareText(left.member, right.member),
   );
-  const grants = [...source.grants].sort(
+  const grants = source.grants.map((grant) => ({
+    ...grant,
+    columns: grant.columns ?? null,
+  })).sort(
     (left, right) =>
       compareText(left.objectKind, right.objectKind) ||
       compareText(left.schema, right.schema) ||
       compareText(left.object, right.object) ||
+      compareText(left.columns?.join("\u0000") ?? null, right.columns?.join("\u0000") ?? null) ||
       compareText(left.grantee, right.grantee) ||
-      compareText(left.privilege, right.privilege),
+      compareText(left.privilege, right.privilege) ||
+      Number(left.grantOption) - Number(right.grantOption),
   );
 
   return canonicalizeJson({

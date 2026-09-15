@@ -114,6 +114,8 @@ test("schema manifest sorts memberships and grants by contract tuples", () => {
           { role: "migration_owner", member: "migration_executor", adminOption: false, inheritOption: false, setOption: true },
         ],
         grants: [
+          { objectKind: "table", schema: "etf", object: "jobs", columns: ["job_id", "status"], grantee: "reader", privilege: "SELECT", grantOption: true },
+          { objectKind: "table", schema: "etf", object: "jobs", columns: ["job_id", "status"], grantee: "reader", privilege: "SELECT", grantOption: false },
           { objectKind: "schema", schema: "etf", object: null, grantee: "migration_owner", privilege: "USAGE", grantOption: false },
           { objectKind: "schema", schema: "etf", object: null, grantee: "migration_owner", privilege: "CREATE", grantOption: false },
         ],
@@ -134,8 +136,17 @@ test("schema manifest sorts memberships and grants by contract tuples", () => {
     [
       ["schema", "etf", null, "migration_owner", "CREATE"],
       ["schema", "etf", null, "migration_owner", "USAGE"],
+      ["table", "etf", "jobs", "reader", "SELECT"],
+      ["table", "etf", "jobs", "reader", "SELECT"],
     ],
   );
+  assert.deepEqual(manifest.grants.map(({ columns }) => columns), [
+    null,
+    null,
+    ["job_id", "status"],
+    ["job_id", "status"],
+  ]);
+  assert.deepEqual(manifest.grants.slice(2).map(({ grantOption }) => grantOption), [false, true]);
 });
 
 test("schema manifest tuple ordering is code-unit based and locale independent", () => {
@@ -224,8 +235,8 @@ test("PostgreSQL projector rejects unsupported migration sequences before queryi
           },
         },
         {
-          sequence: 6,
-          migrationId: "0006-controlled-access",
+          sequence: 7,
+          migrationId: "0007-unsupported",
           contentHash: "a".repeat(64),
         },
       ),

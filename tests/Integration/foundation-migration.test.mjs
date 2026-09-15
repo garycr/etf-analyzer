@@ -136,9 +136,9 @@ test(
       );
       assert.equal(
         applied.schemaManifestHash,
-        "0c378abe080211c705c41ffd15f9cf8bf7dbc61396917df25444144ed3992c1b",
+        "3ba3b63c429cf051378ce3eb4adafe0db697dec487d070669a6bc47dba2f8f7c",
       );
-      assert.equal(Buffer.byteLength(manifestJson, "utf8"), 5324);
+      assert.equal(Buffer.byteLength(manifestJson, "utf8"), 5444);
       const manifest = JSON.parse(manifestJson);
       assert.equal(manifest.contractVersion, "1.0.0-candidate.2");
       assert.deepEqual(manifest.systemExtensions, [

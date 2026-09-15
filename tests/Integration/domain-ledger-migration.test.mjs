@@ -346,13 +346,13 @@ test(
       const manifest = JSON.parse(manifestJson);
       assert.equal(
         applied.contentHash,
-        "5e4bb49c7f1be74c25d6eb5d585305c00f5df9791bfe2ab2a4348fa10fb1fdb5",
+        "d514c7f3b75c6ed83dfdbd9b54b406b14814b2bf8f40bd1e04a9d70a303346a3",
       );
       assert.equal(
         applied.schemaManifestHash,
-        "150541903c6e9f644a2db065fc5ffc04480232b5a3623ef9704e171522e70da4",
+        "61008ff4dd4898afb0f0b168c4d063dae4894fb8257f9ee77db3af95fdde54d4",
       );
-      assert.equal(Buffer.byteLength(manifestJson, "utf8"), 13358);
+      assert.equal(Buffer.byteLength(manifestJson, "utf8"), 14194);
       assert.equal(manifest.migrationSequence.length, 3);
       assert.equal(manifest.objects.filter(({ kind }) => kind === "table").length, 28);
       assert.equal(manifest.objects.filter(({ kind }) => kind === "function").length, 11);
@@ -382,7 +382,7 @@ test(
         ["order_audit", "audit_writer_owner"],
         ["access_denial_audit", "audit_writer_owner"],
         ["ledger_audit", "audit_writer_owner"],
-        ["audit_commitments", "anchor_owner"],
+        ["audit_commitments", "audit_writer_owner"],
         ["ledger_anchors", "anchor_owner"],
         ["portfolio_projections", "projection_owner"],
       ]);

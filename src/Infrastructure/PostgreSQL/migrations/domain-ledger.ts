@@ -315,6 +315,8 @@ CREATE TABLE etf.ledger_commitments (
 GRANT REFERENCES ON etf.portfolios, etf.ledger_commitments TO anchor_owner, projection_owner;
 
 SET LOCAL ROLE anchor_owner;
+GRANT REFERENCES ON etf.anchor_keys TO audit_writer_owner;
+SET LOCAL ROLE audit_writer_owner;
 CREATE TABLE etf.audit_commitments (
   audit_sequence bigint NOT NULL,
   audit_segment_hash character(64) COLLATE "C" NOT NULL,
@@ -327,7 +329,10 @@ CREATE TABLE etf.audit_commitments (
   CONSTRAINT fk_audit_commitments__key_identifier__anchor_keys FOREIGN KEY (key_identifier) REFERENCES etf.anchor_keys (key_identifier) MATCH SIMPLE ON UPDATE RESTRICT ON DELETE RESTRICT NOT DEFERRABLE,
   CONSTRAINT ck_audit_commitments__hashes_lower_hex CHECK (audit_sequence > 0 AND audit_segment_hash ~ '^[0-9a-f]{64}$' AND (previous_audit_commitment IS NULL OR previous_audit_commitment ~ '^[0-9a-f]{64}$') AND audit_commitment ~ '^[0-9a-f]{64}$' AND anchor_hmac ~ '^[0-9a-f]{64}$')
 );
+GRANT REFERENCES ON etf.audit_commitments TO anchor_owner;
 
+SET LOCAL ROLE anchor_owner;
+REVOKE REFERENCES ON etf.anchor_keys FROM audit_writer_owner;
 CREATE TABLE etf.ledger_anchors (
   portfolio_id uuid NOT NULL,
   ledger_sequence bigint NOT NULL,
@@ -366,6 +371,10 @@ ALTER TABLE etf.portfolio_anchor_checkpoints ADD CONSTRAINT fk_portfolio_anchor_
 ALTER TABLE etf.portfolio_anchor_checkpoints ADD CONSTRAINT fk_portfolio_anchor_checkpoints__audit_sequence__audit_commitments FOREIGN KEY (audit_sequence) REFERENCES etf.audit_commitments (audit_sequence) MATCH SIMPLE ON UPDATE RESTRICT ON DELETE RESTRICT NOT DEFERRABLE;
 ALTER TABLE etf.audit_anchor_checkpoints ADD CONSTRAINT fk_audit_anchor_checkpoints__audit_sequence__audit_commitments FOREIGN KEY (audit_sequence) REFERENCES etf.audit_commitments (audit_sequence) MATCH SIMPLE ON UPDATE RESTRICT ON DELETE RESTRICT NOT DEFERRABLE;
 
+SET LOCAL ROLE audit_writer_owner;
+REVOKE REFERENCES ON etf.audit_commitments FROM anchor_owner;
+GRANT SELECT (audit_sequence, audit_commitment), INSERT ON etf.audit_commitments TO anchor_owner;
+SET LOCAL ROLE anchor_owner;
 CREATE FUNCTION etf.anchor_key_inject(requested_key_identifier text, requested_key_ciphertext bytea, requested_activated_at timestamp with time zone) RETURNS void
 LANGUAGE plpgsql VOLATILE PARALLEL UNSAFE SECURITY DEFINER
 SET search_path = pg_catalog, etf
@@ -399,7 +408,8 @@ BEGIN
     IF session_user NOT IN ('app_runtime','projection_runtime','audit_runtime') OR NOT payload ?& ARRAY['domain','keyIdentifier','auditSegmentHash'] OR payload - ARRAY['domain','keyIdentifier','auditSegmentHash']::text[] <> '{}'::jsonb OR payload ->> 'auditSegmentHash' !~ '^[0-9a-f]{64}$' THEN RAISE EXCEPTION 'permission denied' USING ERRCODE = '42501'; END IF;
     SELECT key_ciphertext INTO key_bytes FROM etf.anchor_keys WHERE key_identifier = payload ->> 'keyIdentifier' AND activated_at <= clock_timestamp() AND retired_at IS NULL FOR SHARE;
     IF NOT FOUND THEN RAISE EXCEPTION 'LEDGER_INTEGRITY_FAILED' USING ERRCODE = '55000'; END IF;
-    SELECT audit_sequence, audit_commitment INTO next_sequence, prior_hash FROM etf.audit_commitments ORDER BY audit_sequence DESC LIMIT 1 FOR UPDATE;
+    PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('etf:audit-commitment', 0));
+    SELECT audit_sequence, audit_commitment INTO next_sequence, prior_hash FROM etf.audit_commitments ORDER BY audit_sequence DESC LIMIT 1;
     next_sequence := COALESCE(next_sequence, 0) + 1; accepted := date_trunc('milliseconds', clock_timestamp());
     content := format('{"auditSegmentHash":%s,"auditSequence":%s,"domain":"etf.audit.commitment.v1","keyIdentifier":%s,"previousAuditCommitment":%s}', pg_catalog.to_json(payload ->> 'auditSegmentHash')::text, next_sequence, pg_catalog.to_json(payload ->> 'keyIdentifier')::text, CASE WHEN prior_hash IS NULL THEN 'null' ELSE pg_catalog.to_json(prior_hash)::text END);
     commitment := encode(public.digest(convert_to(content, 'UTF8'), 'sha256'), 'hex');

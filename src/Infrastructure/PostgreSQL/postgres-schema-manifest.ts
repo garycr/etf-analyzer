@@ -28,6 +28,10 @@ import {
   analyticsEvidenceFunctionNames,
   analyticsEvidenceTableNames,
 } from "./migrations/analytics-evidence.js";
+import {
+  controlledAccessFunctionNames,
+  controlledAccessViewNames,
+} from "./migrations/controlled-access.js";
 import { foundationTableNames } from "./migrations/foundation.js";
 
 interface TableSource {
@@ -91,7 +95,8 @@ export async function collectPostgresManifestGrants(
     `SELECT 'database'::text AS object_kind, NULL::text AS schema,
             NULL::text AS object,
             CASE WHEN privilege.grantee = 0 THEN 'PUBLIC' ELSE grantee.rolname END AS grantee,
-            privilege.privilege_type AS privilege, privilege.is_grantable AS grant_option
+            privilege.privilege_type AS privilege, privilege.is_grantable AS grant_option,
+            NULL::text[] AS columns
        FROM pg_catalog.pg_database AS database
        CROSS JOIN LATERAL pg_catalog.aclexplode(
          COALESCE(database.datacl, pg_catalog.acldefault('d', database.datdba))
@@ -103,7 +108,8 @@ export async function collectPostgresManifestGrants(
      SELECT 'schema'::text AS object_kind, namespace.nspname AS schema,
             NULL::text AS object,
             CASE WHEN privilege.grantee = 0 THEN 'PUBLIC' ELSE grantee.rolname END AS grantee,
-            privilege.privilege_type AS privilege, privilege.is_grantable AS grant_option
+            privilege.privilege_type AS privilege, privilege.is_grantable AS grant_option,
+            NULL::text[] AS columns
        FROM pg_catalog.pg_namespace AS namespace
        CROSS JOIN LATERAL pg_catalog.aclexplode(namespace.nspacl) AS privilege
        LEFT JOIN pg_catalog.pg_roles AS grantee ON grantee.oid = privilege.grantee
@@ -112,7 +118,8 @@ export async function collectPostgresManifestGrants(
      SELECT CASE relation.relkind WHEN 'v' THEN 'view' ELSE 'table' END AS object_kind,
             namespace.nspname AS schema, relation.relname AS object,
             CASE WHEN privilege.grantee = 0 THEN 'PUBLIC' ELSE grantee.rolname END AS grantee,
-            privilege.privilege_type AS privilege, privilege.is_grantable AS grant_option
+            privilege.privilege_type AS privilege, privilege.is_grantable AS grant_option,
+            NULL::text[] AS columns
        FROM pg_catalog.pg_class AS relation
        JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = relation.relnamespace
        CROSS JOIN LATERAL pg_catalog.aclexplode(relation.relacl) AS privilege
@@ -123,7 +130,8 @@ export async function collectPostgresManifestGrants(
      SELECT 'function'::text AS object_kind, namespace.nspname AS schema,
             function_record.proname || '(' || pg_catalog.pg_get_function_identity_arguments(function_record.oid) || ')' AS object,
             CASE WHEN privilege.grantee = 0 THEN 'PUBLIC' ELSE grantee.rolname END AS grantee,
-            privilege.privilege_type AS privilege, privilege.is_grantable AS grant_option
+            privilege.privilege_type AS privilege, privilege.is_grantable AS grant_option,
+            NULL::text[] AS columns
        FROM pg_catalog.pg_proc AS function_record
        JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = function_record.pronamespace
        CROSS JOIN LATERAL pg_catalog.aclexplode(
@@ -131,12 +139,32 @@ export async function collectPostgresManifestGrants(
        ) AS privilege
        LEFT JOIN pg_catalog.pg_roles AS grantee ON grantee.oid = privilege.grantee
       WHERE namespace.nspname = 'etf' AND privilege.grantee <> function_record.proowner
-      ORDER BY object_kind, schema, object, grantee, privilege`,
+      UNION ALL
+     SELECT CASE relation.relkind WHEN 'v' THEN 'view' ELSE 'table' END AS object_kind,
+            namespace.nspname AS schema, relation.relname AS object,
+            CASE WHEN privilege.grantee = 0 THEN 'PUBLIC' ELSE grantee.rolname END AS grantee,
+            privilege.privilege_type AS privilege,
+            bool_or(privilege.is_grantable) AS grant_option,
+            array_agg(attribute.attname ORDER BY attribute.attnum) AS columns
+       FROM pg_catalog.pg_class AS relation
+       JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = relation.relnamespace
+       JOIN pg_catalog.pg_attribute AS attribute ON attribute.attrelid = relation.oid
+       CROSS JOIN LATERAL pg_catalog.aclexplode(attribute.attacl) AS privilege
+       LEFT JOIN pg_catalog.pg_roles AS grantee ON grantee.oid = privilege.grantee
+      WHERE namespace.nspname = 'etf' AND relation.relkind IN ('r', 'v')
+        AND attribute.attnum > 0 AND NOT attribute.attisdropped
+        AND privilege.grantee <> relation.relowner
+      GROUP BY relation.relkind, namespace.nspname, relation.relname,
+               privilege.grantee, grantee.rolname, privilege.privilege_type
+      ORDER BY object_kind, schema, object, columns, grantee, privilege`,
   );
   return result.rows.map((row) => ({
     objectKind: requireString(row.object_kind) as ManifestGrant["objectKind"],
     schema: nullableString(row.schema),
     object: nullableString(row.object),
+    columns: row.columns === null || row.columns === undefined
+      ? null
+      : (row.columns as unknown[]).map(requireString),
     grantee: requireString(row.grantee),
     privilege: requireString(row.privilege),
     grantOption: requireBoolean(row.grant_option),
@@ -147,7 +175,7 @@ export async function projectPostgresSchemaManifest(
   client: ManifestClient,
   prospectiveMigration: ManifestMigration,
 ): Promise<string> {
-  if (prospectiveMigration.sequence < 1 || prospectiveMigration.sequence > 5) {
+  if (prospectiveMigration.sequence < 1 || prospectiveMigration.sequence > 6) {
     throw new Error("APPLICATION_MIGRATIONS_INCOMPLETE");
   }
   const extensions = await client.query(
@@ -217,12 +245,38 @@ export async function projectPostgresSchemaManifest(
       WHERE namespace.nspname = 'etf'
       ORDER BY function_record.proname, function_record.oid`,
   );
+  const views = await client.query(
+    `SELECT relation.relname AS name, owner.rolname AS owner,
+            pg_catalog.pg_get_viewdef(relation.oid, false) AS definition,
+            COALESCE((SELECT option_value = 'true'
+                        FROM pg_catalog.pg_options_to_table(relation.reloptions)
+                       WHERE option_name = 'security_barrier'), false) AS security_barrier
+       FROM pg_catalog.pg_class AS relation
+       JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = relation.relnamespace
+       JOIN pg_catalog.pg_roles AS owner ON owner.oid = relation.relowner
+      WHERE namespace.nspname = 'etf' AND relation.relkind = 'v'
+      ORDER BY relation.relname`,
+  );
+  const viewColumns = await client.query(
+    `SELECT relation.relname AS view_name, attribute.attnum::integer AS ordinal,
+            attribute.attname AS name,
+            pg_catalog.format_type(attribute.atttypid, attribute.atttypmod) AS type,
+            collation_record.collname AS collation,
+            NOT attribute.attnotnull AS nullable
+       FROM pg_catalog.pg_class AS relation
+       JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = relation.relnamespace
+       JOIN pg_catalog.pg_attribute AS attribute ON attribute.attrelid = relation.oid
+       LEFT JOIN pg_catalog.pg_collation AS collation_record ON collation_record.oid = attribute.attcollation
+      WHERE namespace.nspname = 'etf' AND relation.relkind = 'v'
+        AND attribute.attnum > 0 AND NOT attribute.attisdropped
+      ORDER BY relation.relname, attribute.attnum`,
+  );
   const unsupportedObjects = await client.query(
     `SELECT
        (SELECT count(*)::integer
           FROM pg_catalog.pg_class AS relation
           JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = relation.relnamespace
-         WHERE namespace.nspname = 'etf' AND relation.relkind NOT IN ('r', 'i'))
+         WHERE namespace.nspname = 'etf' AND relation.relkind NOT IN ('r', 'i', 'v'))
        AS unsupported_count`,
   );
   const columns = await client.query(
@@ -344,6 +398,10 @@ export async function projectPostgresSchemaManifest(
     ...(prospectiveMigration.sequence >= 3 ? domainLedgerFunctionNames : []),
     ...(prospectiveMigration.sequence >= 4 ? fixtureFunctionNames : []),
     ...(prospectiveMigration.sequence >= 5 ? analyticsEvidenceFunctionNames : []),
+    ...(prospectiveMigration.sequence >= 6 ? controlledAccessFunctionNames : []),
+  ].sort(compareCodeUnits);
+  const expectedViewNames = [
+    ...(prospectiveMigration.sequence >= 6 ? controlledAccessViewNames : []),
   ].sort(compareCodeUnits);
 
   if (
@@ -351,6 +409,7 @@ export async function projectPostgresSchemaManifest(
     roles.rows.length !== productRoles.length ||
     tables.rows.length !== expectedTableNames.length ||
     functions.rows.length !== expectedFunctionNames.length ||
+    views.rows.length !== expectedViewNames.length ||
     Number(unsupportedObjects.rows[0]?.unsupported_count) !== 0
   ) {
     throw new Error("APPLICATION_MIGRATIONS_INCOMPLETE");
@@ -367,6 +426,12 @@ export async function projectPostgresSchemaManifest(
   if (
     actualFunctionNames.some((name, index) => name !== expectedFunctionNames[index])
   ) {
+    throw new Error("APPLICATION_MIGRATIONS_INCOMPLETE");
+  }
+  const actualViewNames = views.rows
+    .map((row) => requireString(row.name))
+    .sort(compareCodeUnits);
+  if (actualViewNames.some((name, index) => name !== expectedViewNames[index])) {
     throw new Error("APPLICATION_MIGRATIONS_INCOMPLETE");
   }
   const schema = schemaResult.rows[0];
@@ -479,6 +544,30 @@ export async function projectPostgresSchemaManifest(
       };
     },
   );
+  const viewObjects: ManifestObjectSource[] = views.rows.map(
+    (row): ManifestObjectSource => ({
+      kind: "view",
+      schema: "etf",
+      name: requireString(row.name),
+      owner: requireString(row.owner),
+      definition: {
+        columns: viewColumns.rows
+          .filter((column) => column.view_name === row.name)
+          .sort((left, right) => Number(left.ordinal) - Number(right.ordinal))
+          .map((column) => ({
+            ordinal: Number(column.ordinal),
+            name: requireString(column.name),
+            type: requireString(column.type),
+            collation: nullableString(column.collation),
+            nullable: requireBoolean(column.nullable),
+          })),
+        queryHash: sha256Text(
+          normalizePostgresDefinition(requireString(row.definition)),
+        ),
+        securityBarrier: requireBoolean(row.security_barrier),
+      },
+    }),
+  );
 
   const objects: ManifestObjectSource[] = [
     {
@@ -508,6 +597,7 @@ export async function projectPostgresSchemaManifest(
     })),
     ...tableObjects,
     ...functionObjects,
+    ...viewObjects,
   ];
   const roleMemberships: ManifestRoleMembership[] = memberships.rows.map((row) => ({
     role: requireString(row.role),

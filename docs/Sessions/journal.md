@@ -6,6 +6,17 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-15 | REV-042 0006 controlled-access migration accepted | Ring-2 | @code-reviewer @security-reviewer
+
+**Decision:** Accept the bounded `0006-controlled-access` additive migration after closing immutable enforcement, runtime denial, anchored projection, ownership, minimum privilege, rollback, exact catalog, and column-ACL findings
+**Policy:** DEC-023; DEC-024; DEC-025; DEC-027; DEC-028; WP-1; code review; security review; test quality; exact catalog closure
+**Authority:** Independent Code Reviewer PASS and Security Reviewer PASS with no remaining finding
+**Accountability:** Solo Orchestrator publishes only the empty-database sequence-6 increment and does not begin WP-2 in this work item
+**Result:** SQL hash `62d4c23bcb89cbf26d58af8a994c765d74cf64e2267c0ae52e240f2632be0235`; manifest hash `10feee5e5a5a58137767a9a9803ee5659b56a5feca9b8fb9f9ae45da3cedbf01`; 99/99 tests; build and lint pass; zero vulnerabilities; GitHub issue #69
+**authorization-boundary:** Additive 0006 controlled access and prerequisite authority corrections on an empty database with synthetic conformance records only; no legacy copy, transformation, backfill, reconciliation, WP-2, WP-3 authorization orchestration, WP-5 analytics computation, release, deployment, or production authority
+
+---
+
 ## 2026-09-14 | REV-041 0005 analytics-evidence migration accepted | Ring-2 | @code-reviewer
 
 **Decision:** Accept the bounded `0005-analytics-evidence` additive migration after closing canonical admission, replay concurrency, publication serialization, degraded persistence, read-integrity, retention-cardinality, rollback, and exact-hash findings

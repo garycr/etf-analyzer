@@ -63,3 +63,17 @@
 **Status:** Approved
 **Decision:** Accept the simplified Tier 1 baseline and 20% contingency; reforecast after WP-1
 **Decision date:** 2026-09-11T19:36:59Z
+
+## WP-1 Reforecast
+
+**Review date:** 2026-09-15
+**Disposition:** No baseline change
+
+| Measure | WP-1 baseline | Measured actual | Variance | Disposition |
+| --- | ---: | ---: | ---: | --- |
+| Agent implementation effort | 20 hours | Unavailable | Not computable | Tier 1 execution did not instrument agent-active hours; no value is fabricated |
+| Agent labor cost | $0 | $0 | $0 | Tier 1 AI-agent labor rate remains $0 |
+| Human review effort | Included in 10-hour Ring 2 review allowance | Unavailable | Not computable | Human reviewer time was not instrumented |
+| Operating AI cost | $0 | $0 | $0 | The prototype has no runtime AI dependency |
+
+WP-1 implementation has delivered the planned foundation and PostgreSQL outcome; formal package closure remains pending final independent disposition. DEC-030 corrects package acceptance allocation at leaf level while retaining complete integrated `CT-DB-001A..L` closure in WP-8; impact review found no added work, removed obligation, changed dependency, or schedule effect. The remaining implementation forecast stays at 160 agent hours across WP-2 through WP-8, and the approved project totals remain 202 hours, $3,890 human labor, and $4,668 with contingency. Because actual effort telemetry is unavailable, no percentage variance is asserted and the 15%/25% variance triggers cannot be evaluated retrospectively. WP-2 must capture elapsed or active effort if quantified variance is required at its exit.

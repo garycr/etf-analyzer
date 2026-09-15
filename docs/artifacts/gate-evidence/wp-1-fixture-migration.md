@@ -8,9 +8,11 @@
 
 - Migration identity: `0004-fixtures`, sequence 4
 - Exact SQL-byte SHA-256: `8f73d86024e38c043328c3ac3102dffb627df579757009f150f789bba1bb5b60`
-- Resulting manifest SHA-256: `1c51b8d8b88fd9a5c31af24ae8560f82f9359093134adf4edcd8a6255d9a212e`
+- Resulting manifest SHA-256: `897c67ad05bb35c602c74d412172c8cc0aff398b5448711af25a43974017fda6`
 - PostgreSQL baseline: `16.15|UTF8|UTC|on|C`
 - Autonomous work-item trace: GitHub issue #67
+
+The 2026-09-15 WP-1 closure recomputed this cumulative manifest with the final sequence-6 projector and corrected sequence-3 authority. This hash supersedes the earlier incremental projection; no sequence-4 SQL bytes changed.
 
 ## Executed Behavior
 

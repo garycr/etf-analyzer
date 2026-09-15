@@ -4,7 +4,7 @@
 
 **Project:** ETF Analyzer
 **Created:** 2026-09-10
-**Updated:** 2026-09-11
+**Updated:** 2026-09-15
 **Pricing basis:** Token volumes are estimated; dollar pricing is unavailable until the Ring 2 execution model/provider is selected.
 
 ## Ring 1 - Human Review Attachments
@@ -40,6 +40,11 @@ Provide the human reviewer both development token cost and operating token cost 
 | Review ID | Work package | Development token cost estimate | Operating token cost estimate | Assumptions | Human disposition | Evidence |
 | --------- | ------------ | ------------------------------- | ----------------------------- | ----------- | ----------------- | -------- |
 | R2-BASELINE | WP-1..WP-8 | 1,310,000 input / 655,000 output | 0 operating tokens | One sequential fixture-only prototype; no runtime AI | Approved 2026-09-11; actuals start at WP-1 | `docs/Planning/tasks/ring-2-wbs.md` |
+| R2-WP1 | WP-1 | 120,000 input / 60,000 output | 0 operating tokens | Provider telemetry is unavailable; no measured token actual or dollar cost is fabricated | Reviewed 2026-09-15; remaining forecast unchanged | `docs/artifacts/gate-evidence/wp-1-exit.md` |
+
+### WP-1 Actuals Limitation
+
+The execution surface did not expose model identity, token counts, cache accounting, or provider pricing for the completed WP-1 sessions. Actual development tokens and dollar cost are therefore unavailable. This is an explicit telemetry limitation, not a zero-token claim. Operating token actuals are zero because the implemented prototype has no runtime AI workflow. The WP-2 control estimate remains 150,000 input and 75,000 output tokens; future reviews use provider telemetry when available.
 
 ## Ring 3 - IV&V Estimate Reconciliation
 

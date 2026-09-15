@@ -3,14 +3,14 @@
 > **Purpose:** CVP briefing artifact. Updated at each Ring completion to reflect what was explored, decided, and delivered. This document does not control ring execution.
 
 **Project:** ETF Analyzer  
-**Last Updated:** 2026-09-11
-**Current Ring:** Ring 2 - Development (WP-1 ready, not started)
+**Last Updated:** 2026-09-15
+**Current Ring:** Ring 2 - Development (WP-1 complete; WP-2 active in GitHub #70)
 
 ---
 
 ## 1. Executive Overview
 
-Ring 1 converted the selected MAI-ST strategy into one sequential Tier 1 delivery stream, completed the prototype's design-time application, PostgreSQL, and OpenAPI contract resolution, and approved the WP-1..WP-8 WBS, 16-week schedule, and cost/token baselines. DEC-023 closed Ring 1 and opened Ring 2 at WP-1 only. Architecture remains Proposed, WP-1 has not started, and executable proof remains Ring 2 work.
+Ring 1 converted the selected MAI-ST strategy into one sequential Tier 1 delivery stream and approved the WP-1..WP-8 WBS, schedule, and cost/token baselines. Ring 2 WP-1 completed the executable foundation and six empty-database PostgreSQL migrations with exact hashes, fresh-database 99/99 validation, and REV-044 aggregate PASS. DEC-030 and REV-043 preserve leaf-level CT-DB-001 acceptance without changing scope or estimates. Architecture remains Proposed, and WP-2 is the only active package under GitHub issue #70.
 
 ---
 
@@ -71,9 +71,9 @@ No application implementation exists yet; production readiness is not claimed.
 ## 6. Recommendation
 
 **Production Readiness:** Not Ready - planning only  
-**Ring Recommendation:** Execute Ring 2 sequentially, beginning with WP-1 only
+**Ring Recommendation:** Execute Ring 2 sequentially, continuing with WP-2 only
 
-Begin WP-1 under the approved WBS when implementation is explicitly started. Do not overlap WP-2, activate a product baseline, accept Proposed architecture, connect a live provider or broker, deploy, release, or take production action.
+Execute WP-2 under GitHub issue #70. Do not overlap WP-3, activate a product baseline, accept Proposed architecture, connect a live provider or broker, deploy, release, or take production action.
 
 ### Lessons Learned
 

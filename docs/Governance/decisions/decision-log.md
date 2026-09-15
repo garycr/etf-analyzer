@@ -25,10 +25,33 @@
 | DEC-027 | 2026-09-14 | Architecture | Close domain-ledger cryptography, owner calls, and instrument identity | Workspace Owner | Solo Orchestrator | Active |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
+| DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
 
 ---
 
 ## Decision Records
+
+### DEC-030: CT-DB-001 Work-Package Allocation Clarification
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-030 |
+| **Date** | 2026-09-15 |
+| **Category** | Planning |
+| **Decision** | Correct CT-DB-001 acceptance allocation at executable leaf level: WP-1 closes complete A/B/C/L and D/K foundation leaves; WP-2 through WP-6 close their domain leaves when dependencies exist; WP-8 closes complete integrated A-L |
+| **Policy** | DEC-023; DEC-028; approved sequential WBS; issue #66; cost-estimation variance controls; capture at origin |
+| **Authority** | Solo Orchestrator under the Fully Agentic override in DEC-028, subject to independent Plan Reviewer validation |
+| **Accountable** | Solo Orchestrator |
+| **Context** | The WP-1 WBS row assigned the full physical schema and used A-L shorthand, while issue #66 required only A-D/K/L foundation execution and retained E-J for later packages. D, E, J, and K contain leaves spanning several domains, so assigning each whole scenario to one early package would be infeasible. Aggregate Code and Plan reviews identified both contradictions. |
+| **Alternatives** | Keep A-L in WP-1 and overclaim unavailable behavior; assign each whole scenario to one package despite cross-domain leaves; allocate executable leaves incrementally and retain final integrated closure in WP-8 |
+| **Consequences** | WP-1 may close on reviewed foundation evidence without claiming later domain acceptance. Package reviews preserve leaf evidence, later complete-scenario checks verify composition, and WP-8 remains accountable for integrated A-L closure. This is an acceptance-allocation correction, not a scope removal. No estimate, dependency, product scope, contract content, or package order changes. |
+| **Reasoning** | D and K depend on later denial, reader, fixture-policy, and ledger-integrity behavior; J depends on both application restart and later analytics effects; E spans fixture, application, analytics, and ledger numeric classes. Leaf ownership makes each package exit executable while final integrated closure prevents fragmented acceptance. |
+| **Assumptions** | The approved package outcome matrix remains authoritative and Ring 2 continues as one sequential stream. |
+| **Invalidation** | A later package removes its assigned domain behavior, the PostgreSQL contract changes scenario ownership, or the Workspace Owner changes Ring 2 scope or sequencing |
+| **Status** | Active |
+| **Linked Artifacts** | `docs/Planning/tasks/ring-2-wbs.md`, `docs/artifacts/gate-evidence/wp-1-exit.md`, GitHub issue #66 |
+
+---
 
 ### DEC-029: Analytics Retention Epoch and Canonicalization
 

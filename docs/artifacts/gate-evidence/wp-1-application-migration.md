@@ -8,9 +8,11 @@
 
 - Migration identity: `0002-application`, sequence 2
 - Exact SQL-byte SHA-256: `9865cd75bd6249b4a567daf840f95ad3d7b52bbf534060e87a34516fd0867fdb`
-- Resulting manifest SHA-256: `d61a6a94778bcfb9d57b449690b8c7888b65a044f809467be28a13d0c2640d34`
-- Canonical manifest length: 7,480 UTF-8 bytes
+- Resulting manifest SHA-256: `405d4e276efbf43f40c4856be1c7536b7cc0d8d37329416d8df7e8ed24bb34cc`
+- Canonical manifest length: 7,667 UTF-8 bytes
 - Cumulative catalog: 10 tables, 5 functions, 14 roles, and 9 memberships
+
+The 2026-09-15 WP-1 closure recomputed this cumulative manifest with the final sequence-6 projector. This hash and length supersede the earlier incremental projection; no sequence-2 SQL bytes changed.
 
 ## Executed Behavior
 

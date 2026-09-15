@@ -6,7 +6,7 @@
 **Owner:** Team Lead
 **Conformance check:** `CT-DB-001A..L`
 **Architecture status:** Proposed
-**Implementation status:** Not started; no SQL migration is authorized or supplied by this contract
+**Implementation status:** WP-1 physical implementation complete and awaiting aggregate closure; integrated `CT-DB-001A..L` acceptance remains allocated through WP-8
 
 ## Scope and Authority
 
@@ -16,7 +16,7 @@ Normative owner imports are pinned to domain/order `1.0.0-candidate.1`, ledger `
 
 The database preserves owner semantics and fails closed; it cannot translate an owner failure into success, infer missing evidence, round a canonical number, accept storage order as business order, publish unverified data, mutate immutable evidence, or create a hidden application operation.
 
-This candidate defines no HTTP shape, UI, broker/provider connection, public ingress, external account, event/outbox/queue/scheduler/worker, Kubernetes deployment, backup service, dependency installation, executable migration, baseline activation, or Ring 2 work.
+This candidate defines no HTTP shape, UI, broker/provider connection, public ingress, external account, event/outbox/queue/scheduler/worker, Kubernetes deployment, backup service, dependency installation, baseline activation, or production authority. It defines migration requirements but does not itself authorize Ring 2 execution.
 
 ## PostgreSQL Baseline
 
@@ -41,11 +41,20 @@ Migration identities and order are closed and case-sensitive:
 | 5 | `0005-analytics-evidence` | Input sets, bundles, manifests, retention, replay, and publication references |
 | 6 | `0006-controlled-access` | Controlled functions, append-only triggers, grants, and privilege revocation |
 
-The reviewed `0005-analytics-evidence` exact UTF-8 SQL SHA-256 is `638fdcb40695be04a30c56807e529f753fd37c80ccfdcd6ad58f04e603287cc4`; its resulting PostgreSQL 16.15 schema-manifest SHA-256 is `3ec98b0909672256f88fe5e6851507ee634f5f8c484bcc745fe26e3e70e1a5ec`.
+The final WP-1 PostgreSQL 16.15 identities are:
+
+| Sequence | Exact UTF-8 SQL SHA-256 | Resulting schema-manifest SHA-256 |
+| ---: | --- | --- |
+| 1 | `a604802a67bed66c6ce79d2f2f856b48e184ae5b4f76803ab8ead3a135c85291` | `3ba3b63c429cf051378ce3eb4adafe0db697dec487d070669a6bc47dba2f8f7c` |
+| 2 | `9865cd75bd6249b4a567daf840f95ad3d7b52bbf534060e87a34516fd0867fdb` | `405d4e276efbf43f40c4856be1c7536b7cc0d8d37329416d8df7e8ed24bb34cc` |
+| 3 | `d514c7f3b75c6ed83dfdbd9b54b406b14814b2bf8f40bd1e04a9d70a303346a3` | `61008ff4dd4898afb0f0b168c4d063dae4894fb8257f9ee77db3af95fdde54d4` |
+| 4 | `8f73d86024e38c043328c3ac3102dffb627df579757009f150f789bba1bb5b60` | `897c67ad05bb35c602c74d412172c8cc0aff398b5448711af25a43974017fda6` |
+| 5 | `638fdcb40695be04a30c56807e529f753fd37c80ccfdcd6ad58f04e603287cc4` | `92f3a9dcf71e61ae42977d2a2c009130ec4b622f1370239e65a6d5fdc8e54d46` |
+| 6 | `62d4c23bcb89cbf26d58af8a994c765d74cf64e2267c0ae52e240f2632be0235` | `10feee5e5a5a58137767a9a9803ee5659b56a5feca9b8fb9f9ae45da3cedbf01` |
 
 Each migration is one transaction under a transaction-scoped advisory lock derived from UTF-8 `etf:v1.0.0-prototype.1:migrations`. Before DDL, the deployment runner verifies the migration identity, ascending sequence, and lowercase SHA-256 of exact UTF-8 SQL bytes. A successful transaction inserts exactly one `schema_migrations` row with `sequence`, `migration_id`, `content_hash`, `applied_at`, and resulting `schema_manifest_hash`. A repeated identical identity/hash is a no-op; a missing, reordered, duplicate, changed, or unknown migration fails readiness with `APPLICATION_MIGRATIONS_INCOMPLETE` and performs no implicit repair.
 
-The schema manifest is the canonical UTF-8 RFC 8785 JSON projection of all `etf` schemas, tables, ordered columns, types, nullability, defaults, primary/foreign/unique/check constraints, indexes, functions, triggers, roles, ownership, database grants, and schema-scoped grants after each migration. NULL database and function ACLs are expanded with PostgreSQL 16 `pg_catalog.acldefault` before projection so implicit `PUBLIC` authority remains visible. The manifest excludes PostgreSQL-generated OIDs and physical storage parameters. The first stored manifest is projected only from the committed post-`0001` state; the provisioner prerequisite has no migration row or manifest hash. Ring 2 migration artifacts must publish the six SQL content hashes and six resulting manifest hashes before execution; until then `CT-DB-001` is a design-time plan, not passing migration evidence.
+The schema manifest is the canonical UTF-8 RFC 8785 JSON projection of all `etf` schemas, tables, ordered columns, types, nullability, defaults, primary/foreign/unique/check constraints, indexes, functions, triggers, roles, ownership, database grants, and schema-scoped grants after each migration. NULL database and function ACLs are expanded with PostgreSQL 16 `pg_catalog.acldefault` before projection so implicit `PUBLIC` authority remains visible. The manifest excludes PostgreSQL-generated OIDs and physical storage parameters. The first stored manifest is projected only from the committed post-`0001` state; the provisioner prerequisite has no migration row or manifest hash. WP-1 published and executed all six SQL content hashes and resulting manifest hashes. Under DEC-030, complete A/B/C/L and D/K foundation leaves have executable evidence; domain leaves and integrated `CT-DB-001A..L` acceptance remain allocated through WP-8.
 
 ## Candidate.2 Normative Closure
 
@@ -70,7 +79,7 @@ The manifest root is exactly `{contractVersion,systemExtensions,migrationSequenc
 - Function definition: `{arguments,returns,language,securityDefiner,volatility,parallelSafety,searchPath,bodyHash}`.
 - View definition: `{columns,queryHash,securityBarrier}`; columns are `{ordinal,name,type,collation,nullable}` in ordinal order.
 
-Constraint kind is `primaryKey|unique|foreignKey|check`; fields inapplicable to a kind are null, and applicable column arrays retain declared order. Names and types use `pg_catalog` canonical rendering and contract text uses `COLLATE "C"`. Null means no default/reference/predicate/WHEN expression. Parsed default, check, key-expression, predicate, and trigger-WHEN expressions use `pg_get_expr`. Function `bodyHash` is SHA-256 over the complete text returned by PostgreSQL 16 `pg_get_functiondef(to_regprocedure('<schema>.<name>(<pg_catalog argument types>)')::oid)`. View `queryHash` is SHA-256 over the complete text returned by `pg_get_viewdef(to_regclass('<schema>.<name>')::oid,false)`. Each returned text is encoded UTF-8 after converting line endings to LF, removing trailing spaces on each line, and adding exactly one final newline after removing all existing trailing newlines. Memberships are `{role,member,adminOption,inheritOption,setOption}` sorted by `(role,member)` and read from PostgreSQL 16 `pg_auth_members`. Grants are `{objectKind,schema,object,columns,grantee,privilege,grantOption}`, sorted by that tuple; `columns` is null for object-level grants and the declared-ordinal column-name array for a column-level grant. Database grants set schema, object, and columns null and objectKind `database`; schema grants set schema to `etf` with object and columns null; table/view grants use the unqualified object name; function grants use the unqualified signature such as `audit_append(jsonb)`. Unknown fields, kinds, records, extensions, or objects are drift. Ring 2 supplies actual SQL and definition/root hashes.
+Constraint kind is `primaryKey|unique|foreignKey|check`; fields inapplicable to a kind are null, and applicable column arrays retain declared order. Names and types use `pg_catalog` canonical rendering and contract text uses `COLLATE "C"`. Null means no default/reference/predicate/WHEN expression. Parsed default, check, key-expression, predicate, and trigger-WHEN expressions use `pg_get_expr`. Function `bodyHash` is SHA-256 over the complete text returned by PostgreSQL 16 `pg_get_functiondef(to_regprocedure('<schema>.<name>(<pg_catalog argument types>)')::oid)`. View `queryHash` is SHA-256 over the complete text returned by `pg_get_viewdef(to_regclass('<schema>.<name>')::oid,false)`. Each returned text is encoded UTF-8 after converting line endings to LF, removing trailing spaces on each line, and adding exactly one final newline after removing all existing trailing newlines. Memberships are `{role,member,adminOption,inheritOption,setOption}` sorted by `(role,member)` and read from PostgreSQL 16 `pg_auth_members`. Grants are `{objectKind,schema,object,columns,grantee,privilege,grantOption}`, sorted by that tuple; `columns` is null for object-level grants and the declared-ordinal column-name array for a column-level grant. Database grants set schema, object, and columns null and objectKind `database`; schema grants set schema to `etf` with object and columns null; table/view grants use the unqualified object name; function grants use the unqualified signature such as `audit_append(jsonb)`. Unknown fields, kinds, records, extensions, or objects are drift. WP-1 supplied the actual SQL and definition/root hashes listed above.
 
 ### Authority and Protected Integrity
 
@@ -349,7 +358,7 @@ Any migration identity/order/hash rule, PostgreSQL baseline, object manifest, co
 - [x] Role/grant and controlled-function authority is deny by default.
 - [x] Jobs/checkpoints and readiness survive process restart without event scope.
 - [x] `CT-DB-001A..L` is a named design-time conformance plan.
-- [ ] Six executable migration byte hashes and resulting manifest hashes exist in Ring 2.
+- [x] Six executable migration byte hashes and resulting manifest hashes exist in Ring 2.
 - [x] Distinct Team Lead custody review passes.
 - [x] Independent alternate-role verification passes with no unresolved Critical or Major finding.
 

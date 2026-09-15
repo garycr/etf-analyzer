@@ -6,6 +6,39 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-15 | WP-2 deterministic fixture ingestion started | Ring-2 | @solo-orchestrator
+
+**Decision:** Start WP-2 as the only active sequential package after WP-1 REV-044 PASS and issue #66 closure
+**Policy:** DEC-023; DEC-028; DEC-030; Ring 2 WBS; PT-FIX-001A..O; issue #70
+**Authority:** Solo Orchestrator under Fully Agentic governance after predecessor evidence and reviews passed
+**Accountability:** Solo Orchestrator delivers fixture validation, deterministic ingestion, provenance, DQ, restart, and provider-egress denial evidence before WP-3 starts
+**Result:** GitHub issue #70 opened and assigned; WP-3 through WP-8 remain dependency-blocked
+**authorization-boundary:** Approved local fixtures only; no live provider, network fallback, legacy migration, WP-3 overlap, baseline activation, release, deployment, or production action
+
+---
+
+## 2026-09-15 | REV-044 WP-1 executable foundation closed | Ring-2 | @code-reviewer
+
+**Decision:** Close WP-1 after aggregate verification of the executable foundation, six exact PostgreSQL migrations, corrected canonical evidence, and reforecast
+**Policy:** DEC-023; DEC-028; DEC-030; WP-1; issue #66; code review; test quality; cost and token review
+**Authority:** Solo Orchestrator under Fully Agentic governance with REV-043 Plan Reviewer PASS and REV-044 Code Reviewer PASS
+**Accountability:** Solo Orchestrator closes issue #66, publishes the reviewed closure, and starts only WP-2 next
+**Result:** PostgreSQL 16.15 fresh-database suite 99/99; build, lint, low dependency audit, and diff check pass; six SQL and manifest hash pairs pinned; no open finding
+**authorization-boundary:** WP-1 additive empty-database foundation only; WP-2 is next, WP-3 through WP-8 remain dependency-blocked; no baseline activation, parallel work, provider/broker connection, release, deployment, or production authority
+
+---
+
+## 2026-09-15 | REV-043 DEC-030 CT-DB-001 allocation accepted | Ring-2 | @plan-reviewer
+
+**Decision:** Correct CT-DB-001 acceptance at executable leaf level while retaining complete integrated A-L closure in WP-8
+**Policy:** DEC-023; DEC-028; DEC-030; issue #66; Ring 2 sequential WBS; cost-estimation variance controls
+**Authority:** Solo Orchestrator under Fully Agentic governance with independent Plan Reviewer PASS and no remaining finding
+**Accountability:** Solo Orchestrator closes WP-1 only on complete A/B/C/L and D/K foundation leaves; later packages retain every domain and integrated obligation
+**Result:** No product scope, dependency, estimate, token baseline, package order, cost, or schedule change; REV-043 PASS
+**authorization-boundary:** Planning acceptance allocation only; no later domain acceptance, parallel package, baseline activation, release, deployment, or production authority
+
+---
+
 ## 2026-09-15 | REV-042 0006 controlled-access migration accepted | Ring-2 | @code-reviewer @security-reviewer
 
 **Decision:** Accept the bounded `0006-controlled-access` additive migration after closing immutable enforcement, runtime denial, anchored projection, ownership, minimum privilege, rollback, exact catalog, and column-ACL findings

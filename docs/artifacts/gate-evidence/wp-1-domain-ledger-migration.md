@@ -7,10 +7,12 @@
 ## Canonical Artifacts
 
 - Migration identity: `0003-domain-ledger`, sequence 3
-- Exact SQL-byte SHA-256: `5e4bb49c7f1be74c25d6eb5d585305c00f5df9791bfe2ab2a4348fa10fb1fdb5`
-- Resulting manifest SHA-256: `150541903c6e9f644a2db065fc5ffc04480232b5a3623ef9704e171522e70da4`
-- Canonical manifest length: 13,358 UTF-8 bytes
+- Exact SQL-byte SHA-256: `d514c7f3b75c6ed83dfdbd9b54b406b14814b2bf8f40bd1e04a9d70a303346a3`
+- Resulting manifest SHA-256: `61008ff4dd4898afb0f0b168c4d063dae4894fb8257f9ee77db3af95fdde54d4`
+- Canonical manifest length: 14,194 UTF-8 bytes
 - Cumulative catalog: 28 tables and 11 functions
+
+The 2026-09-15 WP-1 closure recomputed sequence 3 after the reviewed ownership and least-privilege correction delivered with sequence 6. These values supersede the earlier incremental SQL and manifest hashes.
 
 ## Executed Behavior
 

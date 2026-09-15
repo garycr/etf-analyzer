@@ -8,9 +8,11 @@
 
 - Migration identity: `0005-analytics-evidence`, sequence 5
 - Exact SQL-byte SHA-256: `638fdcb40695be04a30c56807e529f753fd37c80ccfdcd6ad58f04e603287cc4`
-- Resulting manifest SHA-256: `3ec98b0909672256f88fe5e6851507ee634f5f8c484bcc745fe26e3e70e1a5ec`
+- Resulting manifest SHA-256: `92f3a9dcf71e61ae42977d2a2c009130ec4b622f1370239e65a6d5fdc8e54d46`
 - PostgreSQL baseline: `16.15|UTF8|UTC|on|C`
 - Autonomous work-item trace: GitHub issue #68
+
+The 2026-09-15 WP-1 closure recomputed this cumulative manifest with the final sequence-6 projector and corrected sequence-3 authority. This hash supersedes the earlier incremental projection; no sequence-5 SQL bytes changed.
 
 ## Executed Behavior
 

@@ -4,13 +4,13 @@
 
 **Project:** ETF Analyzer  
 **Last Updated:** 2026-09-15
-**Current Ring:** Ring 2 - Development (WP-1 complete; WP-2 active in GitHub #70)
+**Current Ring:** Ring 2 - Development (WP-1 and WP-2 complete; WP-3 authorized next)
 
 ---
 
 ## 1. Executive Overview
 
-Ring 1 converted the selected MAI-ST strategy into one sequential Tier 1 delivery stream and approved the WP-1..WP-8 WBS, schedule, and cost/token baselines. Ring 2 WP-1 completed the executable foundation and six empty-database PostgreSQL migrations with exact hashes, fresh-database 99/99 validation, and REV-044 aggregate PASS. DEC-030 and REV-043 preserve leaf-level CT-DB-001 acceptance without changing scope or estimates. Architecture remains Proposed, and WP-2 is the only active package under GitHub issue #70.
+Ring 1 converted the selected MAI-ST strategy into one sequential Tier 1 delivery stream and approved the WP-1..WP-8 WBS, schedule, and cost/token baselines. Ring 2 WP-1 completed the executable foundation with REV-044 PASS. WP-2 completed deterministic fixture ingestion and `PT-FIX-001A..O` with REV-059 conditional PASS and final default-suite results of 292 discovered, 262 passed, 30 environment-skipped, and 0 failed. GitHub #71 tracks identity-grammar and stable PostgreSQL error mapping required before WP-3 accepts non-golden fixtures. Architecture remains Proposed, and WP-3 is the only next package.
 
 ---
 
@@ -71,9 +71,9 @@ No application implementation exists yet; production readiness is not claimed.
 ## 6. Recommendation
 
 **Production Readiness:** Not Ready - planning only  
-**Ring Recommendation:** Execute Ring 2 sequentially, continuing with WP-2 only
+**Ring Recommendation:** Execute Ring 2 sequentially, continuing with WP-3 only
 
-Execute WP-2 under GitHub issue #70. Do not overlap WP-3, activate a product baseline, accept Proposed architecture, connect a live provider or broker, deploy, release, or take production action.
+Execute WP-3 after opening its work item, with #71 closed before any non-golden fixture ingestion path is accepted. Do not overlap WP-4, activate a product baseline, accept Proposed architecture, connect a live provider or broker, deploy, release, or take production action.
 
 ### Lessons Learned
 

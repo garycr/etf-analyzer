@@ -6,7 +6,7 @@
 **Owner:** Team Lead
 **Conformance check:** `PT-FIX-001`
 **Architecture status:** Proposed
-**Implementation status:** Ring 2 in progress; PT-FIX-001A..O and `FIXTURE_UNDECLARED_INPUT` implemented, reviewed, and approved for bounded publication; complete WP-2 approval remains open
+**Implementation status:** WP-2 complete with REV-059 conditional PASS; PT-FIX-001A..O and `FIXTURE_UNDECLARED_INPUT` implemented, reviewed, and published; GitHub #71 is mandatory before WP-3 accepts non-golden fixture input
 
 ## Scope and Authority
 

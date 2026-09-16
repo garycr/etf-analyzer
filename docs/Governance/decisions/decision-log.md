@@ -26,10 +26,33 @@
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
+| DEC-031 | 2026-09-15 | Package closure | Close WP-2 conditionally and authorize WP-3 as the next sequential package | Agent (Fully Agentic) | Solo Orchestrator | Active |
 
 ---
 
 ## Decision Records
+
+### DEC-031: Close WP-2 And Open WP-3
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-031 |
+| **Date** | 2026-09-15 |
+| **Category** | Package closure |
+| **Decision** | Close WP-2 after REV-059 aggregate PASS and authorize WP-3 as the only next sequential package, with GitHub #71 mandatory before any WP-3 command path accepts a non-golden dataset version |
+| **Policy** | DEC-023; DEC-028; DEC-030; approved Ring 2 WBS; issue #70; REV-045..059; test-first development; stable conformance errors |
+| **Authority** | Agent (Fully Agentic), subject to asynchronous Workspace Owner review through dedicated decision-transparency issue #72 |
+| **Accountable** | Solo Orchestrator closes #71 before non-golden ingestion, maintains one-package WIP, and keeps complete Ring 2 and production gates closed |
+| **Context** | All PT-FIX-001A..O scenarios and undeclared-input behavior are implemented, reviewed, and published. The final suite is 292 discovered, 262 passed, 30 environment-skipped, and 0 failed; REV-053 retains zero-skip PostgreSQL 16.15 evidence. REV-059 Code and REV-060 Security reviews found missing application identity-grammar gates and unmapped PostgreSQL check violations, but the hash-pinned golden package remains conformant and database constraints prevent invalid persistence. |
+| **Alternatives** | Reopen WP-2 and repair before closure; close without tracking the gaps; close conditionally and make repair an explicit WP-3 entry prerequisite |
+| **Consequences** | WP-2 closes and WP-3 may start. #71 must complete before a non-golden fixture reaches a command handler. No deployment-level network isolation, live-provider path, baseline activation, architecture acceptance, Ring 2 exit, release, deployment, or production authority follows. |
+| **Reasoning** | The delivered golden fixture path satisfies the approved WP-2 outcome, while the newly identified stable-error gap becomes consequential only when WP-3 introduces a submission boundary. Binding remediation to that entry point preserves sequential delivery without hiding the defect. |
+| **Assumptions** | WP-3 remains local, fixture-only, and single-stream; fixture migration bytes do not change without renewed PostgreSQL execution; no non-golden dataset is accepted before #71 closes. |
+| **Invalidation** | Failure to close #71 before non-golden ingestion, fixture migration drift without database revalidation, a live-provider path, a second implementation stream, or a change to the approved package sequence |
+| **Status** | Active; WP-2 closed conditionally and WP-3 authorized next |
+| **Linked Artifacts** | `docs/Governance/decisions/reviews/REV-059-wp-2-aggregate-closure-review.md`, `docs/Governance/decisions/reviews/REV-060-wp-2-aggregate-security-review.md`, `docs/Governance/decisions/reviews/REV-061-dec-031-wp-2-closure-plan-review.md`, `docs/artifacts/gate-evidence/wp-2-exit.md`, GitHub issues #22, #70, #71, and #72 |
+
+---
 
 ### DEC-030: CT-DB-001 Work-Package Allocation Clarification
 

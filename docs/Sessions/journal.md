@@ -6,6 +6,49 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-15 | REV-061 DEC-031 closure plan review accepted | Ring-2 | @plan-reviewer
+
+**Type:** PLAN-REVIEW
+**review-outcome:** PASS; Critical 0 | Major 0 open
+**Decision:** Accept DEC-031 conditional WP-2 closure, WP-3 sequencing, status synchronization, and estimate treatment
+**Policy:** DEC-023; DEC-028; DEC-030; DEC-031; Fully Agentic traceability; sequential WBS
+**Authority:** Alternate-model Plan Reviewer final recheck
+**Accountability:** Solo Orchestrator publishes closure, closes #70 afterward, and opens WP-3 with explicit default-deny #71 language
+**Result:** Dedicated decision issue #72 closed the initial traceability Major; missing autonomy label remains documented nonblocking repository-administration debt
+**Artifact:** docs/Governance/decisions/reviews/REV-061-dec-031-wp-2-closure-plan-review.md | docs/Governance/decisions/decision-log.md | GitHub issue #72
+**authorization-boundary:** WP-2 closure and WP-3 issue creation only; no non-golden ingestion before #71, WP-4 overlap, complete Ring 2, release, deployment, or production authority
+
+---
+
+## 2026-09-15 | REV-060 WP-2 aggregate security review accepted | Ring-2 | @security-reviewer
+
+**Type:** SECURITY-REVIEW
+**review-outcome:** PASS with mandatory WP-3 entry remediation
+**severity-counts:** Critical 0 | Major 2 tracked in #71 | Minor 2 tracked in #22/#71
+**Decision:** Security-support conditional WP-2 closure and preserve #71 as a hard gate before non-golden WP-3 ingestion
+**Policy:** DEC-023; DEC-028; DEC-030; WP-2; secure coding; least privilege; fail-closed fixture boundary
+**Authority:** Alternate-model Security Reviewer
+**Accountability:** Solo Orchestrator closes #71 before non-golden ingestion and #22 nested redaction before WP-3 diagnostics acceptance
+**Result:** No SQL injection, credential exposure, privilege escalation, path traversal, or transaction-integrity blocker; REV-053 hash-tethered PostgreSQL evidence remains current
+**Artifact:** docs/Governance/decisions/reviews/REV-060-wp-2-aggregate-security-review.md | docs/artifacts/gate-evidence/wp-2-exit.md | GitHub issues #22/#71
+**authorization-boundary:** Conditional WP-2 closure only; no live provider, deployment network policy, complete Ring 2, IV&V, release, deployment, or production authority
+
+---
+
+## 2026-09-15 | DEC-031 WP-2 conditional closure and WP-3 authorization | Ring-2 | @solo-orchestrator
+
+**Type:** PACKAGE-CLOSURE
+**Decision:** Close WP-2 after REV-059 aggregate PASS and authorize WP-3 as the only next sequential package
+**Policy:** DEC-023; DEC-028; DEC-030; WP-2; PT-FIX-001A..O; issues #70/#71; test and code review
+**Authority:** Agent (Fully Agentic), subject to asynchronous Workspace Owner review
+**Accountability:** Solo Orchestrator closes #71 before WP-3 accepts non-golden fixture input and keeps WP-4 and all ring/production gates closed
+**Result:** 292 tests discovered, 262 passed, 30 environment-skipped, 0 failed; REV-053 retains PostgreSQL 16.15 zero-skip evidence; REV-059 aggregate PASS
+**condition:** #71 must enforce application identity grammars and stable PostgreSQL check-violation mapping before non-golden ingestion
+**Artifact:** docs/Governance/decisions/decision-log.md | docs/Governance/decisions/reviews/REV-059-wp-2-aggregate-closure-review.md | docs/artifacts/gate-evidence/wp-2-exit.md
+**authorization-boundary:** WP-2 closure and WP-3 sequencing only; no live provider, complete Ring 2, IV&V, baseline activation, architecture acceptance, release, deployment, or production authority
+
+---
+
 ## 2026-09-15 | WP-2 PT-FIX-001O human approval | Ring-2 | @workspace-owner
 
 **Type:** APPROVAL

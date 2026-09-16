@@ -125,7 +125,7 @@ Emergency changes are revert-only to the last active baseline. Forward-breaking 
 | Classification evidence | Closes manifest/package schemas, adds governed raw-source objects, defines replay/selection/error semantics, fixes DEC-014 boundaries, and publishes normative package hashes |
 | DEC-011 floor assertion | Pass expected: fixture-only point-in-time truth, deterministic evidence, exact arithmetic input, DQ suppression, no provider failover, and Proposed architecture status are preserved |
 | Specialist reviews | REV-020 Team Lead custody PASS after all approved findings; REV-021 independent alternate-role PASS with 0 Critical/Major; all approved Minor/Suggestion corrections applied |
-| Compatibility checks | `PT-FIX-001A..O` design-time plan complete; four golden vectors recomputed locally; Ring 2 executable bindings and CT-ANA fixture-reference/canonical-byte impact assessment pending |
+| Compatibility checks | `PT-FIX-001A..O` executable with REV-059 conditional PASS; approved golden bytes retained; #71 required before non-golden WP-3 ingestion; CT-ANA fixture-reference/canonical-byte impact assessment remains pending |
 | Custodian disposition | Team Lead final custody PASS; fixture portion of `PT-CONTRACT-001` design-time resolution complete |
 | Co-signature | Solo Orchestrator originator; distinct Team Lead custody and independent Architect Reviewer verification complete |
 | Human approval | Workspace Owner approved REV-020 Major/Minor/Nit remediation, new NIT-2, and REV-021 MINOR-1..3/SUGGESTION-1 using the 4.74 quality score |

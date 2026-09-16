@@ -41,10 +41,17 @@ Provide the human reviewer both development token cost and operating token cost 
 | --------- | ------------ | ------------------------------- | ----------------------------- | ----------- | ----------------- | -------- |
 | R2-BASELINE | WP-1..WP-8 | 1,310,000 input / 655,000 output | 0 operating tokens | One sequential fixture-only prototype; no runtime AI | Approved 2026-09-11; actuals start at WP-1 | `docs/Planning/tasks/ring-2-wbs.md` |
 | R2-WP1 | WP-1 | 120,000 input / 60,000 output | 0 operating tokens | Provider telemetry is unavailable; no measured token actual or dollar cost is fabricated | Reviewed 2026-09-15; remaining forecast unchanged | `docs/artifacts/gate-evidence/wp-1-exit.md` |
+| R2-WP2 | WP-2 | 150,000 input / 75,000 output | 0 operating tokens | Provider telemetry is unavailable; no measured token actual or dollar cost is fabricated | Reviewed 2026-09-15; remaining forecast unchanged; #71 is a WP-3 entry repair | `docs/artifacts/gate-evidence/wp-2-exit.md` |
 
 ### WP-1 Actuals Limitation
 
 The execution surface did not expose model identity, token counts, cache accounting, or provider pricing for the completed WP-1 sessions. Actual development tokens and dollar cost are therefore unavailable. This is an explicit telemetry limitation, not a zero-token claim. Operating token actuals are zero because the implemented prototype has no runtime AI workflow. The WP-2 control estimate remains 150,000 input and 75,000 output tokens; future reviews use provider telemetry when available.
+
+### WP-2 Actuals Limitation
+
+The execution surface did not expose agent-active hours, model identity, token counts, cache accounting, or provider pricing for WP-2. Actual development effort, token use, dollar cost, and percentage variance are unavailable and are not fabricated. Operating token actuals remain zero because the prototype has no runtime AI workflow. REV-059 found no evidence requiring a scope, sequence, schedule, or baseline change; GitHub #71 is bounded remediation at the WP-3 entry point.
+
+The unchanged remaining WP-3-through-WP-8 control forecast is 1,040,000 input tokens and 520,000 output tokens, with zero operating tokens.
 
 ## Ring 3 - IV&V Estimate Reconciliation
 

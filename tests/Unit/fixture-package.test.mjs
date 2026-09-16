@@ -654,6 +654,180 @@ test("fixture selection reports undeclared input before required-input failures"
   );
 });
 
+test("PT-FIX-001N reports every safely detectable defect in precedence order", () => {
+  const fixturePackage = packageWithRecordMutation(
+    "market-observations.jsonl",
+    (records) => {
+      records[0].qualityCodes = ["SOURCE_STALE"];
+      records[0].qualityState = "Stale";
+      records.push({
+        ...structuredClone(records[0]),
+        ingestionJobId: "fixture-build-2",
+        instrumentId: "UNDECLARED-ETF",
+        qualityCodes: [],
+        qualityState: "Valid",
+        revision: "01",
+      });
+    },
+  );
+  const changedManifest = JSON.parse(fixturePackage.manifest.toString("utf8"));
+  changedManifest.unknown = true;
+  updateManifest(fixturePackage, changedManifest);
+  fixturePackage.files[`raw-sources/${rawSourceHash}`] = Buffer.from(
+    "tampered local fixture source\n",
+    "utf8",
+  );
+
+  assert.throws(
+    () => selectFixturePackageAt(fixturePackage, "2026-01-30T22:00:00.000Z"),
+    (error) => {
+      assert.ok(error instanceof FixtureConformanceError);
+      assert.equal(error.code, "FIXTURE_MANIFEST_INVALID");
+      assert.deepEqual(
+        error.issues.map(({ code }) => code),
+        [
+          "FIXTURE_MANIFEST_INVALID",
+          "FIXTURE_FILE_INTEGRITY_FAILED",
+          "FIXTURE_TEMPORAL_INVALID",
+          "FIXTURE_PROVENANCE_INVALID",
+          "FIXTURE_PROVENANCE_INVALID",
+          "FIXTURE_PROVENANCE_INVALID",
+          "FIXTURE_UNDECLARED_INPUT",
+          "FIXTURE_REQUIRED_STALE",
+        ],
+      );
+      return true;
+    },
+  );
+});
+
+test("PT-FIX-001N orders malformed identities by absent, invalid, then valid components", () => {
+  const malformedPackage = (reverse) => packageWithRecordMutation(
+    "market-observations.jsonl",
+    (records) => {
+      const validRecord = structuredClone(records[0]);
+      delete records[0].instrumentId;
+      records[0].revision = "01";
+      records.push({
+        ...structuredClone(validRecord),
+        ingestionJobId: "fixture-build-2",
+        instrumentId: 7,
+        revision: "02",
+      });
+      records.push({
+        ...structuredClone(validRecord),
+        ingestionJobId: "fixture-build-3",
+        instrumentId: 10,
+        revision: "03",
+      });
+      records.push({
+        ...structuredClone(validRecord),
+        ingestionJobId: "fixture-build-4",
+        instrumentId: "ZZZ",
+        revision: "04",
+      });
+      if (reverse) {
+        records.reverse();
+      }
+    },
+  );
+  const temporalIssues = (fixturePackage) => {
+    let captured;
+    assert.throws(
+      () => validateFixturePackage(fixturePackage),
+      (error) => {
+        assert.ok(error instanceof FixtureConformanceError);
+        captured = error;
+        return true;
+      },
+    );
+    assert.ok(Object.isFrozen(captured.issues));
+    assert.ok(Object.isFrozen(captured.issues[0].businessIdentity[0]));
+    assert.ok(Object.isFrozen(captured.issues[0].relativePath));
+    return captured.issues.filter(({ code }) => code === "FIXTURE_TEMPORAL_INVALID");
+  };
+
+  const forwardIssues = temporalIssues(malformedPackage(false));
+  const reverseIssues = temporalIssues(malformedPackage(true));
+  assert.deepEqual(reverseIssues, forwardIssues);
+  assert.deepEqual(
+    forwardIssues.map(({ businessIdentity }) => businessIdentity[0].state),
+    ["absent", "invalid", "invalid", "valid"],
+  );
+  assert.deepEqual(
+    forwardIssues
+      .map(({ businessIdentity }) => businessIdentity[0])
+      .filter(({ state }) => state === "invalid")
+      .map(({ raw }) => raw),
+    ["7", "10"],
+  );
+});
+
+test("PT-FIX-001N attributes a record-count mismatch to its fixture file", () => {
+  const fixturePackage = packageWithManifestMutation((value) => {
+    value.datasetVersion = "2026.01.1";
+    value.files.find(({ relativePath }) =>
+      relativePath === "market-observations.jsonl"
+    ).recordCount = 2;
+  });
+
+  assert.throws(
+    () => validateFixturePackage(fixturePackage),
+    (error) => {
+      assert.ok(error instanceof FixtureConformanceError);
+      const issue = error.issues.find(({ code }) =>
+        code === "FIXTURE_FILE_INTEGRITY_FAILED"
+      );
+      assert.deepEqual(issue.relativePath, {
+        state: "valid",
+        value: "market-observations.jsonl",
+      });
+      return true;
+    },
+  );
+});
+
+test("PT-FIX-001N classifies an economic provider as invalid for a market identity", () => {
+  const fixturePackage = packageWithRecordMutation(
+    "market-observations.jsonl",
+    ([record]) => {
+      record.providerId = "FRED";
+      record.revision = "01";
+    },
+  );
+
+  assert.throws(
+    () => validateFixturePackage(fixturePackage),
+    (error) => {
+      assert.ok(error instanceof FixtureConformanceError);
+      const issue = error.issues.find(({ code }) => code === "FIXTURE_TEMPORAL_INVALID");
+      assert.deepEqual(issue.businessIdentity[2], { raw: "FRED", state: "invalid" });
+      return true;
+    },
+  );
+});
+
+test("PT-FIX-001N does not derive required-input issues from a malformed evaluation instant", () => {
+  const fixturePackage = packageWithManifestMutation((value) => {
+    value.datasetVersion = "2026.01.1";
+    value.unknown = true;
+  });
+
+  assert.throws(
+    () => selectFixturePackageAt(fixturePackage, "not-an-instant"),
+    (error) => {
+      assert.ok(error instanceof FixtureConformanceError);
+      assert.equal(error.code, "FIXTURE_MANIFEST_INVALID");
+      assert.ok(error.issues.some(({ code }) => code === "FIXTURE_TEMPORAL_INVALID"));
+      assert.equal(
+        error.issues.some(({ code }) => code.startsWith("FIXTURE_REQUIRED_")),
+        false,
+      );
+      return true;
+    },
+  );
+});
+
 test("PT-FIX-001D/E selection preserves package validation precedence", () => {
   const fixturePackage = packageWithRecordMutation(
     "market-observations.jsonl",

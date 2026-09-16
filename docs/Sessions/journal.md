@@ -6,6 +6,36 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-15 | WP-2 PT-FIX-001N human approval | Ring-2 | @workspace-owner
+
+**Type:** APPROVAL
+**Decision:** Approve the reviewed PT-FIX-001N deterministic aggregate-error increment for bounded publication
+**Policy:** Human approval; WP-2; PT-FIX-001N; issue #70; REV-057
+**Authority:** Workspace Owner explicit approval
+**Accountability:** Solo Orchestrator publishes the approved increment and continues WP-2 sequentially
+**Result:** REV-057 PASS and validated complete deterministic error-ordering evidence accepted for publication
+**authorization-boundary:** PT-FIX-001N only; no PT-FIX-001O, complete WP-2, legacy migration, release, deployment, or production action is authorized
+
+---
+
+## 2026-09-15 | REV-057 PT-FIX-001N deterministic error ordering accepted | Ring-2 | @code-reviewer
+
+**Type:** REVIEW-RECHECK
+**review-type:** code-and-test-conformance
+**review-outcome:** PASS; publication pending human approval
+**severity-counts:** Critical 0 | Major 0 | Minor 0 open
+**Decision:** Accept PT-FIX-001N complete safely detectable defect collection, stable controlling code, and deterministic total ordering
+**Policy:** DEC-023; DEC-028; DEC-030; WP-2; PT-FIX-001N; issue #70; code review; test quality
+**Authority:** Alternate-model Code Reviewer final recheck closed all three Major and two Minor findings
+**Accountability:** Solo Orchestrator publishes only after Workspace Owner approval and retains PT-FIX-001O and complete WP-2 as separate open increments
+**Result:** Focused PT-FIX-001N tests 5/5; complete repository suite 291 discovered, 261 passed, 30 environment-skipped, 0 failed; build, lint, diagnostics, audit, and diff checks pass
+**remediation:** Added attributed record-count issues, record-type-aware provider grammar, malformed-instant suppression, deep component immutability, and checked map access
+**Artifact:** docs/Governance/decisions/reviews/REV-057-wp-2-deterministic-error-ordering-review.md | docs/artifacts/gate-evidence/wp-2-deterministic-error-ordering.md | src/Application/fixture-package.ts | tests/Unit/fixture-package.test.mjs
+**authorization-boundary:** PT-FIX-001N only; no PT-FIX-001O, complete WP-2, legacy migration, release, deployment, or production authority
+**selector:** delegated
+
+---
+
 ## 2026-09-15 | WP-2 undeclared-input human approval | Ring-2 | @workspace-owner
 
 **Type:** APPROVAL

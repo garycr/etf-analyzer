@@ -16,6 +16,19 @@ export type FixtureConformanceCode =
   | "FIXTURE_TEMPORAL_INVALID"
   | "FIXTURE_UNDECLARED_INPUT";
 
+export type FixtureIdentityComponent =
+  | { readonly state: "absent" }
+  | { readonly raw: string; readonly state: "invalid" }
+  | { readonly state: "valid"; readonly value: string };
+
+export interface FixtureConformanceIssue {
+  readonly businessIdentity: readonly FixtureIdentityComponent[];
+  readonly code: FixtureConformanceCode;
+  readonly datasetIdentity: readonly FixtureIdentityComponent[];
+  readonly recordType: "" | "market" | "economic";
+  readonly relativePath: FixtureIdentityComponent;
+}
+
 const approvedDatasetHashes = new Map<string, string>([
   [
     "etf-prototype-core\u00002026.01.0",
@@ -25,11 +38,25 @@ const approvedDatasetHashes = new Map<string, string>([
 
 export class FixtureConformanceError extends Error {
   public readonly code: FixtureConformanceCode;
+  public readonly issues: readonly FixtureConformanceIssue[];
 
-  public constructor(code: FixtureConformanceCode) {
+  public constructor(
+    code: FixtureConformanceCode,
+    issues: readonly FixtureConformanceIssue[] = [],
+  ) {
     super(code);
     this.name = "FixtureConformanceError";
     this.code = code;
+    this.issues = Object.freeze(issues.map((issue) => Object.freeze({
+      ...issue,
+      businessIdentity: Object.freeze(
+        issue.businessIdentity.map((component) => Object.freeze({ ...component })),
+      ),
+      datasetIdentity: Object.freeze(
+        issue.datasetIdentity.map((component) => Object.freeze({ ...component })),
+      ),
+      relativePath: Object.freeze({ ...issue.relativePath }),
+    })));
   }
 }
 
@@ -147,6 +174,21 @@ const provenanceFields = new Set([
 ]);
 
 const qualityStates = new Set(["Valid", "Partial", "Stale", "Quarantined"]);
+
+const fixtureCodePrecedence: readonly FixtureConformanceCode[] = [
+  "FIXTURE_MANIFEST_INVALID",
+  "FIXTURE_FILE_INTEGRITY_FAILED",
+  "FIXTURE_DATASET_HASH_MISMATCH",
+  "FIXTURE_IDEMPOTENCY_CONFLICT",
+  "FIXTURE_TEMPORAL_INVALID",
+  "FIXTURE_DECIMAL_INVALID",
+  "FIXTURE_PROVENANCE_INVALID",
+  "FIXTURE_UNDECLARED_INPUT",
+  "FIXTURE_REQUIRED_MISSING",
+  "FIXTURE_REQUIRED_PARTIAL",
+  "FIXTURE_REQUIRED_STALE",
+  "FIXTURE_REQUIRED_QUARANTINED",
+];
 
 function sha256(bytes: Uint8Array | string): string {
   return createHash("sha256").update(bytes).digest("hex");
@@ -505,6 +547,29 @@ function requireParsedFixtureFile(
   return parsedFile;
 }
 
+function validateObservationRecord(
+  record: Readonly<Record<string, unknown>>,
+  fields: readonly string[],
+): void {
+  const expectedFields = new Set(fields);
+  const actualFields = new Set(Object.keys(record));
+  if (
+    [...actualFields].some((field) => !expectedFields.has(field)) ||
+    fields.some((field) => !provenanceFields.has(field) && !actualFields.has(field))
+  ) {
+    throw new FixtureConformanceError("FIXTURE_MANIFEST_INVALID");
+  }
+  const qualityState = requireString(record, "qualityState");
+  const qualityCodes = requireStringArray(record.qualityCodes);
+  requireStrictlySortedUnique(qualityCodes, compareUtf8);
+  if (
+    !qualityStates.has(qualityState) ||
+    (qualityState === "Valid") !== (qualityCodes.length === 0)
+  ) {
+    throw new FixtureConformanceError("FIXTURE_MANIFEST_INVALID");
+  }
+}
+
 function validateClosedObservationRecords(
   parsedFiles: readonly ParsedFixtureFile[],
 ): void {
@@ -516,40 +581,39 @@ function validateClosedObservationRecords(
     parsedFiles,
     "economic-vintages.jsonl",
   );
-  const requireObservationFields = (
-    record: Readonly<Record<string, unknown>>,
-    fields: readonly string[],
-  ): void => {
-    const expectedFields = new Set(fields);
-    const actualFields = new Set(Object.keys(record));
-    if (
-      [...actualFields].some((field) => !expectedFields.has(field)) ||
-      fields.some((field) => !provenanceFields.has(field) && !actualFields.has(field))
-    ) {
-      throw new FixtureConformanceError("FIXTURE_MANIFEST_INVALID");
-    }
-  };
-  const validateQualityMetadata = (
-    record: Readonly<Record<string, unknown>>,
-  ): void => {
-    const qualityState = requireString(record, "qualityState");
-    const qualityCodes = requireStringArray(record.qualityCodes);
-    requireStrictlySortedUnique(qualityCodes, compareUtf8);
-    if (
-      !qualityStates.has(qualityState) ||
-      (qualityState === "Valid") !== (qualityCodes.length === 0)
-    ) {
-      throw new FixtureConformanceError("FIXTURE_MANIFEST_INVALID");
-    }
-  };
   marketFile.records.forEach((record) => {
-    requireObservationFields(record, marketObservationFields);
-    validateQualityMetadata(record);
+    validateObservationRecord(record, marketObservationFields);
   });
   economicFile.records.forEach((record) => {
-    requireObservationFields(record, economicVintageFields);
-    validateQualityMetadata(record);
+    validateObservationRecord(record, economicVintageFields);
   });
+}
+
+function validateDecimalValue(record: Readonly<Record<string, unknown>>): void {
+  const numericScales = new Map([
+    ["Money", 8],
+    ["Quantity", 10],
+    ["Rate", 12],
+    ["UnitPrice", 10],
+  ]);
+  const numericClass = requireString(record, "numericClass");
+  const scale = numericScales.get(numericClass);
+  const value = requireString(record, "value");
+  const decimal = /^(-?)(0|[1-9][0-9]*)\.([0-9]+)$/u.exec(value);
+  if (scale === undefined || decimal === null) {
+    throw new FixtureConformanceError("FIXTURE_DECIMAL_INVALID");
+  }
+  const sign = decimal[1] as string;
+  const integer = decimal[2] as string;
+  const fraction = decimal[3] as string;
+  const integerDigits = integer === "0" ? 0 : integer.length;
+  if (
+    fraction.length !== scale ||
+    integerDigits + fraction.length > 28 ||
+    (sign === "-" && integer === "0" && /^0+$/u.test(fraction))
+  ) {
+    throw new FixtureConformanceError("FIXTURE_DECIMAL_INVALID");
+  }
 }
 
 function validateObservationValues(parsedFiles: readonly ParsedFixtureFile[]): void {
@@ -574,31 +638,8 @@ function validateObservationValues(parsedFiles: readonly ParsedFixtureFile[]): v
     requireCanonicalTimestamp(requireString(record, "releaseTimestamp"));
   }
 
-  const numericScales = new Map([
-    ["Money", 8],
-    ["Quantity", 10],
-    ["Rate", 12],
-    ["UnitPrice", 10],
-  ]);
   for (const record of [...marketFile.records, ...economicFile.records]) {
-    const numericClass = requireString(record, "numericClass");
-    const scale = numericScales.get(numericClass);
-    const value = requireString(record, "value");
-    const decimal = /^(-?)(0|[1-9][0-9]*)\.([0-9]+)$/u.exec(value);
-    if (scale === undefined || decimal === null) {
-      throw new FixtureConformanceError("FIXTURE_DECIMAL_INVALID");
-    }
-    const sign = decimal[1] as string;
-    const integer = decimal[2] as string;
-    const fraction = decimal[3] as string;
-    const integerDigits = integer === "0" ? 0 : integer.length;
-    if (
-      fraction.length !== scale ||
-      integerDigits + fraction.length > 28 ||
-      (sign === "-" && integer === "0" && /^0+$/u.test(fraction))
-    ) {
-      throw new FixtureConformanceError("FIXTURE_DECIMAL_INVALID");
-    }
+    validateDecimalValue(record);
   }
   for (const record of marketFile.records) {
     const numericClass = requireString(record, "numericClass");
@@ -808,7 +849,11 @@ function validateFixturePackageContents(
 export function validateFixturePackage(
   fixturePackage: FixturePackageBytes,
 ): ValidatedFixturePackage {
-  return validateFixturePackageContents(fixturePackage).result;
+  try {
+    return validateFixturePackageContents(fixturePackage).result;
+  } catch (error) {
+    throwWithFixtureDiagnostics(error, fixturePackage);
+  }
 }
 
 function validateRequiredSelection(
@@ -880,7 +925,551 @@ function validateRequiredSelection(
   }
 }
 
-export function selectFixturePackageAt(
+function diagnosticRawValue(value: unknown): string {
+  if (typeof value === "string") {
+    return value;
+  }
+  try {
+    return canonicalizeJson(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function diagnosticComponent(
+  value: unknown,
+  isValid: (candidate: string) => boolean = () => true,
+): FixtureIdentityComponent {
+  if (value === undefined) {
+    return { state: "absent" };
+  }
+  if (typeof value === "string" && isValid(value)) {
+    return { state: "valid", value };
+  }
+  return { raw: diagnosticRawValue(value), state: "invalid" };
+}
+
+function isCanonicalDate(value: string): boolean {
+  try {
+    requireCanonicalDate(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isCanonicalTimestamp(value: string): boolean {
+  try {
+    requireCanonicalTimestamp(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function diagnosticRecordComponent(
+  recordType: FixtureConformanceIssue["recordType"],
+  record: Readonly<Record<string, unknown>>,
+  field: string,
+): FixtureIdentityComponent {
+  const validators: Readonly<Record<string, (value: string) => boolean>> = {
+    adjustmentPolicy: (value) => [
+      "unadjusted",
+      "split-adjusted",
+      "total-return-adjusted",
+    ].includes(value),
+    instrumentId: (value) => /^[A-Z0-9][A-Z0-9._-]{0,63}$/u.test(value),
+    observationDate: isCanonicalDate,
+    providerId: (value) => recordType === "market"
+      ? value === "fixture"
+      : ["FRED", "ALFRED", "BLS", "BEA", "TREASURY_FISCAL_DATA"].includes(value),
+    releaseTimestamp: isCanonicalTimestamp,
+    revision: (value) => /^(0|[1-9][0-9]*)$/u.test(value),
+    seriesId: (value) => /^[\x20-\x7E]{1,128}$/u.test(value),
+    tradingDate: isCanonicalDate,
+    vintageId: (value) => /^[\x20-\x7E]{1,128}$/u.test(value),
+  };
+  return diagnosticComponent(record[field], validators[field]);
+}
+
+function recordBusinessIdentity(
+  recordType: FixtureConformanceIssue["recordType"],
+  record?: Readonly<Record<string, unknown>>,
+): readonly FixtureIdentityComponent[] {
+  if (record === undefined) {
+    return [];
+  }
+  const fields = recordType === "market"
+    ? ["instrumentId", "tradingDate", "providerId", "adjustmentPolicy", "revision"]
+    : recordType === "economic"
+    ? ["providerId", "seriesId", "observationDate", "releaseTimestamp", "vintageId"]
+    : [];
+  return fields.map((field) => diagnosticRecordComponent(recordType, record, field));
+}
+
+function createFixtureIssue(
+  code: FixtureConformanceCode,
+  manifest?: Readonly<Record<string, unknown>>,
+  relativePath?: string,
+  recordType: FixtureConformanceIssue["recordType"] = "",
+  record?: Readonly<Record<string, unknown>>,
+): FixtureConformanceIssue {
+  return {
+    businessIdentity: recordBusinessIdentity(recordType, record),
+    code,
+    datasetIdentity: [
+      diagnosticComponent(
+        manifest?.datasetId,
+        (value) => /^[a-z0-9][a-z0-9-]{0,63}$/u.test(value),
+      ),
+      diagnosticComponent(
+        manifest?.datasetVersion,
+        (value) => /^\d{4}\.(0[1-9]|1[0-2])\.(0|[1-9]\d*)$/u.test(value),
+      ),
+    ],
+    recordType,
+    relativePath: diagnosticComponent(relativePath, (value) => {
+      try {
+        requireNormalizedRelativePath(value);
+        return true;
+      } catch {
+        return false;
+      }
+    }),
+  };
+}
+
+function encodedComponent(component: FixtureIdentityComponent): Buffer {
+  if (component.state === "absent") {
+    return Buffer.from([0]);
+  }
+  const value = component.state === "valid" ? component.value : component.raw;
+  const bytes = Buffer.from(value, "utf8");
+  if (component.state === "invalid") {
+    return Buffer.concat([
+      Buffer.from([1]),
+      Buffer.from(`${bytes.byteLength}:`, "utf8"),
+      bytes,
+    ]);
+  }
+  return Buffer.concat([Buffer.from([2]), bytes]);
+}
+
+function compareComponents(
+  left: readonly FixtureIdentityComponent[],
+  right: readonly FixtureIdentityComponent[],
+): number {
+  const length = Math.max(left.length, right.length);
+  for (let index = 0; index < length; index += 1) {
+    const comparison = Buffer.compare(
+      encodedComponent(left[index] ?? { state: "absent" }),
+      encodedComponent(right[index] ?? { state: "absent" }),
+    );
+    if (comparison !== 0) {
+      return comparison;
+    }
+  }
+  return 0;
+}
+
+function compareFixtureIssues(
+  left: FixtureConformanceIssue,
+  right: FixtureConformanceIssue,
+): number {
+  const codeComparison = fixtureCodePrecedence.indexOf(left.code) -
+    fixtureCodePrecedence.indexOf(right.code);
+  if (codeComparison !== 0) {
+    return codeComparison;
+  }
+  const datasetComparison = compareComponents(left.datasetIdentity, right.datasetIdentity);
+  if (datasetComparison !== 0) {
+    return datasetComparison;
+  }
+  const pathComparison = compareComponents([left.relativePath], [right.relativePath]);
+  if (pathComparison !== 0) {
+    return pathComparison;
+  }
+  const recordTypeOrder = { "": -1, market: 0, economic: 1 } as const;
+  const recordTypeComparison = recordTypeOrder[left.recordType] - recordTypeOrder[right.recordType];
+  return recordTypeComparison || compareComponents(left.businessIdentity, right.businessIdentity);
+}
+
+function collectFixtureDiagnostics(
+  fixturePackage: FixturePackageBytes,
+  evaluationInstant?: string,
+): readonly FixtureConformanceIssue[] {
+  const issues: FixtureConformanceIssue[] = [];
+  let manifest: Readonly<Record<string, unknown>>;
+  try {
+    const text = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true })
+      .decode(fixturePackage.manifest);
+    const parsed: unknown = JSON.parse(text);
+    if (parsed === null || Array.isArray(parsed) || typeof parsed !== "object") {
+      throw new Error("invalid manifest root");
+    }
+    manifest = parsed as Readonly<Record<string, unknown>>;
+  } catch {
+    return [createFixtureIssue("FIXTURE_MANIFEST_INVALID")];
+  }
+
+  let descriptors: readonly FileDescriptor[] = [];
+  let declaredCoverage: DeclaredCoverage | undefined;
+  try {
+    const canonicalManifest = parseManifest(fixturePackage.manifest);
+    requireClosedRecord(canonicalManifest, manifestFields);
+    validateManifestIdentity(canonicalManifest);
+    descriptors = parseDescriptors(canonicalManifest.files);
+    validateObservationDescriptors(descriptors);
+    requireStrictlySortedUnique(
+      descriptors.map(({ relativePath }) => relativePath),
+      compareUtf8,
+    );
+    declaredCoverage = validateCoverage(canonicalManifest);
+  } catch {
+    issues.push(createFixtureIssue("FIXTURE_MANIFEST_INVALID", manifest));
+    try {
+      descriptors = parseDescriptors(manifest.files);
+    } catch {
+      descriptors = [];
+    }
+    try {
+      declaredCoverage = validateCoverage(manifest);
+    } catch {
+      declaredCoverage = undefined;
+    }
+  }
+
+  const actualPaths = Object.keys(fixturePackage.files).sort(compareUtf8);
+  const expectedPaths = descriptors.map(({ relativePath }) => relativePath).sort(compareUtf8);
+  if (canonicalizeJson(expectedPaths) !== canonicalizeJson(actualPaths)) {
+    issues.push(createFixtureIssue("FIXTURE_FILE_INTEGRITY_FAILED", manifest));
+  }
+
+  const fileHashes: Record<string, string> = {};
+  for (const [relativePath, bytes] of Object.entries(fixturePackage.files)) {
+    fileHashes[relativePath] = sha256(bytes);
+  }
+  for (const descriptor of descriptors) {
+    const bytes = fixturePackage.files[descriptor.relativePath];
+    const contentHash = bytes === undefined ? undefined : sha256(bytes);
+    if (
+      bytes === undefined ||
+      bytes.byteLength !== descriptor.byteLength ||
+      contentHash !== descriptor.sha256 ||
+      (descriptor.relativePath.startsWith("raw-sources/") &&
+        descriptor.relativePath !== `raw-sources/${contentHash}`)
+    ) {
+      issues.push(createFixtureIssue(
+        "FIXTURE_FILE_INTEGRITY_FAILED",
+        manifest,
+        descriptor.relativePath,
+      ));
+    }
+  }
+
+  const parsedFiles: ParsedFixtureFile[] = [];
+  for (const [relativePath, recordType] of [
+    ["market-observations.jsonl", "market"],
+    ["economic-vintages.jsonl", "economic"],
+  ] as const) {
+    const bytes = fixturePackage.files[relativePath];
+    const descriptor = descriptors.find((item) => item.relativePath === relativePath);
+    if (bytes === undefined || descriptor === undefined) {
+      continue;
+    }
+    try {
+      const records = parseJsonLines(bytes);
+      if (records.length !== descriptor.recordCount) {
+        issues.push(createFixtureIssue(
+          "FIXTURE_FILE_INTEGRITY_FAILED",
+          manifest,
+          relativePath,
+        ));
+      }
+      parsedFiles.push({ descriptor, records });
+    } catch {
+      issues.push(createFixtureIssue("FIXTURE_MANIFEST_INVALID", manifest, relativePath, recordType));
+    }
+  }
+
+  if (typeof manifest.datasetHash === "string") {
+    const { datasetHash: ignoredDatasetHash, ...hashMembers } = manifest;
+    void ignoredDatasetHash;
+    if (sha256(canonicalizeJson({ ...hashMembers, domain: "etf.fixture.dataset.v1" })) !== manifest.datasetHash) {
+      issues.push(createFixtureIssue("FIXTURE_DATASET_HASH_MISMATCH", manifest));
+    }
+  }
+
+  if (
+    typeof manifest.datasetId === "string" &&
+    typeof manifest.datasetVersion === "string" &&
+    typeof manifest.datasetHash === "string"
+  ) {
+    const approvedDatasetHash = approvedDatasetHashes.get(
+      `${manifest.datasetId}\u0000${manifest.datasetVersion}`,
+    );
+    if (approvedDatasetHash !== undefined && approvedDatasetHash !== manifest.datasetHash) {
+      issues.push(createFixtureIssue("FIXTURE_IDEMPOTENCY_CONFLICT", manifest));
+    }
+  }
+
+  if (parsedFiles.length === 2) {
+    for (const validateReplay of [validateMarketReplay, validateEconomicReplay]) {
+      try {
+        validateReplay(parsedFiles);
+      } catch (error) {
+        if (error instanceof FixtureConformanceError) {
+          issues.push(createFixtureIssue(error.code, manifest));
+        }
+      }
+    }
+  }
+
+  for (const [recordType, relativePath] of [
+    ["market", "market-observations.jsonl"],
+    ["economic", "economic-vintages.jsonl"],
+  ] as const) {
+    const records = parsedFiles.find(({ descriptor }) => descriptor.relativePath === relativePath)?.records ?? [];
+    for (const record of records) {
+      try {
+        validateObservationRecord(
+          record,
+          recordType === "market" ? marketObservationFields : economicVintageFields,
+        );
+      } catch {
+        issues.push(createFixtureIssue(
+          "FIXTURE_MANIFEST_INVALID",
+          manifest,
+          relativePath,
+          recordType,
+          record,
+        ));
+      }
+
+      let temporalInvalid = false;
+      try {
+        if (recordType === "market") {
+          requireCanonicalDate(requireString(record, "tradingDate"));
+          requireCanonicalTimestamp(requireString(record, "sourceAvailableAt"));
+          temporalInvalid = !/^(0|[1-9][0-9]*)$/u.test(requireString(record, "revision"));
+        } else {
+          requireCanonicalDate(requireString(record, "observationDate"));
+          requireCanonicalTimestamp(requireString(record, "releaseTimestamp"));
+        }
+      } catch {
+        temporalInvalid = true;
+      }
+      if (temporalInvalid) {
+        issues.push(createFixtureIssue(
+          "FIXTURE_TEMPORAL_INVALID",
+          manifest,
+          relativePath,
+          recordType,
+          record,
+        ));
+      }
+
+      try {
+        validateDecimalValue(record);
+        if (recordType === "market") {
+          const numericClass = requireString(record, "numericClass");
+          const currency = requireString(record, "currency");
+          const requiresUsd = numericClass === "Money" || numericClass === "UnitPrice";
+          if ((requiresUsd && currency !== "USD") || (!requiresUsd && currency !== "")) {
+            throw new FixtureConformanceError("FIXTURE_DECIMAL_INVALID");
+          }
+        }
+      } catch {
+        issues.push(createFixtureIssue(
+          "FIXTURE_DECIMAL_INVALID",
+          manifest,
+          relativePath,
+          recordType,
+          record,
+        ));
+      }
+
+      const rawSourceHash = record.rawSourceHash;
+      const rawSourceRef = record.rawSourceRef;
+      if (
+        typeof rawSourceHash !== "string" ||
+        !/^[0-9a-f]{64}$/u.test(rawSourceHash) ||
+        typeof rawSourceRef !== "string" ||
+        rawSourceRef !== `raw-sources/${rawSourceHash}` ||
+        fileHashes[rawSourceRef] !== rawSourceHash ||
+        typeof record.normalizationId !== "string" ||
+        record.normalizationId.length === 0 ||
+        typeof record.ingestionJobId !== "string" ||
+        record.ingestionJobId.length === 0
+      ) {
+        issues.push(createFixtureIssue(
+          "FIXTURE_PROVENANCE_INVALID",
+          manifest,
+          relativePath,
+          recordType,
+          record,
+        ));
+      }
+
+      if (declaredCoverage !== undefined) {
+        const values = recordType === "market"
+          ? [record.instrumentId, record.adjustmentPolicy, record.tradingDate]
+          : [record.providerId, record.seriesId, record.observationDate];
+        if (
+          values.every((value) => typeof value === "string") &&
+          !(recordType === "market" ? declaredCoverage.marketInputs : declaredCoverage.economicInputs)
+            .has(canonicalizeJson(values))
+        ) {
+          issues.push(createFixtureIssue(
+            "FIXTURE_UNDECLARED_INPUT",
+            manifest,
+            relativePath,
+            recordType,
+            record,
+          ));
+        }
+      }
+    }
+  }
+
+  let validEvaluationInstant: string | undefined;
+  if (evaluationInstant !== undefined) {
+    try {
+      requireCanonicalTimestamp(evaluationInstant);
+      validEvaluationInstant = evaluationInstant;
+    } catch {
+      issues.push(createFixtureIssue("FIXTURE_TEMPORAL_INVALID", manifest));
+    }
+  }
+
+  if (validEvaluationInstant !== undefined && declaredCoverage !== undefined) {
+    const marketRecords = parsedFiles.find(
+      ({ descriptor }) => descriptor.relativePath === "market-observations.jsonl",
+    )?.records ?? [];
+    const economicRecords = parsedFiles.find(
+      ({ descriptor }) => descriptor.relativePath === "economic-vintages.jsonl",
+    )?.records ?? [];
+    const selectedMarket = new Map<string, Readonly<Record<string, unknown>>>();
+    for (const record of marketRecords) {
+      if (
+        typeof record.instrumentId !== "string" ||
+        typeof record.tradingDate !== "string" ||
+        typeof record.providerId !== "string" ||
+        typeof record.adjustmentPolicy !== "string" ||
+        typeof record.revision !== "string" ||
+        !/^(0|[1-9][0-9]*)$/u.test(record.revision) ||
+        typeof record.sourceAvailableAt !== "string" ||
+        record.sourceAvailableAt > validEvaluationInstant
+      ) {
+        continue;
+      }
+      const key = canonicalizeJson([
+        record.instrumentId,
+        record.adjustmentPolicy,
+        record.tradingDate,
+      ]);
+      const selected = selectedMarket.get(key);
+      if (
+        selected === undefined ||
+        BigInt(record.revision) > BigInt(requireString(selected, "revision"))
+      ) {
+        selectedMarket.set(key, record);
+      }
+    }
+    const selectedEconomic = new Map<string, Readonly<Record<string, unknown>>>();
+    for (const record of economicRecords) {
+      if (
+        typeof record.providerId !== "string" ||
+        typeof record.seriesId !== "string" ||
+        typeof record.observationDate !== "string" ||
+        typeof record.releaseTimestamp !== "string" ||
+        record.releaseTimestamp > validEvaluationInstant
+      ) {
+        continue;
+      }
+      const key = canonicalizeJson([record.providerId, record.seriesId, record.observationDate]);
+      const selected = selectedEconomic.get(key);
+      if (
+        selected === undefined ||
+        record.releaseTimestamp > requireString(selected, "releaseTimestamp")
+      ) {
+        selectedEconomic.set(key, record);
+      }
+    }
+    for (const [recordType, relativePath, declaredInputs, selectedRecords] of [
+      ["market", "market-observations.jsonl", declaredCoverage.marketInputs, selectedMarket],
+      ["economic", "economic-vintages.jsonl", declaredCoverage.economicInputs, selectedEconomic],
+    ] as const) {
+      for (const declaredInput of declaredInputs) {
+        const record = selectedRecords.get(declaredInput);
+        if (record === undefined) {
+          const identity = JSON.parse(declaredInput) as string[];
+          const syntheticRecord = recordType === "market"
+            ? {
+                adjustmentPolicy: identity[1],
+                instrumentId: identity[0],
+                tradingDate: identity[2],
+              }
+            : {
+                observationDate: identity[2],
+                providerId: identity[0],
+                seriesId: identity[1],
+              };
+          issues.push(createFixtureIssue(
+            "FIXTURE_REQUIRED_MISSING",
+            manifest,
+            relativePath,
+            recordType,
+            syntheticRecord,
+          ));
+          continue;
+        }
+        const qualityState = record.qualityState;
+        const code = qualityState === "Partial"
+          ? "FIXTURE_REQUIRED_PARTIAL"
+          : qualityState === "Stale"
+          ? "FIXTURE_REQUIRED_STALE"
+          : qualityState === "Quarantined"
+          ? "FIXTURE_REQUIRED_QUARANTINED"
+          : undefined;
+        if (code !== undefined) {
+          issues.push(createFixtureIssue(
+            code,
+            manifest,
+            relativePath,
+            recordType,
+            record,
+          ));
+        }
+      }
+    }
+  }
+
+  return issues.sort(compareFixtureIssues);
+}
+
+function throwWithFixtureDiagnostics(
+  error: unknown,
+  fixturePackage: FixturePackageBytes,
+  evaluationInstant?: string,
+): never {
+  if (!(error instanceof FixtureConformanceError)) {
+    throw error;
+  }
+  let issues: FixtureConformanceIssue[];
+  try {
+    issues = [...collectFixtureDiagnostics(fixturePackage, evaluationInstant)];
+  } catch {
+    issues = [];
+  }
+  if (!issues.some(({ code }) => code === error.code)) {
+    issues.push(createFixtureIssue(error.code));
+    issues.sort(compareFixtureIssues);
+  }
+  throw new FixtureConformanceError(error.code, issues);
+}
+
+function selectFixturePackageAtContents(
   fixturePackage: FixturePackageBytes,
   evaluationInstant: string,
 ): FixturePackageSelection {
@@ -952,4 +1541,15 @@ export function selectFixturePackageAt(
     economicVintages,
     marketObservations,
   };
+}
+
+export function selectFixturePackageAt(
+  fixturePackage: FixturePackageBytes,
+  evaluationInstant: string,
+): FixturePackageSelection {
+  try {
+    return selectFixturePackageAtContents(fixturePackage, evaluationInstant);
+  } catch (error) {
+    throwWithFixtureDiagnostics(error, fixturePackage, evaluationInstant);
+  }
 }

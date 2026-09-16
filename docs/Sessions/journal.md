@@ -6,6 +6,20 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-16 | WP-3 PT-APP-001G readiness and analytical separation accepted | Ring-2 | @code-reviewer
+
+**Type:** CODE-AND-SECURITY-REVIEW
+**review-outcome:** PASS; Critical 0 | Major 0 | Minor 0 | Sev 1/2 security 0
+**Decision:** Accept test-only conformance evidence that Ready reports required dependency and control state without claiming analytical eligibility, freshness, evidence, ledger, provider, or release state
+**Policy:** DEC-023; DEC-028; DEC-030; DEC-032; WP-3; PT-APP-001G; code review; security review; test-quality review
+**Authority:** Alternate-model Code Reviewer final recheck and Security Reviewer PASS
+**Accountability:** Solo Orchestrator preserves owning analytics admission and advances next to stable owning error/cause behavior in PT-APP-001H without adding readiness claims
+**Result:** Focused 1/1; complete default suite 302 discovered, 272 passed, 30 environment-skipped, 0 failed; test quality 4.7/5; lint, diagnostics, audit, and diff checks pass
+**Artifact:** docs/Governance/decisions/reviews/REV-073-wp-3-readiness-analytical-separation-code-review.md | docs/Governance/decisions/reviews/REV-074-wp-3-readiness-analytical-separation-security-review.md | docs/artifacts/gate-evidence/wp-3-readiness-analytical-separation.md
+**authorization-boundary:** PT-APP-001G only; no PT-APP-001H..P completion, WP-4 overlap, live provider, release, deployment, or production authority
+
+---
+
 ## 2026-09-16 | WP-3 PT-APP-001F readiness fail-closure accepted | Ring-2 | @code-reviewer
 
 **Type:** CODE-AND-SECURITY-REVIEW

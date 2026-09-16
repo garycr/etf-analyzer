@@ -9,6 +9,7 @@ import {
   displayVerifiedResearch,
   evaluateReadiness,
   presentFailedJob,
+  readinessDependencyNames,
   restartDurableJob,
   submitConfirmedPaperOrder,
   resolveApplicationOperation,
@@ -361,5 +362,54 @@ test("PT-APP-001F required dependency failures produce ordered NotReady recovery
         requiresConfirmation: false,
       },
     });
+  }
+});
+
+test("PT-APP-001G Ready remains distinct from blocked analytical eligibility", () => {
+  const checkedAt = "2026-09-16T16:20:00.000Z";
+  const dependencies = Object.fromEntries(
+    [...readinessDependencyNames].reverse().map((dependency, index) => [
+      dependency,
+      {
+        ready: true,
+        checkedAt: `2026-09-16T16:${String(index).padStart(2, "0")}:00.000Z`,
+      },
+    ]),
+  );
+
+  for (const liveness of ["Live", "NotLive"]) {
+    const readiness = evaluateReadiness({ checkedAt, liveness, dependencies });
+
+    assert.deepEqual(new Set(Object.keys(readiness)), new Set([
+      "state",
+      "checkedAt",
+      "displayTimezone",
+      "liveness",
+      "dependencies",
+      "controllingError",
+    ]));
+    assert.equal(readiness.state, "Ready");
+    assert.equal(readiness.checkedAt, checkedAt);
+    assert.equal(readiness.liveness, liveness);
+    assert.equal(readiness.controllingError, null);
+    assert.deepEqual(readiness.dependencies.map(({ dependency, state, code }) => ({
+      dependency,
+      state,
+      code,
+    })), readinessDependencyNames.map((dependency) => ({
+      dependency,
+      state: "Ready",
+      code: null,
+    })));
+    for (const prohibitedClaim of [
+      "providerRights",
+      "fixtureFreshness",
+      "analyticalValidity",
+      "evidenceCompleteness",
+      "ledgerReconciliation",
+      "releaseReadiness",
+    ]) {
+      assert.equal(prohibitedClaim in readiness, false);
+    }
   }
 });

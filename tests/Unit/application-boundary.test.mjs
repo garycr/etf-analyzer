@@ -7,6 +7,7 @@ import {
   applicationQueryOperations,
   dispatchApplicationOperation,
   displayVerifiedResearch,
+  restartDurableJob,
   submitConfirmedPaperOrder,
   resolveApplicationOperation,
 } from "../../dist/Application/application-boundary.js";
@@ -184,6 +185,45 @@ test("PT-APP-001C preserves the domain owner's error without retry", () => {
             confirmationText: "Confirm hypothetical paper order",
           },
         },
+        () => {
+          dispatchCount += 1;
+          throw ownerError;
+        },
+      ),
+    (error) => error === ownerError,
+  );
+  assert.equal(dispatchCount, 1);
+});
+
+test("PT-APP-001D dispatches one exact JobRestart and returns persisted progress", () => {
+  const jobId = "30000000-0000-4000-8000-000000000001";
+  const ownerResult = Object.freeze({
+    jobId,
+    status: "Pending",
+    attempt: 2,
+    checkpoint: Object.freeze({ attempt: 1, sequence: 7 }),
+    acceptedCount: 3,
+    rejectedCount: 1,
+  });
+  const dispatched = [];
+
+  const result = restartDurableJob(jobId, (request) => {
+    dispatched.push(request);
+    return ownerResult;
+  });
+
+  assert.equal(result, ownerResult);
+  assert.deepEqual(dispatched, [{ jobId }]);
+});
+
+test("PT-APP-001D preserves restart refusal without retry or translation", () => {
+  const ownerError = new Error("APPLICATION_JOB_NOT_RESTARTABLE");
+  let dispatchCount = 0;
+
+  assert.throws(
+    () =>
+      restartDurableJob(
+        "30000000-0000-4000-8000-000000000002",
         () => {
           dispatchCount += 1;
           throw ownerError;

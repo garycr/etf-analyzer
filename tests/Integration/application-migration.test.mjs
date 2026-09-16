@@ -68,11 +68,11 @@ test(
       );
       assert.equal(
         applicationApplied.contentHash,
-        "9865cd75bd6249b4a567daf840f95ad3d7b52bbf534060e87a34516fd0867fdb",
+        "ad458453834e72413f644e81e38829ae491a26a44f1ca03deeaf71349552c198",
       );
       assert.equal(
         applicationApplied.schemaManifestHash,
-        "405d4e276efbf43f40c4856be1c7536b7cc0d8d37329416d8df7e8ed24bb34cc",
+        "7f6929ff5e9414a99921fd74d26ef9795a10cfeb1f8939ef240d974834873abb",
       );
       assert.equal(Buffer.byteLength(applicationManifest, "utf8"), 7667);
       const manifest = JSON.parse(applicationManifest);
@@ -295,8 +295,21 @@ test(
         /APPLICATION_REQUEST_INVALID/,
       );
       await client.query(
+        `INSERT INTO etf.job_checkpoints (
+           job_id, checkpoint_id, attempt, sequence, committed_at, content_hash,
+           effect_domain, first_effect_identity, last_effect_identity, effect_count
+         ) VALUES (
+           '20000000-0000-4000-8000-000000000001',
+           '20000000-0000-4000-8000-000000000002', 1, 7,
+           '2026-09-14T00:02:30.000Z', $1, 'FixtureObservation',
+           'prices:1', 'prices:3', 3
+         )`,
+        ["a".repeat(64)],
+      );
+      await client.query(
         `UPDATE etf.jobs
             SET status = 'Failed', completed_at = '2026-09-14T00:03:00.000Z',
+                accepted_count = 3, rejected_count = 1,
                 controlling_error = '{"code":"APPLICATION_DEPENDENCY_UNAVAILABLE"}'::jsonb
           WHERE job_id = '20000000-0000-4000-8000-000000000001'`,
       );
@@ -304,8 +317,160 @@ test(
         "SELECT etf.job_restart($1::jsonb) AS result",
         [JSON.stringify({ jobId: "20000000-0000-4000-8000-000000000001" })],
       );
-      assert.equal(restarted.rows[0].result.status, "Pending");
-      assert.equal(restarted.rows[0].result.attempt, 2);
+      assert.deepEqual(restarted.rows[0].result, {
+        jobId: "20000000-0000-4000-8000-000000000001",
+        jobType: "FixtureIngestion",
+        status: "Pending",
+        restartability: "Restartable",
+        attempt: 2,
+        operation: "FixtureIngestionStart",
+        originalCommandId: "30000000-0000-4000-8000-000000000001",
+        inputIdentity: { datasetId: "p0", datasetVersion: "1" },
+        createdAt: "2026-09-14T00:02:00.000Z",
+        startedAt: null,
+        completedAt: null,
+        checkpoint: {
+          checkpointId: "20000000-0000-4000-8000-000000000002",
+          attempt: 1,
+          sequence: 7,
+          committedAt: "2026-09-14T00:02:30.000Z",
+          contentHash: "a".repeat(64),
+        },
+        acceptedCount: 3,
+        rejectedCount: 1,
+        controllingError: null,
+      });
+      const committedEffects = await client.query(
+        `SELECT count(*)::integer AS checkpoint_count,
+                sum(effect_count)::integer AS effect_count
+           FROM etf.job_checkpoints
+          WHERE job_id = '20000000-0000-4000-8000-000000000001'`,
+      );
+      assert.deepEqual(committedEffects.rows[0], {
+        checkpoint_count: 1,
+        effect_count: 3,
+      });
+
+      for (const invalidState of [
+        {
+          status: "Running",
+          restartability: "Restartable",
+          startedAt: "2026-09-14T00:04:00.000Z",
+          completedAt: null,
+          controllingError: null,
+        },
+        {
+          status: "Failed",
+          restartability: "NotRestartable",
+          startedAt: null,
+          completedAt: "2026-09-14T00:05:00.000Z",
+          controllingError: { code: "APPLICATION_DEPENDENCY_UNAVAILABLE" },
+        },
+      ]) {
+        await client.query(
+          `UPDATE etf.jobs
+              SET status = $1, restartability = $2,
+                  started_at = $3::timestamp with time zone,
+                  completed_at = $4::timestamp with time zone,
+                  controlling_error = $5::jsonb
+            WHERE job_id = '20000000-0000-4000-8000-000000000001'`,
+          [
+            invalidState.status,
+            invalidState.restartability,
+            invalidState.startedAt,
+            invalidState.completedAt,
+            invalidState.controllingError,
+          ],
+        );
+        const beforeRefusal = await client.query(
+          `SELECT job.status, job.restartability, job.attempt,
+                  job.accepted_count, job.rejected_count,
+                  count(checkpoint.*)::integer AS checkpoint_count,
+                  coalesce(sum(checkpoint.effect_count), 0)::integer AS effect_count
+             FROM etf.jobs AS job
+             LEFT JOIN etf.job_checkpoints AS checkpoint ON checkpoint.job_id = job.job_id
+            WHERE job.job_id = '20000000-0000-4000-8000-000000000001'
+            GROUP BY job.job_id`,
+        );
+        await assert.rejects(
+          () =>
+            client.query("SELECT etf.job_restart($1::jsonb)", [
+              JSON.stringify({ jobId: "20000000-0000-4000-8000-000000000001" }),
+            ]),
+          /APPLICATION_JOB_NOT_RESTARTABLE/,
+        );
+        const afterRefusal = await client.query(
+          `SELECT job.status, job.restartability, job.attempt,
+                  job.accepted_count, job.rejected_count,
+                  count(checkpoint.*)::integer AS checkpoint_count,
+                  coalesce(sum(checkpoint.effect_count), 0)::integer AS effect_count
+             FROM etf.jobs AS job
+             LEFT JOIN etf.job_checkpoints AS checkpoint ON checkpoint.job_id = job.job_id
+            WHERE job.job_id = '20000000-0000-4000-8000-000000000001'
+            GROUP BY job.job_id`,
+        );
+        assert.deepEqual(afterRefusal.rows, beforeRefusal.rows);
+      }
+
+      await client.query(
+        `UPDATE etf.jobs
+            SET status = 'Failed', restartability = 'Restartable',
+                started_at = NULL, completed_at = '2026-09-14T00:06:00.000Z',
+                controlling_error = '{"code":"APPLICATION_DEPENDENCY_UNAVAILABLE"}'::jsonb
+          WHERE job_id = '20000000-0000-4000-8000-000000000001'`,
+      );
+      const beforeRace = await client.query(
+        `SELECT job.attempt::integer AS attempt,
+          count(checkpoint.*)::integer AS checkpoint_count,
+                coalesce(sum(checkpoint.effect_count), 0)::integer AS effect_count
+           FROM etf.jobs AS job
+           LEFT JOIN etf.job_checkpoints AS checkpoint ON checkpoint.job_id = job.job_id
+          WHERE job.job_id = '20000000-0000-4000-8000-000000000001'
+          GROUP BY job.job_id`,
+      );
+      const concurrentRestartClient = new pg.Client({ connectionString });
+      await concurrentRestartClient.connect();
+      try {
+        const restartRequest = JSON.stringify({
+          jobId: "20000000-0000-4000-8000-000000000001",
+        });
+        const restartRace = await Promise.allSettled([
+          client.query("SELECT etf.job_restart($1::jsonb) AS result", [restartRequest]),
+          concurrentRestartClient.query(
+            "SELECT etf.job_restart($1::jsonb) AS result",
+            [restartRequest],
+          ),
+        ]);
+        assert.equal(
+          restartRace.filter(({ status }) => status === "fulfilled").length,
+          1,
+        );
+        assert.equal(
+          restartRace.filter(({ status }) => status === "rejected").length,
+          1,
+        );
+        assert.match(
+          restartRace.find(({ status }) => status === "rejected").reason.message,
+          /APPLICATION_JOB_NOT_RESTARTABLE/,
+        );
+      } finally {
+        await concurrentRestartClient.end();
+      }
+      const afterRace = await client.query(
+        `SELECT job.status, job.attempt::integer AS attempt,
+                count(checkpoint.*)::integer AS checkpoint_count,
+                coalesce(sum(checkpoint.effect_count), 0)::integer AS effect_count
+           FROM etf.jobs AS job
+           LEFT JOIN etf.job_checkpoints AS checkpoint ON checkpoint.job_id = job.job_id
+          WHERE job.job_id = '20000000-0000-4000-8000-000000000001'
+          GROUP BY job.job_id`,
+      );
+      assert.deepEqual(afterRace.rows[0], {
+        status: "Pending",
+        attempt: beforeRace.rows[0].attempt + 1,
+        checkpoint_count: beforeRace.rows[0].checkpoint_count,
+        effect_count: beforeRace.rows[0].effect_count,
+      });
 
       const readinessId = "40000000-0000-4000-8000-000000000001";
       const readiness = await client.query(

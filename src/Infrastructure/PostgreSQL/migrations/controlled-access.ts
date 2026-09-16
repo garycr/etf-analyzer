@@ -168,8 +168,8 @@ BEGIN
     INTO checkpoint_value
     FROM etf.job_checkpoints AS checkpoint
    WHERE checkpoint.job_id = requested_job_id
-     AND checkpoint.attempt = job_row.attempt
-   ORDER BY checkpoint.sequence DESC
+     AND checkpoint.attempt <= job_row.attempt
+   ORDER BY checkpoint.attempt DESC, checkpoint.sequence DESC
    LIMIT 1;
   RETURN jsonb_build_object('job', jsonb_build_object(
     'jobId', job_row.job_id,

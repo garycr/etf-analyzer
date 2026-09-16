@@ -28,7 +28,7 @@ test("0002 application has the exact identity and closed table set", () => {
   ]);
   assert.equal(
     createHash("sha256").update(applicationMigration.sql, "utf8").digest("hex"),
-    "9865cd75bd6249b4a567daf840f95ad3d7b52bbf534060e87a34516fd0867fdb",
+    "ad458453834e72413f644e81e38829ae491a26a44f1ca03deeaf71349552c198",
   );
 });
 

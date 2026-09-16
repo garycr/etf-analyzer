@@ -411,6 +411,7 @@ SET search_path = pg_catalog, etf
 AS $function$
 DECLARE
   restarted_job etf.jobs%ROWTYPE;
+  checkpoint_value jsonb;
 BEGIN
   IF payload IS NULL
      OR jsonb_typeof(payload) <> 'object'
@@ -437,6 +438,19 @@ BEGIN
          controlling_error = NULL
    WHERE job_id = restarted_job.job_id
    RETURNING * INTO restarted_job;
+  SELECT jsonb_build_object(
+           'checkpointId', checkpoint.checkpoint_id,
+           'attempt', checkpoint.attempt,
+           'sequence', checkpoint.sequence,
+           'committedAt', to_char(checkpoint.committed_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+           'contentHash', checkpoint.content_hash
+         )
+    INTO checkpoint_value
+    FROM etf.job_checkpoints AS checkpoint
+   WHERE checkpoint.job_id = restarted_job.job_id
+     AND checkpoint.attempt <= restarted_job.attempt
+   ORDER BY checkpoint.attempt DESC, checkpoint.sequence DESC
+   LIMIT 1;
   RETURN jsonb_build_object(
     'jobId', restarted_job.job_id,
     'jobType', restarted_job.job_type,
@@ -449,6 +463,7 @@ BEGIN
     'createdAt', to_char(restarted_job.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
     'startedAt', NULL,
     'completedAt', NULL,
+    'checkpoint', checkpoint_value,
     'acceptedCount', restarted_job.accepted_count,
     'rejectedCount', restarted_job.rejected_count,
     'controllingError', NULL

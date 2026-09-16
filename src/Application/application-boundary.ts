@@ -47,6 +47,10 @@ export interface PaperOrderSubmissionRequest {
   readonly transitionCommandId: string;
 }
 
+export interface JobRestartRequest {
+  readonly jobId: string;
+}
+
 export interface PaperOrderConfirmation {
   readonly actorId: "local-user";
   readonly confirmedAt: string;
@@ -127,6 +131,13 @@ export function displayVerifiedResearch<Result>(
   research: CompleteVerifiedResearch<Result>,
 ): Result {
   return research.result;
+}
+
+export function restartDurableJob<Result>(
+  jobId: string,
+  ownerDispatch: (request: JobRestartRequest) => Result,
+): Result {
+  return ownerDispatch(Object.freeze({ jobId }));
 }
 
 const paperOrderNotDispatched = Object.freeze({

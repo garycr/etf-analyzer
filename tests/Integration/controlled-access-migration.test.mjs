@@ -28,8 +28,8 @@ const lockSql =
   "SELECT pg_catalog.pg_advisory_lock(pg_catalog.hashtextextended('etf:test:role-bootstrap', 0))";
 const unlockSql =
   "SELECT pg_catalog.pg_advisory_unlock(pg_catalog.hashtextextended('etf:test:role-bootstrap', 0))";
-const controlledAccessContentHash = "62d4c23bcb89cbf26d58af8a994c765d74cf64e2267c0ae52e240f2632be0235";
-const controlledAccessManifestHash = "03e42f1f4de6d150d98058f072a24649b5c66adbc177825f211e2e94d73a8d1c";
+const controlledAccessContentHash = "aa5d6d22b3da20eed8792a3db15f6c0b15b6cbfa30ade07678a543f1f6e16879";
+const controlledAccessManifestHash = "4341ce8bae3808fe78b670bedd074eb960f4844a48f2cedd68379d3d770a5210";
 
 async function cleanBootstrap(client) {
   await client.query("ROLLBACK").catch(() => undefined);
@@ -72,7 +72,7 @@ async function applyCompleteMigrationSet(client) {
       assert.equal(owner.rows[0]?.owner, "audit_writer_owner");
       await client.query(
         `INSERT INTO etf.jobs VALUES
-           ('10000000-0000-0000-0000-000000000001', 'Analytics', 'Pending', 'Restartable', 1,
+           ('10000000-0000-0000-0000-000000000001', 'Analytics', 'Pending', 'Restartable', 2,
             'AnalyticsRun', '10000000-0000-0000-0000-000000000002', '{}'::jsonb,
             '2026-09-14T00:04:00.000Z', NULL, NULL, 0, 0, NULL);
          INSERT INTO etf.job_checkpoints VALUES

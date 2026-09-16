@@ -6,6 +6,20 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-16 | WP-3 PT-APP-001D durable job restart accepted | Ring-2 | @code-reviewer
+
+**Type:** CODE-AND-SECURITY-REVIEW
+**review-outcome:** PASS; Critical 0 | Major 0 | Minor 0 open
+**Decision:** Accept atomic same-job restart, prior committed-checkpoint continuity, exact one-call application dispatch, and deterministic concurrent refusal
+**Policy:** DEC-023; DEC-028; DEC-030; DEC-032; WP-3; PT-APP-001D; code review; security review; test-first development
+**Authority:** Alternate-model Code Reviewer final recheck and Security Reviewer PASS
+**Accountability:** Solo Orchestrator preserves failed-job presentation for PT-APP-001E, runtime caller/input admission for PT-APP-001M, and replay for PT-APP-001N before continuing sequentially
+**Result:** Complete exact-CI PostgreSQL suite 299/299 with zero skips/failures; focused application 2/2, sequence 2 1/1, sequence 6 2/2; lint, diagnostics, audit, and diff checks pass
+**Artifact:** docs/Governance/decisions/reviews/REV-067-wp-3-durable-job-restart-code-review.md | docs/Governance/decisions/reviews/REV-068-wp-3-durable-job-restart-security-review.md | docs/artifacts/gate-evidence/wp-3-durable-job-restart.md
+**authorization-boundary:** PT-APP-001D only; no PT-APP-001E..P completion, WP-4 overlap, live provider, release, deployment, or production authority
+
+---
+
 ## 2026-09-16 | WP-3 PT-APP-001C paper confirmation dispatch accepted | Ring-2 | @code-reviewer
 
 **Type:** REVIEW-RECHECK

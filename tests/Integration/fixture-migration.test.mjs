@@ -294,7 +294,7 @@ test(
       );
       assert.equal(
         applied.schemaManifestHash,
-        "d23310c3534fa40c6aafdaa951000bab43409bd99cc69264a33c8c5e111dc9d5",
+        "dc95190e31e4d101a517398b669fcad70f90440d459c57f84cc362484200787a",
       );
 
       const owners = await client.query(

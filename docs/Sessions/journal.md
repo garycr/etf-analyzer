@@ -6,6 +6,20 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-16 | WP-3 PT-APP-001J research warning metadata accepted | Ring-2 | @code-reviewer
+
+**Type:** CODE-AND-SECURITY-REVIEW
+**review-outcome:** PASS; Critical 0 | Major 0 | Minor 0 open | Sev 1/2 security 0
+**Decision:** Accept immutable exact research-only warning metadata for analytical-result, evidence, and paper-action semantics with explicit non-applicability and fail-closed unknown classification
+**Policy:** DEC-023; DEC-028; DEC-030; DEC-032; WP-3; PT-APP-001J; code review; security review; test-first development
+**Authority:** Alternate-model Code Reviewer final recheck and Security Reviewer PASS
+**Accountability:** Solo Orchestrator preserves semantic result classification for full result composition and DOM association/status/announcement behavior for PT-APP-001L before continuing sequentially to PT-APP-001K
+**Result:** Focused 1/1; complete default suite 305 discovered, 275 passed, 30 environment-skipped, 0 failed; test quality 4.89/5; lint, diagnostics, audit, and diff checks pass
+**Artifact:** docs/Governance/decisions/reviews/REV-079-wp-3-research-warning-code-review.md | docs/Governance/decisions/reviews/REV-080-wp-3-research-warning-security-review.md | docs/artifacts/gate-evidence/wp-3-research-warning.md
+**authorization-boundary:** PT-APP-001J metadata only; no PT-APP-001K..P completion, full presentation composition, WP-4 overlap, live provider, release, deployment, or production authority
+
+---
+
 ## 2026-09-16 | WP-3 PT-APP-001I canonical display accepted | Ring-2 | @code-reviewer
 
 **Type:** CODE-AND-SECURITY-REVIEW

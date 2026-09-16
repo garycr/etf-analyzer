@@ -190,6 +190,23 @@ export interface CanonicalValuePresentation {
   readonly accessibleText: string;
 }
 
+export type ResearchWarningResultKind =
+  | "AnalyticalResult"
+  | "Evidence"
+  | "PaperAction"
+  | "NonAnalytical";
+
+export type ResearchWarningPresentation =
+  | {
+    readonly researchWarningRequired: true;
+    readonly warningText:
+      "Research only — hypothetical — user makes all investment decisions.";
+  }
+  | {
+    readonly researchWarningRequired: false;
+    readonly warningText: null;
+  };
+
 export interface FailedJobPresentation<Job extends FailedJobForPresentation> {
   readonly job: Job;
   readonly error: {
@@ -371,6 +388,32 @@ export function presentCanonicalValue(
     visibleText,
     accessibleText: visibleText,
   });
+}
+
+const requiredResearchWarning = Object.freeze({
+  researchWarningRequired: true as const,
+  warningText:
+    "Research only — hypothetical — user makes all investment decisions." as const,
+});
+const absentResearchWarning = Object.freeze({
+  researchWarningRequired: false as const,
+  warningText: null,
+});
+
+export function presentResearchWarning(
+  resultKind: ResearchWarningResultKind,
+): ResearchWarningPresentation {
+  switch (resultKind) {
+    case "AnalyticalResult":
+    case "Evidence":
+    case "PaperAction":
+      return requiredResearchWarning;
+    case "NonAnalytical":
+      return absentResearchWarning;
+    default:
+      resultKind satisfies never;
+      throw new Error("Research warning result kind is not supported");
+  }
 }
 
 export function evaluateReadiness(

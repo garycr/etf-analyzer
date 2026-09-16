@@ -12,6 +12,7 @@ import {
   presentCanonicalValue,
   presentFailedJob,
   presentOwnerFailure,
+  presentResearchWarning,
   readinessDependencyNames,
   restartDurableJob,
   submitConfirmedPaperOrder,
@@ -487,4 +488,40 @@ test("PT-APP-001I presents canonical values without semantic drift", () => {
     ]);
     assert.ok(Object.isFrozen(presentation));
   }
+});
+
+test("PT-APP-001J retains exact research warning metadata on refresh", () => {
+  const warningText =
+    "Research only — hypothetical — user makes all investment decisions.";
+
+  for (const resultKind of ["AnalyticalResult", "Evidence", "PaperAction"]) {
+    const initial = presentResearchWarning(resultKind);
+    const refreshed = presentResearchWarning(resultKind);
+
+    assert.deepEqual(initial, {
+      researchWarningRequired: true,
+      warningText,
+    });
+    assert.deepEqual(refreshed, initial);
+    assert.ok(Object.isFrozen(initial));
+    assert.deepEqual(Object.keys(initial), [
+      "researchWarningRequired",
+      "warningText",
+    ]);
+  }
+
+  const nonAnalytical = presentResearchWarning("NonAnalytical");
+  assert.deepEqual(nonAnalytical, {
+    researchWarningRequired: false,
+    warningText: null,
+  });
+  assert.ok(Object.isFrozen(nonAnalytical));
+  assert.deepEqual(Object.keys(nonAnalytical), [
+    "researchWarningRequired",
+    "warningText",
+  ]);
+  assert.throws(
+    () => presentResearchWarning("Unclassified"),
+    /Research warning result kind is not supported/,
+  );
 });

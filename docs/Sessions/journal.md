@@ -6,6 +6,36 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-15 | WP-2 PT-FIX-001O human approval | Ring-2 | @workspace-owner
+
+**Type:** APPROVAL
+**Decision:** Approve the reviewed PT-FIX-001O application-level provider-egress denial increment for bounded publication
+**Policy:** Human approval; WP-2; PT-FIX-001O; issue #70; REV-058
+**Authority:** Workspace Owner explicit approval
+**Accountability:** Solo Orchestrator publishes the approved increment without claiming deployment-level network isolation or complete WP-2 approval
+**Result:** REV-058 PASS and validated provider-egress denial evidence accepted for publication
+**authorization-boundary:** PT-FIX-001O application-level control only; no deployment firewall, container network policy, egress proxy, complete WP-2, legacy migration, release, deployment, or production action is authorized
+
+---
+
+## 2026-09-15 | REV-058 PT-FIX-001O provider egress denial accepted | Ring-2 | @code-reviewer
+
+**Type:** REVIEW-RECHECK
+**review-type:** code-and-test-conformance
+**review-outcome:** PASS; publication pending human approval
+**severity-counts:** Critical 0 | Major 0 | Minor 0 open
+**Decision:** Accept PT-FIX-001O application-level DNS and provider-connection denial with immutable zero-success evidence and no fixture substitution
+**Policy:** DEC-023; DEC-028; DEC-030; WP-2; PT-FIX-001O; issue #70; code review; test quality
+**Authority:** Alternate-model Code Reviewer final recheck closed endpoint disclosure, inconsistent denial-path, and malformed-endpoint coverage findings
+**Accountability:** Solo Orchestrator publishes only after Workspace Owner approval and does not claim deployment-level egress policy or complete WP-2 approval
+**Result:** Focused PT-FIX-001O test 1/1; complete repository suite 292 discovered, 262 passed, 30 environment-skipped, 0 failed; build, lint, diagnostics, audit, and diff checks pass
+**remediation:** Sanitized denial evidence to endpoint origin, redacted malformed endpoints, unified the fail-closed path, and proved zero DNS/network transport calls
+**Artifact:** docs/Governance/decisions/reviews/REV-058-wp-2-provider-egress-denial-review.md | docs/artifacts/gate-evidence/wp-2-provider-egress-denial.md | src/Application/foundation.ts | tests/Unit/fixture-package.test.mjs
+**authorization-boundary:** PT-FIX-001O application-level control only; no deployment firewall, container network policy, egress proxy, complete WP-2, legacy migration, release, deployment, or production authority
+**selector:** delegated
+
+---
+
 ## 2026-09-15 | WP-2 PT-FIX-001N human approval | Ring-2 | @workspace-owner
 
 **Type:** APPROVAL

@@ -6,6 +6,20 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-16 | WP-3 PT-APP-001M exact schema admission accepted | Ring-2 | @code-reviewer
+
+**Type:** CODE-AND-SECURITY-REVIEW
+**review-outcome:** PASS; Critical 0 | Major 0 open | Minor 0 open | Security findings 0 open
+**Decision:** Accept duplicate-aware raw request parsing, exact closed request/result schemas, zero malformed owner dispatch, canonical pre-dispatch Analytics identities, complete OT and Job coherence, ordinary recursively frozen acyclic opaque owner imports, and blocked-integrity value suppression
+**Policy:** DEC-023; DEC-028; DEC-030; DEC-032; DEC-033; WP-3; PT-APP-001M; application contract; code review; security review; test-first development
+**Authority:** Alternate-model Code Reviewer and Security Reviewer final PASS
+**Accountability:** Solo Orchestrator continues sequentially to PT-APP-001N replay identity, then PT-APP-001O precedence and PT-APP-001P result composition, while preserving owner authority and the closed 9-command/7-query catalog
+**Result:** Focused 2/2; complete default suite 310 discovered, 280 passed, 30 environment-skipped, 0 failed; test quality 4.5/5; lint, diagnostics, dependency audit, and diff checks pass
+**Artifact:** docs/Governance/decisions/reviews/REV-086-wp-3-exact-schema-admission-code-review.md | docs/Governance/decisions/reviews/REV-087-wp-3-exact-schema-admission-security-review.md | docs/artifacts/gate-evidence/wp-3-exact-schema-admission.md
+**authorization-boundary:** PT-APP-001M only; no PT-APP-001N..P completion, API/broker/provider/event/queue/scheduler/WP-4 surface, live provider, release, deployment, or production authority
+
+---
+
 ## 2026-09-16 | WP-3 PT-APP-001L accessible recovery accepted | Ring-2 | @code-reviewer
 
 **Type:** CODE-ACCESSIBILITY-AND-SECURITY-REVIEW

@@ -382,6 +382,423 @@ export class ApplicationOperationUnknownError extends Error {
   }
 }
 
+export class ApplicationRequestInvalidError extends Error {
+  readonly code = "APPLICATION_REQUEST_INVALID";
+
+  constructor() {
+    super("The application request is invalid");
+    this.name = "ApplicationRequestInvalidError";
+  }
+}
+
+export class ApplicationResultInvalidError extends Error {
+  readonly code = "APPLICATION_RESULT_INVALID";
+
+  constructor() {
+    super("The application result is invalid");
+    this.name = "ApplicationResultInvalidError";
+  }
+}
+
+class JsonMemberScanner {
+  private index = 0;
+
+  constructor(private readonly text: string) {}
+
+  scan(): void {
+    this.skipWhitespace();
+    this.scanValue();
+    this.skipWhitespace();
+    if (this.index !== this.text.length) {
+      throw new ApplicationRequestInvalidError();
+    }
+  }
+
+  private skipWhitespace(): void {
+    while (/\s/u.test(this.text[this.index] ?? "")) {
+      this.index += 1;
+    }
+  }
+
+  private scanValue(): void {
+    this.skipWhitespace();
+    const character = this.text[this.index];
+    if (character === "{") {
+      this.scanObject();
+      return;
+    }
+    if (character === "[") {
+      this.scanArray();
+      return;
+    }
+    if (character === '"') {
+      this.scanString();
+      return;
+    }
+    const start = this.index;
+    while (
+      this.index < this.text.length &&
+      !/[\s,}\]]/u.test(this.text[this.index] ?? "")
+    ) {
+      this.index += 1;
+    }
+    if (start === this.index) {
+      throw new ApplicationRequestInvalidError();
+    }
+  }
+
+  private scanObject(): void {
+    this.index += 1;
+    this.skipWhitespace();
+    const members = new Set<string>();
+    if (this.text[this.index] === "}") {
+      this.index += 1;
+      return;
+    }
+    while (true) {
+      if (this.text[this.index] !== '"') {
+        throw new ApplicationRequestInvalidError();
+      }
+      const member = this.scanString();
+      if (members.has(member)) {
+        throw new ApplicationRequestInvalidError();
+      }
+      members.add(member);
+      this.skipWhitespace();
+      if (this.text[this.index] !== ":") {
+        throw new ApplicationRequestInvalidError();
+      }
+      this.index += 1;
+      this.scanValue();
+      this.skipWhitespace();
+      if (this.text[this.index] === "}") {
+        this.index += 1;
+        return;
+      }
+      if (this.text[this.index] !== ",") {
+        throw new ApplicationRequestInvalidError();
+      }
+      this.index += 1;
+      this.skipWhitespace();
+    }
+  }
+
+  private scanArray(): void {
+    this.index += 1;
+    this.skipWhitespace();
+    if (this.text[this.index] === "]") {
+      this.index += 1;
+      return;
+    }
+    while (true) {
+      this.scanValue();
+      this.skipWhitespace();
+      if (this.text[this.index] === "]") {
+        this.index += 1;
+        return;
+      }
+      if (this.text[this.index] !== ",") {
+        throw new ApplicationRequestInvalidError();
+      }
+      this.index += 1;
+      this.skipWhitespace();
+    }
+  }
+
+  private scanString(): string {
+    const start = this.index;
+    this.index += 1;
+    while (this.index < this.text.length) {
+      const character = this.text[this.index];
+      if (character === "\\") {
+        this.index += 2;
+        continue;
+      }
+      this.index += 1;
+      if (character === '"') {
+        try {
+          return JSON.parse(this.text.slice(start, this.index)) as string;
+        } catch {
+          throw new ApplicationRequestInvalidError();
+        }
+      }
+    }
+    throw new ApplicationRequestInvalidError();
+  }
+}
+
+function invalidApplicationRequest(): never {
+  throw new ApplicationRequestInvalidError();
+}
+
+function requireClosedRecord(
+  value: unknown,
+  fields: readonly string[],
+): Record<string, unknown> {
+  if (
+    value === null ||
+    Array.isArray(value) ||
+    typeof value !== "object" ||
+    Object.getPrototypeOf(value) !== Object.prototype
+  ) {
+    return invalidApplicationRequest();
+  }
+  const actualFields = Object.keys(value).sort();
+  const expectedFields = [...fields].sort();
+  if (
+    actualFields.length !== expectedFields.length ||
+    actualFields.some((field, index) => field !== expectedFields[index])
+  ) {
+    return invalidApplicationRequest();
+  }
+  return value as Record<string, unknown>;
+}
+
+function isString(value: unknown): value is string {
+  return typeof value === "string";
+}
+
+function isUuid(value: unknown): value is string {
+  return typeof value === "string" && uuidPattern.test(value);
+}
+
+function isUInt(value: unknown): value is string {
+  return typeof value === "string" && /^(?:0|[1-9][0-9]*)$/u.test(value);
+}
+
+function isCanonicalDate(value: unknown): value is string {
+  if (typeof value !== "string" || !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/u.test(value)) {
+    return false;
+  }
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === value;
+}
+
+function isUtcInstant(value: unknown): value is string {
+  if (typeof value !== "string" || !utcInstantPattern.test(value)) {
+    return false;
+  }
+  const parsed = new Date(value);
+  return !Number.isNaN(parsed.valueOf()) && parsed.toISOString() === value;
+}
+
+function isScale10(value: unknown): value is string {
+  return typeof value === "string" && /^(?:0|[1-9][0-9]*)\.[0-9]{10}$/u.test(value);
+}
+
+function isScale8(value: unknown): value is string {
+  return typeof value === "string" && /^(?:0|[1-9][0-9]*)\.[0-9]{8}$/u.test(value);
+}
+
+function requireStringArray(
+  value: unknown,
+  options: Readonly<{ nonEmpty?: boolean; unique?: boolean; uuid?: boolean }> = {},
+): readonly string[] {
+  if (
+    !Array.isArray(value) ||
+    (options.nonEmpty === true && value.length === 0) ||
+    !value.every((item) => options.uuid === true ? isUuid(item) : isString(item)) ||
+    (options.unique === true && new Set(value).size !== value.length)
+  ) {
+    return invalidApplicationRequest();
+  }
+  return value;
+}
+
+function requireConfirmation(value: unknown): void {
+  const confirmation = requireClosedRecord(
+    value,
+    ["actorId", "confirmedAt", "confirmationText"],
+  );
+  if (
+    confirmation.actorId !== "local-user" ||
+    !isUtcInstant(confirmation.confirmedAt) ||
+    !isString(confirmation.confirmationText)
+  ) {
+    invalidApplicationRequest();
+  }
+}
+
+function requireTransitionPayload(transition: unknown, value: unknown): void {
+  if (typeof transition !== "string") {
+    invalidApplicationRequest();
+  }
+  let payload: Record<string, unknown>;
+  switch (transition) {
+    case "OT-02":
+      payload = requireClosedRecord(value, ["confirmation"]);
+      requireConfirmation(payload.confirmation);
+      return;
+    case "OT-03":
+      payload = requireClosedRecord(
+        value,
+        ["portfolioId", "validationSnapshotId", "expectedPortfolioVersion"],
+      );
+      if (
+        !isUuid(payload.portfolioId) ||
+        !isUuid(payload.validationSnapshotId) ||
+        !isUInt(payload.expectedPortfolioVersion)
+      ) invalidApplicationRequest();
+      return;
+    case "OT-04":
+    case "OT-07":
+    case "OT-10": {
+      const field = transition === "OT-04" ? "rejectionCode" : "reasonCode";
+      payload = requireClosedRecord(value, [field]);
+      if (!isString(payload[field])) invalidApplicationRequest();
+      return;
+    }
+    case "OT-05":
+    case "OT-06":
+    case "OT-09":
+      payload = requireClosedRecord(value, [
+        "portfolioId",
+        "transactionId",
+        "fillId",
+        "expectedPortfolioVersion",
+        "quantity",
+        "unitPrice",
+        "fee",
+      ]);
+      if (
+        !isUuid(payload.portfolioId) ||
+        !isUuid(payload.transactionId) ||
+        !isUuid(payload.fillId) ||
+        !isUInt(payload.expectedPortfolioVersion) ||
+        !isScale10(payload.quantity) ||
+        !isScale10(payload.unitPrice) ||
+        !isScale8(payload.fee)
+      ) invalidApplicationRequest();
+      return;
+    case "OT-08":
+      payload = requireClosedRecord(value, ["expiresAt"]);
+      if (!isUtcInstant(payload.expiresAt)) invalidApplicationRequest();
+      return;
+    default:
+      invalidApplicationRequest();
+  }
+}
+
+function validateApplicationPayload(
+  operation: ApplicationOperation,
+  payload: Record<string, unknown>,
+): Readonly<Record<string, unknown>> {
+  switch (operation) {
+    case "WatchlistPut": {
+      const record = requireClosedRecord(payload, ["instrumentId", "displayName", "expectedVersion"]);
+      if (!isString(record.instrumentId) || !isString(record.displayName) || !isUInt(record.expectedVersion)) invalidApplicationRequest();
+      return payload;
+    }
+    case "WatchlistRemove": {
+      const record = requireClosedRecord(payload, ["instrumentId", "expectedVersion"]);
+      if (!isString(record.instrumentId) || !isUInt(record.expectedVersion)) invalidApplicationRequest();
+      return payload;
+    }
+    case "WatchlistReorder": {
+      const record = requireClosedRecord(payload, ["orderedInstrumentIds", "expectedVersion"]);
+      requireStringArray(record.orderedInstrumentIds, { nonEmpty: true, unique: true });
+      if (!isUInt(record.expectedVersion)) invalidApplicationRequest();
+      return payload;
+    }
+    case "FixtureIngestionStart": {
+      const record = requireClosedRecord(payload, ["jobId", "datasetId", "datasetVersion", "fixturePackageHash"]);
+      if (!isUuid(record.jobId) || !isString(record.datasetId) || !isString(record.datasetVersion) || typeof record.fixturePackageHash !== "string" || !sha256Pattern.test(record.fixturePackageHash)) invalidApplicationRequest();
+      return payload;
+    }
+    case "JobRestart":
+    case "JobGet": {
+      const record = requireClosedRecord(payload, ["jobId"]);
+      if (!isUuid(record.jobId)) invalidApplicationRequest();
+      return payload;
+    }
+    case "AnalyticsRun": {
+      const record = requireClosedRecord(payload, ["jobId", "evidenceCommandId", "asOfDate", "configurationHash", "inputEvidenceIds"]);
+      if (!isUuid(record.jobId) || !isUuid(record.evidenceCommandId) || !isCanonicalDate(record.asOfDate) || typeof record.configurationHash !== "string" || !sha256Pattern.test(record.configurationHash)) invalidApplicationRequest();
+      const inputEvidenceIds = requireStringArray(
+        record.inputEvidenceIds,
+        { nonEmpty: true, unique: true, uuid: true },
+      );
+      return Object.freeze({
+        ...payload,
+        inputEvidenceIds: Object.freeze([...inputEvidenceIds].sort(compareCodePoints)),
+      });
+    }
+    case "PaperOrderDraftCreate": {
+      const record = requireClosedRecord(payload, ["orderId", "instrumentId", "researchEvidenceId", "side", "quantity", "unitPrice", "tradeDate"]);
+      if (!isUuid(record.orderId) || !isString(record.instrumentId) || !isUuid(record.researchEvidenceId) || (record.side !== "Buy" && record.side !== "Sell") || !isScale10(record.quantity) || !isScale10(record.unitPrice) || !isCanonicalDate(record.tradeDate)) invalidApplicationRequest();
+      return payload;
+    }
+    case "PaperOrderTransition": {
+      const record = requireClosedRecord(payload, ["orderId", "transitionCommandId", "expectedVersion", "transition", "transitionPayload"]);
+      if (!isUuid(record.orderId) || !isUuid(record.transitionCommandId) || !isUInt(record.expectedVersion)) invalidApplicationRequest();
+      requireTransitionPayload(record.transition, record.transitionPayload);
+      return payload;
+    }
+    case "DiagnosticsExportCreate": {
+      const record = requireClosedRecord(payload, ["exportId", "from", "through", "requestedCodes"]);
+      if (
+        !isUuid(record.exportId) ||
+        !isUtcInstant(record.from) ||
+        !isUtcInstant(record.through) ||
+        compareCodePoints(record.from, record.through) > 0
+      ) invalidApplicationRequest();
+      const codes = requireStringArray(record.requestedCodes, { nonEmpty: true, unique: true });
+      if (!codes.every((code) => stableCodePattern.test(code))) invalidApplicationRequest();
+      return payload;
+    }
+    case "WatchlistGet":
+    case "ReadinessGet":
+      requireClosedRecord(payload, []);
+      return payload;
+    case "AnalyticsResultGet": {
+      const record = requireClosedRecord(payload, ["publicationTargetId"]);
+      if (!isUuid(record.publicationTargetId)) invalidApplicationRequest();
+      return payload;
+    }
+    case "EvidenceGet": {
+      const record = requireClosedRecord(payload, ["evidenceId"]);
+      if (!isString(record.evidenceId)) invalidApplicationRequest();
+      return payload;
+    }
+    case "PaperOrderGet": {
+      const record = requireClosedRecord(payload, ["orderId"]);
+      if (!isUuid(record.orderId)) invalidApplicationRequest();
+      return payload;
+    }
+    case "PortfolioGet": {
+      const record = requireClosedRecord(payload, ["portfolioId", "asOf"]);
+      if (!isUuid(record.portfolioId) || !isUtcInstant(record.asOf)) invalidApplicationRequest();
+      return payload;
+    }
+  }
+}
+
+function freezeJsonValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    value.forEach(freezeJsonValue);
+    return Object.freeze(value);
+  }
+  if (value !== null && typeof value === "object") {
+    Object.values(value).forEach(freezeJsonValue);
+    return Object.freeze(value);
+  }
+  return value;
+}
+
+function parseApplicationPayload(payloadJson: string): Record<string, unknown> {
+  try {
+    new JsonMemberScanner(payloadJson).scan();
+    const parsed: unknown = JSON.parse(payloadJson);
+    const payload = requireClosedRecord(parsed, Object.keys(parsed as object));
+    return freezeJsonValue(payload) as Record<string, unknown>;
+  } catch (error) {
+    if (error instanceof ApplicationRequestInvalidError) {
+      throw error;
+    }
+    throw new ApplicationRequestInvalidError();
+  }
+}
+
 function createOperationDefinitions(): Map<string, ApplicationOperationDefinition> {
   const definitions = new Map<string, ApplicationOperationDefinition>();
   for (const [kind, operations] of [
@@ -415,6 +832,555 @@ export function dispatchApplicationOperation<Result>(
   handler: (definition: ApplicationOperationDefinition) => Result,
 ): Result {
   return handler(resolveApplicationOperation(operation));
+}
+
+export function dispatchValidatedApplicationRequest<Result>(
+  operation: string,
+  payloadJson: string,
+  ownerDispatch: (
+    definition: ApplicationOperationDefinition,
+    payload: Readonly<Record<string, unknown>>,
+  ) => Result,
+): Result {
+  const definition = resolveApplicationOperation(operation);
+  const payload = parseApplicationPayload(payloadJson);
+  const validatedPayload = validateApplicationPayload(definition.operation, payload);
+  return ownerDispatch(definition, validatedPayload);
+}
+
+function invalidApplicationResult(): never {
+  throw new ApplicationResultInvalidError();
+}
+
+function requireClosedResultRecord(
+  value: unknown,
+  fields: readonly string[],
+): Record<string, unknown> {
+  if (
+    value === null ||
+    Array.isArray(value) ||
+    typeof value !== "object" ||
+    (Object.getPrototypeOf(value) !== Object.prototype &&
+      Object.getPrototypeOf(value) !== null)
+  ) {
+    return invalidApplicationResult();
+  }
+  const actualFields = Object.keys(value).sort();
+  const expectedFields = [...fields].sort();
+  if (
+    actualFields.length !== expectedFields.length ||
+    actualFields.some((field, index) => field !== expectedFields[index])
+  ) {
+    return invalidApplicationResult();
+  }
+  return value as Record<string, unknown>;
+}
+
+function requireResultUInt(value: unknown): string {
+  if (!isUInt(value)) return invalidApplicationResult();
+  return value;
+}
+
+function compareUInt(left: string, right: string): number {
+  return left.length - right.length || (left < right ? -1 : left > right ? 1 : 0);
+}
+
+function compareCodePoints(left: string, right: string): number {
+  const leftPoints = Array.from(left, (character) => character.codePointAt(0) ?? 0);
+  const rightPoints = Array.from(right, (character) => character.codePointAt(0) ?? 0);
+  const length = Math.min(leftPoints.length, rightPoints.length);
+  for (let index = 0; index < length; index += 1) {
+    const difference = leftPoints[index]! - rightPoints[index]!;
+    if (difference !== 0) return difference;
+  }
+  return leftPoints.length - rightPoints.length;
+}
+
+function validateResultRecovery(value: unknown): Readonly<Record<string, unknown>> | null {
+  if (value === null) return null;
+  const recovery = requireClosedResultRecord(value, [
+    "actionId",
+    "label",
+    "targetOperation",
+    "focusTarget",
+    "requiresConfirmation",
+  ]);
+  if (
+    !isString(recovery.actionId) ||
+    !isString(recovery.label) ||
+    !isString(recovery.targetOperation) ||
+    !isString(recovery.focusTarget) ||
+    typeof recovery.requiresConfirmation !== "boolean"
+  ) invalidApplicationResult();
+  try {
+    resolveApplicationOperation(recovery.targetOperation);
+  } catch {
+    invalidApplicationResult();
+  }
+  return Object.freeze({ ...recovery });
+}
+
+function validateResultError(value: unknown): Readonly<Record<string, unknown>> {
+  const error = requireClosedResultRecord(value, [
+    "code",
+    "message",
+    "boundedIdentifiers",
+    "recovery",
+  ]);
+  if (!isString(error.code) || !isString(error.message)) invalidApplicationResult();
+  const identifiers = requireClosedResultRecord(
+    error.boundedIdentifiers,
+    Object.keys(error.boundedIdentifiers as object),
+  );
+  if (!Object.values(identifiers).every(isString)) invalidApplicationResult();
+  return Object.freeze({
+    code: error.code,
+    message: error.message,
+    boundedIdentifiers: Object.freeze({ ...identifiers }),
+    recovery: validateResultRecovery(error.recovery),
+  });
+}
+
+function validateWatchlistItem(value: unknown): Readonly<Record<string, unknown>> {
+  const item = requireClosedResultRecord(value, [
+    "instrumentId",
+    "displayName",
+    "validationState",
+    "position",
+  ]);
+  if (
+    !isString(item.instrumentId) ||
+    !isString(item.displayName) ||
+    (item.validationState !== "Valid" && item.validationState !== "Invalid") ||
+    !isUInt(item.position)
+  ) invalidApplicationResult();
+  return Object.freeze({ ...item });
+}
+
+function validateWatchlistItems(value: unknown): readonly Readonly<Record<string, unknown>>[] {
+  if (!Array.isArray(value)) return invalidApplicationResult();
+  const items = value.map(validateWatchlistItem);
+  const identities = items.map((item) => item.instrumentId as string);
+  if (new Set(identities).size !== identities.length) invalidApplicationResult();
+  return Object.freeze(items.sort((left, right) =>
+    compareUInt(left.position as string, right.position as string) ||
+    compareCodePoints(left.instrumentId as string, right.instrumentId as string)
+  ));
+}
+
+function validateJobInputIdentity(
+  jobType: unknown,
+  value: unknown,
+): Readonly<Record<string, unknown>> {
+  if (jobType === "FixtureIngestion") {
+    const identity = requireClosedResultRecord(value, [
+      "datasetId",
+      "datasetVersion",
+      "fixturePackageHash",
+    ]);
+    if (
+      !isString(identity.datasetId) ||
+      !isString(identity.datasetVersion) ||
+      typeof identity.fixturePackageHash !== "string" ||
+      !sha256Pattern.test(identity.fixturePackageHash)
+    ) invalidApplicationResult();
+    return Object.freeze({ ...identity });
+  }
+  if (jobType === "Analytics") {
+    const identity = requireClosedResultRecord(value, [
+      "evidenceCommandId",
+      "asOfDate",
+      "configurationHash",
+      "inputEvidenceIds",
+    ]);
+    const inputEvidenceIds = Array.isArray(identity.inputEvidenceIds)
+      ? identity.inputEvidenceIds
+      : invalidApplicationResult();
+    if (
+      !isUuid(identity.evidenceCommandId) ||
+      !isCanonicalDate(identity.asOfDate) ||
+      typeof identity.configurationHash !== "string" ||
+      !sha256Pattern.test(identity.configurationHash) ||
+      inputEvidenceIds.length === 0 ||
+      !inputEvidenceIds.every(isUuid) ||
+      new Set(inputEvidenceIds).size !== inputEvidenceIds.length
+    ) invalidApplicationResult();
+    return Object.freeze({
+      ...identity,
+      inputEvidenceIds: Object.freeze([...inputEvidenceIds].sort(compareCodePoints)),
+    });
+  }
+  return invalidApplicationResult();
+}
+
+function validateJobCheckpoint(value: unknown): Readonly<Record<string, unknown>> | null {
+  if (value === null) return null;
+  const checkpoint = requireClosedResultRecord(value, [
+    "checkpointId",
+    "attempt",
+    "sequence",
+    "committedAt",
+    "contentHash",
+  ]);
+  if (
+    !isUuid(checkpoint.checkpointId) ||
+    !isUInt(checkpoint.attempt) ||
+    !isUInt(checkpoint.sequence) ||
+    !isUtcInstant(checkpoint.committedAt) ||
+    typeof checkpoint.contentHash !== "string" ||
+    !sha256Pattern.test(checkpoint.contentHash)
+  ) invalidApplicationResult();
+  return Object.freeze({ ...checkpoint });
+}
+
+function validateJob(value: unknown): Readonly<Record<string, unknown>> {
+  const job = requireClosedResultRecord(value, [
+    "jobId", "jobType", "status", "restartability", "attempt", "operation",
+    "originalCommandId", "inputIdentity", "createdAt", "startedAt", "completedAt",
+    "checkpoint", "acceptedCount", "rejectedCount", "controllingError",
+  ]);
+  if (
+    !isUuid(job.jobId) ||
+    (job.jobType !== "FixtureIngestion" && job.jobType !== "Analytics") ||
+    !["Pending", "Running", "Succeeded", "Failed"].includes(job.status as string) ||
+    (job.restartability !== "Restartable" && job.restartability !== "NotRestartable") ||
+    !isUInt(job.attempt) ||
+    (job.operation !== "FixtureIngestionStart" && job.operation !== "AnalyticsRun") ||
+    !isUuid(job.originalCommandId) ||
+    !isUtcInstant(job.createdAt) ||
+    (job.startedAt !== null && !isUtcInstant(job.startedAt)) ||
+    (job.completedAt !== null && !isUtcInstant(job.completedAt)) ||
+    !isUInt(job.acceptedCount) ||
+    !isUInt(job.rejectedCount) ||
+    (job.jobType === "FixtureIngestion" && job.operation !== "FixtureIngestionStart") ||
+    (job.jobType === "Analytics" && job.operation !== "AnalyticsRun") ||
+    (job.status === "Pending" &&
+      (job.startedAt !== null || job.completedAt !== null || job.controllingError !== null)) ||
+    (job.status === "Running" &&
+      (job.startedAt === null || job.completedAt !== null || job.controllingError !== null)) ||
+    (job.status === "Succeeded" &&
+      (job.startedAt === null || job.completedAt === null || job.controllingError !== null)) ||
+    (job.status === "Failed" &&
+      (job.completedAt === null || job.controllingError === null))
+  ) invalidApplicationResult();
+  return Object.freeze({
+    ...job,
+    inputIdentity: validateJobInputIdentity(job.jobType, job.inputIdentity),
+    checkpoint: validateJobCheckpoint(job.checkpoint),
+    controllingError: job.controllingError === null
+      ? null
+      : validateResultError(job.controllingError),
+  });
+}
+
+function validateReadiness(value: unknown): Readonly<Record<string, unknown>> {
+  const readiness = requireClosedResultRecord(value, [
+    "state", "checkedAt", "displayTimezone", "liveness", "dependencies", "controllingError",
+  ]);
+  if (
+    (readiness.state !== "Ready" && readiness.state !== "NotReady") ||
+    !isUtcInstant(readiness.checkedAt) ||
+    readiness.displayTimezone !== "UTC" ||
+    (readiness.liveness !== "Live" && readiness.liveness !== "NotLive") ||
+    !Array.isArray(readiness.dependencies) ||
+    (readiness.state === "Ready") !== (readiness.controllingError === null)
+  ) invalidApplicationResult();
+  const dependencies = readiness.dependencies.map((value) => {
+    const dependency = requireClosedResultRecord(
+      value,
+      ["dependency", "state", "checkedAt", "code"],
+    );
+    if (
+      !readinessDependencyNames.includes(dependency.dependency as ReadinessDependencyName) ||
+      (dependency.state !== "Ready" && dependency.state !== "NotReady") ||
+      !isUtcInstant(dependency.checkedAt) ||
+      (dependency.code !== null && !isString(dependency.code)) ||
+      (dependency.state === "Ready") !== (dependency.code === null)
+    ) invalidApplicationResult();
+    return Object.freeze({ ...dependency });
+  });
+  if (
+    dependencies.length !== readinessDependencyNames.length ||
+    new Set(dependencies.map((item) => item.dependency)).size !== dependencies.length
+  ) invalidApplicationResult();
+  dependencies.sort((left, right) =>
+    readinessDependencyNames.indexOf(left.dependency as ReadinessDependencyName) -
+    readinessDependencyNames.indexOf(right.dependency as ReadinessDependencyName)
+  );
+  return Object.freeze({
+    ...readiness,
+    dependencies: Object.freeze(dependencies),
+    controllingError: readiness.controllingError === null
+      ? null
+      : validateResultError(readiness.controllingError),
+  });
+}
+
+function validateResultConfirmation(value: unknown): Readonly<Record<string, unknown>> | null {
+  if (value === null) return null;
+  const confirmation = requireClosedResultRecord(
+    value,
+    ["actorId", "confirmedAt", "confirmationText"],
+  );
+  if (
+    confirmation.actorId !== "local-user" ||
+    !isUtcInstant(confirmation.confirmedAt) ||
+    !isString(confirmation.confirmationText)
+  ) invalidApplicationResult();
+  return Object.freeze({ ...confirmation });
+}
+
+const orderStates = new Set([
+  "Draft", "Submitted", "Accepted", "Partial", "Filled", "Rejected", "Canceled", "Expired",
+]);
+const orderTransitions = new Set([
+  "OT-01", "OT-02", "OT-03", "OT-04", "OT-05", "OT-06", "OT-07", "OT-08", "OT-09", "OT-10",
+]);
+const orderTransitionRows = Object.freeze({
+  "OT-01": Object.freeze({ sourceState: "Initial", targetState: "Draft", trigger: "UserCreatedFromResearch" }),
+  "OT-02": Object.freeze({ sourceState: "Draft", targetState: "Submitted", trigger: "UserConfirmedPaperAction" }),
+  "OT-03": Object.freeze({ sourceState: "Submitted", targetState: "Accepted", trigger: "PortfolioValidationPassed" }),
+  "OT-04": Object.freeze({ sourceState: "Submitted", targetState: "Rejected", trigger: "PortfolioValidationFailed" }),
+  "OT-05": Object.freeze({ sourceState: "Accepted", targetState: "Partial", trigger: "LocalPartialFillSimulated" }),
+  "OT-06": Object.freeze({ sourceState: "Accepted", targetState: "Filled", trigger: "LocalCompleteFillSimulated" }),
+  "OT-07": Object.freeze({ sourceState: "Accepted", targetState: "Canceled", trigger: "UserCanceledOpenQuantity" }),
+  "OT-08": Object.freeze({ sourceState: "Accepted", targetState: "Expired", trigger: "DeterministicExpiryReached" }),
+  "OT-09": Object.freeze({ sourceState: "Partial", targetState: "Filled", trigger: "LocalRemainderFillSimulated" }),
+  "OT-10": Object.freeze({ sourceState: "Partial", targetState: "Canceled", trigger: "UserCanceledRemainingQuantity" }),
+});
+
+function validateOrderTransitionRecord(value: unknown): Readonly<Record<string, unknown>> {
+  const transition = requireClosedResultRecord(value, [
+    "transitionCommandId", "transition", "sourceState", "targetState", "trigger",
+    "occurredAt", "actorId", "correlationId", "priorVersion", "resultingVersion", "baselineVersion",
+  ]);
+  const row = orderTransitionRows[transition.transition as keyof typeof orderTransitionRows];
+  if (
+    !isUuid(transition.transitionCommandId) ||
+    !orderTransitions.has(transition.transition as string) ||
+    (transition.sourceState !== "Initial" && !orderStates.has(transition.sourceState as string)) ||
+    !orderStates.has(transition.targetState as string) ||
+    !isString(transition.trigger) ||
+    !isUtcInstant(transition.occurredAt) ||
+    transition.actorId !== "local-user" ||
+    !isUuid(transition.correlationId) ||
+    !isUInt(transition.priorVersion) ||
+    !isUInt(transition.resultingVersion) ||
+    transition.baselineVersion !== "v1.0.0" ||
+    row === undefined ||
+    transition.sourceState !== row.sourceState ||
+    transition.targetState !== row.targetState ||
+    transition.trigger !== row.trigger
+  ) invalidApplicationResult();
+  return Object.freeze({ ...transition });
+}
+
+function validatePaperOrder(value: unknown): Readonly<Record<string, unknown>> {
+  const order = requireClosedResultRecord(value, [
+    "orderId", "instrumentId", "state", "aggregateVersion", "researchEvidenceId", "side",
+    "requestedQuantity", "filledQuantity", "openQuantity", "unitPrice", "tradeDate",
+    "confirmation", "transitionHistory",
+  ]);
+  if (
+    !isUuid(order.orderId) ||
+    !isString(order.instrumentId) ||
+    !orderStates.has(order.state as string) ||
+    !isUInt(order.aggregateVersion) ||
+    !isUuid(order.researchEvidenceId) ||
+    (order.side !== "Buy" && order.side !== "Sell") ||
+    !isScale10(order.requestedQuantity) ||
+    !isScale10(order.filledQuantity) ||
+    !isScale10(order.openQuantity) ||
+    !isScale10(order.unitPrice) ||
+    !isCanonicalDate(order.tradeDate) ||
+    !Array.isArray(order.transitionHistory)
+  ) invalidApplicationResult();
+  const transitionHistory = order.transitionHistory.map(validateOrderTransitionRecord)
+    .sort((left, right) =>
+      compareUInt(left.resultingVersion as string, right.resultingVersion as string) ||
+      compareCodePoints(left.transitionCommandId as string, right.transitionCommandId as string)
+    );
+  return Object.freeze({
+    ...order,
+    confirmation: validateResultConfirmation(order.confirmation),
+    transitionHistory: Object.freeze(transitionHistory),
+  });
+}
+
+function validateDiagnosticExport(value: unknown): Readonly<Record<string, unknown>> {
+  const diagnosticExport = requireClosedResultRecord(value, [
+    "exportId", "createdAt", "codes", "itemCount", "contentHash",
+  ]);
+  if (
+    !isUuid(diagnosticExport.exportId) ||
+    !isUtcInstant(diagnosticExport.createdAt) ||
+    !Array.isArray(diagnosticExport.codes) ||
+    diagnosticExport.codes.length === 0 ||
+    !diagnosticExport.codes.every((code) =>
+      typeof code === "string" && stableCodePattern.test(code)
+    ) ||
+    new Set(diagnosticExport.codes).size !== diagnosticExport.codes.length ||
+    !isUInt(diagnosticExport.itemCount) ||
+    typeof diagnosticExport.contentHash !== "string" ||
+    !sha256Pattern.test(diagnosticExport.contentHash)
+  ) invalidApplicationResult();
+  return Object.freeze({
+    ...diagnosticExport,
+    codes: Object.freeze([...diagnosticExport.codes].sort(compareCodePoints)),
+  });
+}
+
+function validatePortfolioLot(value: unknown): Readonly<Record<string, unknown>> {
+  const lot = requireClosedResultRecord(value, [
+    "lotId", "instrumentId", "acquiredAt", "ledgerSequence", "openQuantity", "openBasis",
+  ]);
+  if (
+    !isUuid(lot.lotId) || !isString(lot.instrumentId) || !isUtcInstant(lot.acquiredAt) ||
+    !isUInt(lot.ledgerSequence) || !isScale10(lot.openQuantity) || !isScale8(lot.openBasis)
+  ) invalidApplicationResult();
+  return Object.freeze({ ...lot });
+}
+
+function validatePortfolioPosition(value: unknown): Readonly<Record<string, unknown>> {
+  const position = requireClosedResultRecord(value, [
+    "instrumentId", "quantity", "basis", "valuation", "unrealizedPnL",
+  ]);
+  if (
+    !isString(position.instrumentId) || !isScale10(position.quantity) ||
+    !isScale8(position.basis) || !isScale8(position.valuation) ||
+    !isScale8(position.unrealizedPnL)
+  ) invalidApplicationResult();
+  return Object.freeze({ ...position });
+}
+
+function validatePortfolio(value: unknown): Readonly<Record<string, unknown>> {
+  const portfolio = requireClosedResultRecord(value, [
+    "portfolioId", "portfolioVersion", "asOf", "valuationSnapshotId",
+    "precisionPolicyVersion", "baselineVersion", "cash", "lots", "positions",
+    "realizedPnL", "totalEquity", "reconciliationState",
+  ]);
+  if (
+    !isUuid(portfolio.portfolioId) || !isUInt(portfolio.portfolioVersion) ||
+    !isUtcInstant(portfolio.asOf) || !isUuid(portfolio.valuationSnapshotId) ||
+    portfolio.precisionPolicyVersion !== "DEC-014" || portfolio.baselineVersion !== "v1.0.0" ||
+    !isScale8(portfolio.cash) || !Array.isArray(portfolio.lots) ||
+    !Array.isArray(portfolio.positions) || !isScale8(portfolio.realizedPnL) ||
+    !isScale8(portfolio.totalEquity) ||
+    (portfolio.reconciliationState !== "Reconciled" && portfolio.reconciliationState !== "IntegrityBlocked")
+  ) invalidApplicationResult();
+  const lots = portfolio.lots.map(validatePortfolioLot).sort((left, right) =>
+    compareCodePoints(left.acquiredAt as string, right.acquiredAt as string) ||
+    compareUInt(left.ledgerSequence as string, right.ledgerSequence as string) ||
+    compareCodePoints(left.lotId as string, right.lotId as string)
+  );
+  const positions = portfolio.positions.map(validatePortfolioPosition).sort((left, right) =>
+    compareCodePoints(left.instrumentId as string, right.instrumentId as string)
+  );
+  if (
+    portfolio.reconciliationState === "IntegrityBlocked" &&
+    (lots.length !== 0 ||
+      positions.length !== 0 ||
+      portfolio.cash !== "0.00000000" ||
+      portfolio.realizedPnL !== "0.00000000" ||
+      portfolio.totalEquity !== "0.00000000")
+  ) invalidApplicationResult();
+  return Object.freeze({
+    ...portfolio,
+    lots: Object.freeze(lots),
+    positions: Object.freeze(positions),
+  });
+}
+
+function requireOpaqueOwnerRecord(value: unknown): Readonly<Record<string, unknown>> {
+  if (
+    value === null || Array.isArray(value) || typeof value !== "object" ||
+    Object.getPrototypeOf(value) !== Object.prototype ||
+    !isRecursivelyFrozen(value)
+  ) invalidApplicationResult();
+  return value as Readonly<Record<string, unknown>>;
+}
+
+function isRecursivelyFrozen(
+  value: unknown,
+  activeObjects = new WeakSet<object>(),
+): boolean {
+  if (value === null || typeof value !== "object" || !Object.isFrozen(value)) {
+    return value === null || typeof value !== "object";
+  }
+  if (activeObjects.has(value)) {
+    return false;
+  }
+  activeObjects.add(value);
+  const recursivelyFrozen = Object.values(value).every((member) =>
+    isRecursivelyFrozen(member, activeObjects)
+  );
+  activeObjects.delete(value);
+  return recursivelyFrozen;
+}
+
+export function validateApplicationSuccessData(
+  operation: string,
+  value: unknown,
+): Readonly<Record<string, unknown>> {
+  const definition = resolveApplicationOperation(operation);
+  let data: Record<string, unknown>;
+  switch (definition.operation) {
+    case "WatchlistPut":
+      data = requireClosedResultRecord(value, ["item", "version"]);
+      return Object.freeze({ item: validateWatchlistItem(data.item), version: requireResultUInt(data.version) });
+    case "WatchlistRemove":
+      data = requireClosedResultRecord(value, ["version"]);
+      return Object.freeze({ version: requireResultUInt(data.version) });
+    case "WatchlistReorder":
+    case "WatchlistGet":
+      data = requireClosedResultRecord(value, ["orderedItems", "version"]);
+      return Object.freeze({ orderedItems: validateWatchlistItems(data.orderedItems), version: requireResultUInt(data.version) });
+    case "FixtureIngestionStart":
+    case "JobRestart":
+    case "AnalyticsRun":
+    case "JobGet":
+      data = requireClosedResultRecord(value, ["job"]);
+      return Object.freeze({ job: validateJob(data.job) });
+    case "PaperOrderDraftCreate":
+    case "PaperOrderTransition":
+    case "PaperOrderGet":
+      data = requireClosedResultRecord(value, ["order"]);
+      return Object.freeze({ order: validatePaperOrder(data.order) });
+    case "DiagnosticsExportCreate":
+      data = requireClosedResultRecord(value, ["export"]);
+      return Object.freeze({ export: validateDiagnosticExport(data.export) });
+    case "ReadinessGet":
+      data = requireClosedResultRecord(value, ["readiness"]);
+      return Object.freeze({ readiness: validateReadiness(data.readiness) });
+    case "AnalyticsResultGet":
+      data = requireClosedResultRecord(value, ["result"]);
+      return Object.freeze({ result: requireOpaqueOwnerRecord(data.result) });
+    case "EvidenceGet":
+      data = requireClosedResultRecord(value, ["evidence"]);
+      return Object.freeze({ evidence: requireOpaqueOwnerRecord(data.evidence) });
+    case "PortfolioGet":
+      data = requireClosedResultRecord(value, ["portfolio"]);
+      return Object.freeze({ portfolio: validatePortfolio(data.portfolio) });
+  }
+}
+
+export function dispatchValidatedApplicationOperation(
+  operation: string,
+  payloadJson: string,
+  ownerDispatch: (
+    definition: ApplicationOperationDefinition,
+    payload: Readonly<Record<string, unknown>>,
+  ) => unknown,
+): Readonly<Record<string, unknown>> {
+  return dispatchValidatedApplicationRequest(
+    operation,
+    payloadJson,
+    (definition, payload) =>
+      validateApplicationSuccessData(
+        definition.operation,
+        ownerDispatch(definition, payload),
+      ),
+  );
 }
 
 export function displayVerifiedResearch<Result>(
@@ -775,7 +1741,7 @@ const prohibitedDiagnosticFieldPattern =
   /(apikey|brokerageartifact|commandpayload|connectionstring|credential|databaseurl|environmentsecret|kubernetessecret|password|protectedanchorkey|rawfixturesource|rawprovider|requestpayload|secret|sourceurl|sql|stack|symbol|token|userenteredtext)/i;
 const stableCodePattern = /^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+$/u;
 const uuidPattern =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 const utcInstantPattern =
   /^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]\.[0-9]{3}Z$/u;
 const sha256Pattern = /^[0-9a-f]{64}$/u;

@@ -28,10 +28,33 @@
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-031 | 2026-09-15 | Package closure | Close WP-2 conditionally and authorize WP-3 as the next sequential package | Agent (Fully Agentic) | Solo Orchestrator | Active |
 | DEC-032 | 2026-09-16 | Remediation closure | Close #71 after complete fixture identity mediation and stable PostgreSQL check errors | Agent (Fully Agentic) | Solo Orchestrator | Active |
+| DEC-033 | 2026-09-16 | Contract admission | Close PT-APP-001M with exact duplicate-aware request and coherent result admission | Agent (Fully Agentic) | Solo Orchestrator | Active |
 
 ---
 
 ## Decision Records
+
+### DEC-033: Close Exact Application Schema Admission
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-033 |
+| **Date** | 2026-09-16 |
+| **Category** | Contract admission |
+| **Decision** | Close PT-APP-001M after enforcing duplicate-aware raw JSON admission, exact request and result schemas, owner-dispatch suppression, pre-dispatch Analytics identity ordering, complete transition and Job coherence, and cycle-safe opaque owner imports |
+| **Policy** | DEC-023; DEC-028; DEC-030; DEC-032; approved WP-3 application contract; test-first development; code review; security review |
+| **Authority** | Agent (Fully Agentic), with alternate-model Code Reviewer and Security Reviewer final PASS dispositions |
+| **Accountable** | Solo Orchestrator publishes only PT-APP-001M artifacts, continues next to PT-APP-001N, and keeps precedence, composition, WP-4, release, deployment, and production gates closed |
+| **Context** | The application catalog existed but runtime callers could not yet submit raw records through one exact admission boundary, and owner results lacked complete state-machine coherence checks. Initial review exposed unsorted replay-affecting Analytics identities, incomplete OT coverage, under-constrained Jobs, and permissive opaque record handling. |
+| **Alternatives** | Rely on transport parsing; validate only top-level fields; admit owner data without coherence checks; close exact transport-independent admission before replay composition |
+| **Consequences** | All 16 operations now reject malformed or duplicate-bearing records before owner dispatch and admit only exact coherent success projections. Analytics replay identities are canonical before ownership transfer. Opaque owner records retain identity but must be ordinary, recursively frozen, and acyclic. Replay conflict semantics remain PT-APP-001N. |
+| **Reasoning** | Exact application admission must be transport-independent and precede replay handling so malformed, ambiguous, or noncanonical identities cannot reach owning contracts or acquire cached outcomes. Result coherence is part of the same trust boundary because independently valid fields can still encode impossible state. |
+| **Assumptions** | The catalog remains closed at 9 commands and 7 queries; AnalyticsResult and Evidence remain opaque owner imports; no API, broker, provider, event, queue, scheduler, or WP-4 surface is introduced. |
+| **Invalidation** | A catalog operation or schema change; a different replay identity policy; transport-specific admission replacing this boundary; mutable/cyclic owner imports becoming contractual; or a new transition/Job state |
+| **Status** | Active; PT-APP-001M complete and PT-APP-001N is next sequentially |
+| **Linked Artifacts** | `docs/artifacts/gate-evidence/wp-3-exact-schema-admission.md`, `docs/Governance/decisions/reviews/REV-086-wp-3-exact-schema-admission-code-review.md`, `docs/Governance/decisions/reviews/REV-087-wp-3-exact-schema-admission-security-review.md`, GitHub issue #73 |
+
+---
 
 ### DEC-032: Close Fixture Identity And Stable-Error Remediation
 

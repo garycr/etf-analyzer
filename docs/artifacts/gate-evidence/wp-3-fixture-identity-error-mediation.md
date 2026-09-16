@@ -10,6 +10,10 @@ Application fixture validation now enforces every governed market and economic o
 
 The PostgreSQL trust boundary now mirrors the application `datasetId` grammar and maps `check_violation` to `FIXTURE_MANIFEST_INVALID`. Direct `fixture_ingest(jsonb)` vectors prove malformed provider and self-consistent malformed dataset identities are rejected atomically with zero package, descriptor, raw-source, market, or replay rows.
 
+## Dataset Approval Boundary
+
+GitHub #71 does not add or change any entry in `approvedDatasetHashes`. Existing `PT-FIX-001A` coverage proves a self-consistent byte, descriptor, and dataset-hash replacement under the approved golden identity returns `FIXTURE_IDEMPOTENCY_CONFLICT`. Structurally validating a new version does not make it command-trusted: WP-3 has not yet implemented that acceptance boundary, and issue #73 retains default-deny until a dataset identity/hash receives governed review and executable command-level approval coverage.
+
 ## Test-First Evidence
 
 - Application red: the malformed lowercase market instrument survived structural validation and failed later as `FIXTURE_UNDECLARED_INPUT`.

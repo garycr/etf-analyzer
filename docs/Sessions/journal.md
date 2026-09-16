@@ -6,6 +6,20 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-16 | WP-3 PT-APP-001P closed Job state machine accepted | Ring-2 | @code-reviewer
+
+**Type:** CODE-AND-SECURITY-REVIEW
+**review-outcome:** PASS; Critical 0 | Major 0 open | Minor 0 open | Security findings 0 open
+**Decision:** Accept exact Job enums and four-field state projections, four owner transitions, restartable Failed-to-Pending only through JobRestart, exact attempt increment, descriptor-captured runtime admission, and immutable fail-closed results
+**Policy:** DEC-023; DEC-028; DEC-030; DEC-032; DEC-033; DEC-034; DEC-035; DEC-036; WP-3; PT-APP-001P; application contract; code review; security review; test-first development
+**Authority:** Alternate-model Code Reviewer and Security Reviewer final PASS
+**Accountability:** Solo Orchestrator assembles aggregate WP-3 closure next, preserves full Job/checkpoint/effect persistence under owners, and excludes cancellation, asynchronous delivery, WP-4, release, deployment, and production authority
+**Result:** Focused 1/1 across 128 policy vectors and adversarial reflection/numeric cases; complete default suite 317 discovered, 287 passed, 30 environment-skipped, 0 failed; test quality 4.63/5; lint, diagnostics, dependency audit, and diff checks pass
+**Artifact:** docs/Governance/decisions/reviews/REV-092-wp-3-job-state-machine-code-review.md | docs/Governance/decisions/reviews/REV-093-wp-3-job-state-machine-security-review.md | docs/artifacts/gate-evidence/wp-3-job-state-machine.md
+**authorization-boundary:** PT-APP-001P exact state policy only; no full Job persistence transfer, cancellation, API/broker/provider/event/outbox/queue/scheduler/worker/delayed-consumer/WP-4 surface, aggregate WP-3 closure, live provider, release, deployment, or production authority
+
+---
+
 ## 2026-09-16 | WP-3 PT-APP-001O deterministic error precedence accepted | Ring-2 | @code-reviewer
 
 **Type:** CODE-AND-SECURITY-REVIEW

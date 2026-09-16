@@ -2,11 +2,15 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  ApplicationJobTransitionError,
   ApplicationRequestInvalidError,
   ApplicationResultInvalidError,
   ApplicationOperationUnknownError,
   ApplicationUnauthorizedError,
   applicationCommandOperations,
+  applicationJobRestartability,
+  applicationJobStatuses,
+  applicationJobTypes,
   applicationQueryOperations,
   activateBlockedStateRecovery,
   dispatchApplicationOperation,
@@ -27,6 +31,7 @@ import {
   restartDurableJob,
   selectControllingApplicationError,
   submitConfirmedPaperOrder,
+  transitionApplicationJobState,
   validateApplicationSuccessData,
   resolveApplicationOperation,
 } from "../../dist/Application/application-boundary.js";
@@ -1778,4 +1783,139 @@ test("PT-APP-001O applies precedence on the command admission path", () => {
   );
   assert.equal(readinessCalls, 0);
   assert.equal(ownerCalls, 0);
+});
+
+test("PT-APP-001P admits only the closed immutable job transitions", () => {
+  assert.deepEqual(applicationJobTypes, ["FixtureIngestion", "Analytics"]);
+  assert.deepEqual(applicationJobStatuses, ["Pending", "Running", "Succeeded", "Failed"]);
+  assert.deepEqual(applicationJobRestartability, ["Restartable", "NotRestartable"]);
+
+  const legalOwnerTransitions = new Set([
+    "Pending:Running",
+    "Pending:Failed",
+    "Running:Succeeded",
+    "Running:Failed",
+  ]);
+
+  for (const jobType of applicationJobTypes) {
+    for (const restartability of applicationJobRestartability) {
+      for (const sourceStatus of applicationJobStatuses) {
+        for (const targetStatus of applicationJobStatuses) {
+          for (const trigger of ["Owner", "JobRestart"]) {
+            const job = Object.freeze({
+              jobType,
+              status: sourceStatus,
+              restartability,
+              attempt: 2,
+            });
+            const before = JSON.stringify(job);
+            const transition = `${sourceStatus}:${targetStatus}`;
+            const vector = `${jobType}/${restartability}/${transition}/${trigger}`;
+            const isOwnerTransition =
+              trigger === "Owner" && legalOwnerTransitions.has(transition);
+            const isRestart =
+              trigger === "JobRestart" &&
+              restartability === "Restartable" &&
+              transition === "Failed:Pending";
+
+            if (isOwnerTransition || isRestart) {
+              const result = transitionApplicationJobState(job, targetStatus, trigger);
+              assert.notEqual(result, job, vector);
+              assert.equal(Object.isFrozen(result), true, vector);
+              assert.deepEqual(
+                Object.keys(result).sort(),
+                ["attempt", "jobType", "restartability", "status"],
+                vector,
+              );
+              assert.equal(result.status, targetStatus, vector);
+              assert.equal(result.attempt, isRestart ? 3 : 2, vector);
+            } else {
+              const code = trigger === "JobRestart"
+                ? "APPLICATION_JOB_NOT_RESTARTABLE"
+                : "APPLICATION_RESULT_INVALID";
+              assert.throws(
+                () => transitionApplicationJobState(job, targetStatus, trigger),
+                (error) =>
+                  error instanceof ApplicationJobTransitionError &&
+                  error.code === code,
+                vector,
+              );
+            }
+            assert.equal(JSON.stringify(job), before, vector);
+          }
+        }
+      }
+    }
+  }
+
+  const failedJob = Object.freeze({
+    jobType: "Analytics",
+    status: "Failed",
+    restartability: "NotRestartable",
+    attempt: 1,
+  });
+  for (const [job, targetStatus, trigger, code] of [
+    [failedJob, "Pending", "JobRestart", "APPLICATION_JOB_NOT_RESTARTABLE"],
+    [{ ...failedJob, status: "Running", restartability: "Restartable" }, "Pending", "JobRestart", "APPLICATION_JOB_NOT_RESTARTABLE"],
+    [{ ...failedJob, restartability: "Restartable" }, "Pending", "Owner", "APPLICATION_RESULT_INVALID"],
+    [{ ...failedJob, status: "Canceled" }, "Pending", "JobRestart", "APPLICATION_RESULT_INVALID"],
+    [{ ...failedJob, jobType: "Reconciliation" }, "Pending", "JobRestart", "APPLICATION_RESULT_INVALID"],
+    [{ ...failedJob, attempt: 0 }, "Pending", "JobRestart", "APPLICATION_RESULT_INVALID"],
+    [{ ...failedJob, attempt: -1 }, "Pending", "JobRestart", "APPLICATION_RESULT_INVALID"],
+    [{ ...failedJob, attempt: 1.5 }, "Pending", "JobRestart", "APPLICATION_RESULT_INVALID"],
+    [{ ...failedJob, attempt: Number.NaN }, "Pending", "JobRestart", "APPLICATION_RESULT_INVALID"],
+    [{ ...failedJob, attempt: Number.POSITIVE_INFINITY }, "Pending", "JobRestart", "APPLICATION_RESULT_INVALID"],
+    [{ ...failedJob, attempt: Number.MAX_SAFE_INTEGER + 1 }, "Pending", "JobRestart", "APPLICATION_RESULT_INVALID"],
+    [{ ...failedJob, attempt: Number.MAX_SAFE_INTEGER, restartability: "Restartable" }, "Pending", "JobRestart", "APPLICATION_RESULT_INVALID"],
+    [{ ...failedJob, restartability: "Sometimes" }, "Pending", "JobRestart", "APPLICATION_RESULT_INVALID"],
+    [{ ...failedJob, restartability: "Restartable" }, "Canceled", "Owner", "APPLICATION_RESULT_INVALID"],
+    [{ ...failedJob, restartability: "Restartable" }, "Pending", "DelayedConsumer", "APPLICATION_RESULT_INVALID"],
+  ]) {
+    const before = JSON.stringify(job);
+    const vector = `${JSON.stringify(job)}/${targetStatus}/${trigger}`;
+    assert.throws(
+      () => transitionApplicationJobState(job, targetStatus, trigger),
+      (error) => error instanceof ApplicationJobTransitionError && error.code === code,
+      vector,
+    );
+    assert.equal(JSON.stringify(job), before, vector);
+  }
+
+  const validState = {
+    jobType: "Analytics",
+    status: "Failed",
+    restartability: "Restartable",
+    attempt: 1,
+  };
+  let statusReads = 0;
+  const accessorState = { ...validState };
+  Object.defineProperty(accessorState, "status", {
+    enumerable: true,
+    get() {
+      statusReads += 1;
+      return "Failed";
+    },
+  });
+  const inheritedState = Object.create(validState);
+  const throwingProxy = new Proxy(validState, {
+    getPrototypeOf() {
+      throw new Error("attacker-controlled prototype failure");
+    },
+  });
+  for (const [job, label] of [
+    [{ ...validState, checkpoint: { sequence: 1 } }, "extra checkpoint"],
+    [{ ...validState, queue: () => undefined }, "capability field"],
+    [accessorState, "accessor"],
+    [inheritedState, "inherited fields"],
+    [throwingProxy, "throwing proxy"],
+  ]) {
+    assert.throws(
+      () => transitionApplicationJobState(job, "Pending", "JobRestart"),
+      (error) =>
+        error instanceof ApplicationJobTransitionError &&
+        error.code === "APPLICATION_RESULT_INVALID",
+      label,
+    );
+  }
+  assert.equal(statusReads, 0);
 });

@@ -31,10 +31,33 @@
 | DEC-033 | 2026-09-16 | Contract admission | Close PT-APP-001M with exact duplicate-aware request and coherent result admission | Agent (Fully Agentic) | Solo Orchestrator | Active |
 | DEC-034 | 2026-09-16 | Replay integrity | Close PT-APP-001N with atomic application replay distinct from owning idempotency | Agent (Fully Agentic) | Solo Orchestrator | Active |
 | DEC-035 | 2026-09-16 | Error precedence | Close PT-APP-001O with deterministic ranked selection on live command admission | Agent (Fully Agentic) | Solo Orchestrator | Active |
+| DEC-036 | 2026-09-16 | Job lifecycle | Close PT-APP-001P with an exact immutable Job state projection and transition policy | Agent (Fully Agentic) | Solo Orchestrator | Active |
 
 ---
 
 ## Decision Records
+
+### DEC-036: Close The Application Job State Machine
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-036 |
+| **Date** | 2026-09-16 |
+| **Category** | Job lifecycle |
+| **Decision** | Close PT-APP-001P with exact closed Job enums, descriptor-captured four-field state projections, four owner transitions, restartable Failed-to-Pending only through JobRestart, exact attempt increment, and immutable fail-closed results |
+| **Policy** | DEC-023; DEC-028; DEC-030; DEC-032; DEC-033; DEC-034; DEC-035; approved WP-3 application contract; test-first development; code review; security review |
+| **Authority** | Agent (Fully Agentic), with alternate-model Code Reviewer and Security Reviewer final PASS dispositions |
+| **Accountable** | Solo Orchestrator assembles aggregate WP-3 evidence next, preserves full Job/checkpoint/effect persistence under owning PostgreSQL paths, and keeps WP-4, release, deployment, and production authority closed |
+| **Context** | Job result coherence and restart dispatch existed, but PT-APP-001P lacked one executable closed state-transition projection. Initial review found an unsound generic return type; security review then found inherited/accessor/proxy ambiguity and nested/capability propagation through generic spread. |
+| **Alternatives** | Leave transition policy documentary; mutate full Job records in the application boundary; retain arbitrary generic fields; expose cancellation or asynchronous work delivery; implement an exact primitive state projection while owners retain durable Job mutation |
+| **Consequences** | The application can enumerate and enforce all 128 type/policy/state/target/trigger combinations without reading accessors or carrying nested/capability fields. Illegal transitions, terminal mutation, invalid restart policy, malformed values, reflection failures, and overflow return stable errors without source mutation. |
+| **Reasoning** | PT-APP-001P owns transition policy, not persistence. A narrow exact projection makes the state machine executable and type-sound while preventing the application layer from cloning or weakening owner-held checkpoint, identity, and committed-effect invariants. |
+| **Assumptions** | Full Job records continue through exact result admission and PostgreSQL owners; attempts begin at one; transitions are synchronous; owner persistence applies timestamps, controlling errors, checkpoints, and committed-effect guarantees atomically. |
+| **Invalidation** | A new Job type/status/restartability value; cancellation; a new legal transition or trigger; asynchronous execution; a requirement for this projection to mutate full Job records; or changed attempt semantics |
+| **Status** | Active; PT-APP-001P complete and aggregate WP-3 closure is next |
+| **Linked Artifacts** | `docs/artifacts/gate-evidence/wp-3-job-state-machine.md`, `docs/Governance/decisions/reviews/REV-092-wp-3-job-state-machine-code-review.md`, `docs/Governance/decisions/reviews/REV-093-wp-3-job-state-machine-security-review.md`, GitHub issue #73 |
+
+---
 
 ### DEC-035: Close Deterministic Error Precedence
 

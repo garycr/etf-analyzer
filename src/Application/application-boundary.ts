@@ -22,6 +22,23 @@ export const applicationQueryOperations = Object.freeze([
   "PortfolioGet",
 ] as const);
 
+export const applicationJobTypes = Object.freeze([
+  "FixtureIngestion",
+  "Analytics",
+] as const);
+
+export const applicationJobStatuses = Object.freeze([
+  "Pending",
+  "Running",
+  "Succeeded",
+  "Failed",
+] as const);
+
+export const applicationJobRestartability = Object.freeze([
+  "Restartable",
+  "NotRestartable",
+] as const);
+
 export type ApplicationCommandOperation =
   (typeof applicationCommandOperations)[number];
 export type ApplicationQueryOperation =
@@ -29,6 +46,21 @@ export type ApplicationQueryOperation =
 export type ApplicationOperation =
   | ApplicationCommandOperation
   | ApplicationQueryOperation;
+export type ApplicationJobType = (typeof applicationJobTypes)[number];
+export type ApplicationJobStatus = (typeof applicationJobStatuses)[number];
+export type ApplicationJobRestartability =
+  (typeof applicationJobRestartability)[number];
+export type ApplicationJobTransitionTrigger = "Owner" | "JobRestart";
+
+export interface ApplicationJobStateProjection {
+  readonly jobType: ApplicationJobType;
+  readonly status: ApplicationJobStatus;
+  readonly restartability: ApplicationJobRestartability;
+  readonly attempt: number;
+}
+
+export type ApplicationJobTransitionResult =
+  Readonly<ApplicationJobStateProjection>;
 
 export interface ApplicationOperationDefinition {
   readonly operation: ApplicationOperation;
@@ -470,6 +502,19 @@ export class ApplicationResultInvalidError extends Error {
   constructor() {
     super("The application result is invalid");
     this.name = "ApplicationResultInvalidError";
+  }
+}
+
+export class ApplicationJobTransitionError extends Error {
+  constructor(
+    readonly code:
+      | "APPLICATION_JOB_NOT_RESTARTABLE"
+      | "APPLICATION_RESULT_INVALID",
+  ) {
+    super(code === "APPLICATION_JOB_NOT_RESTARTABLE"
+      ? "The job cannot be restarted"
+      : "The application job transition is invalid");
+    this.name = "ApplicationJobTransitionError";
   }
 }
 
@@ -2375,6 +2420,111 @@ export function restartDurableJob<Result>(
   ownerDispatch: (request: JobRestartRequest) => Result,
 ): Result {
   return ownerDispatch(Object.freeze({ jobId }));
+}
+
+function captureApplicationJobState(
+  value: unknown,
+): ApplicationJobStateProjection | null {
+  try {
+    if (
+      value === null ||
+      Array.isArray(value) ||
+      typeof value !== "object" ||
+      Object.getPrototypeOf(value) !== Object.prototype
+    ) return null;
+
+    const descriptors = Object.getOwnPropertyDescriptors(value);
+    const fields = ["attempt", "jobType", "restartability", "status"] as const;
+    const actualFields = Reflect.ownKeys(descriptors).sort();
+    if (
+      actualFields.length !== fields.length ||
+      actualFields.some((field, index) => field !== fields[index])
+    ) return null;
+
+    const values: Record<(typeof fields)[number], unknown> = {
+      attempt: undefined,
+      jobType: undefined,
+      restartability: undefined,
+      status: undefined,
+    };
+    for (const field of fields) {
+      const descriptor = descriptors[field];
+      if (
+        descriptor === undefined ||
+        !("value" in descriptor) ||
+        !descriptor.enumerable
+      ) return null;
+      values[field] = descriptor.value;
+    }
+    if (
+      !applicationJobTypes.includes(values.jobType as ApplicationJobType) ||
+      !applicationJobStatuses.includes(values.status as ApplicationJobStatus) ||
+      !applicationJobRestartability.includes(
+        values.restartability as ApplicationJobRestartability,
+      ) ||
+      !Number.isSafeInteger(values.attempt) ||
+      (values.attempt as number) < 1
+    ) return null;
+
+    return Object.freeze({
+      jobType: values.jobType as ApplicationJobType,
+      status: values.status as ApplicationJobStatus,
+      restartability: values.restartability as ApplicationJobRestartability,
+      attempt: values.attempt as number,
+    });
+  } catch {
+    return null;
+  }
+}
+
+export function transitionApplicationJobState(
+  job: ApplicationJobStateProjection,
+  targetStatus: ApplicationJobStatus,
+  trigger: ApplicationJobTransitionTrigger,
+): ApplicationJobTransitionResult {
+  const state = captureApplicationJobState(job);
+  if (
+    state === null ||
+    !applicationJobStatuses.includes(targetStatus) ||
+    (trigger !== "Owner" && trigger !== "JobRestart")
+  ) {
+    throw new ApplicationJobTransitionError("APPLICATION_RESULT_INVALID");
+  }
+
+  if (trigger === "JobRestart") {
+    if (
+      state.status !== "Failed" ||
+      targetStatus !== "Pending" ||
+      state.restartability !== "Restartable"
+    ) {
+      throw new ApplicationJobTransitionError("APPLICATION_JOB_NOT_RESTARTABLE");
+    }
+    if (state.attempt === Number.MAX_SAFE_INTEGER) {
+      throw new ApplicationJobTransitionError("APPLICATION_RESULT_INVALID");
+    }
+    return Object.freeze({
+      jobType: state.jobType,
+      status: targetStatus,
+      restartability: state.restartability,
+      attempt: state.attempt + 1,
+    });
+  }
+
+  const isLegalOwnerTransition =
+    (state.status === "Pending" &&
+      (targetStatus === "Running" || targetStatus === "Failed")) ||
+    (state.status === "Running" &&
+      (targetStatus === "Succeeded" || targetStatus === "Failed"));
+  if (!isLegalOwnerTransition) {
+    throw new ApplicationJobTransitionError("APPLICATION_RESULT_INVALID");
+  }
+
+  return Object.freeze({
+    jobType: state.jobType,
+    status: targetStatus,
+    restartability: state.restartability,
+    attempt: state.attempt,
+  });
 }
 
 const paperOrderNotDispatched = Object.freeze({

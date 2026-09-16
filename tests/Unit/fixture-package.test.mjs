@@ -8,6 +8,11 @@ import {
   selectFixturePackageAt,
   validateFixturePackage,
 } from "../../dist/Application/fixture-package.js";
+import {
+  ProviderEgressDeniedError,
+  attemptProductProviderEgress,
+  loadLocalConfiguration,
+} from "../../dist/Application/foundation.js";
 
 const rawSourceHash = "70c5f44217c47edb5239e56ffcb9d4e53581ff58c189ac6912870f1593af74df";
 const marketHash = "bf5e14badd7df4312cc69f818ba8e9123dfe33d0e934223eef5308520aa45cab";
@@ -42,6 +47,57 @@ function goldenPackage() {
     manifest,
   };
 }
+
+test("PT-FIX-001O denies provider DNS and connection attempts without fixture substitution", () => {
+  const configuration = loadLocalConfiguration({ ETF_PROVIDER_EGRESS: "disabled" });
+  const validatedPackage = validateFixturePackage(goldenPackage());
+  const packageBeforeAttempts = structuredClone(validatedPackage);
+  let transportCalls = 0;
+
+  for (const operation of ["dns-resolution", "network-connection"]) {
+    assert.throws(
+      () => attemptProductProviderEgress(
+        configuration,
+        operation,
+        "https://api-key:secret@provider.example.test/observations?api_key=sensitive#fragment",
+        () => {
+          transportCalls += 1;
+        },
+      ),
+      (error) => {
+        assert.ok(error instanceof ProviderEgressDeniedError);
+        assert.deepEqual(error.evidence, {
+          endpoint: "https://provider.example.test",
+          fixtureOnly: true,
+          operation,
+          outcome: "denied",
+          successfulConnections: 0,
+        });
+        assert.ok(Object.isFrozen(error.evidence));
+        return true;
+      },
+    );
+  }
+
+  assert.throws(
+    () => attemptProductProviderEgress(
+      configuration,
+      "network-connection",
+      "api_key=sensitive",
+      () => {
+        transportCalls += 1;
+      },
+    ),
+    (error) => {
+      assert.ok(error instanceof ProviderEgressDeniedError);
+      assert.equal(error.evidence.endpoint, "[REDACTED]");
+      return true;
+    },
+  );
+
+  assert.equal(transportCalls, 0);
+  assert.deepEqual(validatedPackage, packageBeforeAttempts);
+});
 
 function packageWithManifestMutation(mutate, moveFile) {
   const fixturePackage = goldenPackage();

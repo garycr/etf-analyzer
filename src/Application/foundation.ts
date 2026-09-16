@@ -16,6 +16,45 @@ export interface HealthSnapshot {
   checks: FoundationChecks;
 }
 
+export type ProviderEgressOperation = "dns-resolution" | "network-connection";
+
+export interface ProviderEgressDenialEvidence {
+  readonly endpoint: string;
+  readonly fixtureOnly: true;
+  readonly operation: ProviderEgressOperation;
+  readonly outcome: "denied";
+  readonly successfulConnections: 0;
+}
+
+export class ProviderEgressDeniedError extends Error {
+  readonly code = "PROVIDER_EGRESS_DENIED";
+  readonly evidence: ProviderEgressDenialEvidence;
+
+  constructor(
+    operation: ProviderEgressOperation,
+    endpoint: string,
+    fixtureOnly: true,
+  ) {
+    super("Product provider egress is denied in fixture mode");
+    this.name = "ProviderEgressDeniedError";
+    this.evidence = Object.freeze({
+      endpoint: sanitizedEndpointOrigin(endpoint),
+      fixtureOnly,
+      operation,
+      outcome: "denied",
+      successfulConnections: 0,
+    });
+  }
+}
+
+function sanitizedEndpointOrigin(endpoint: string): string {
+  try {
+    return new URL(endpoint).origin;
+  } catch {
+    return "[REDACTED]";
+  }
+}
+
 const logLevels = new Set<LocalConfiguration["logLevel"]>([
   "debug",
   "info",
@@ -44,6 +83,20 @@ export function loadLocalConfiguration(
     logLevel: logLevel as LocalConfiguration["logLevel"],
     postgresUrl: environment.ETF_POSTGRES_URL,
   };
+}
+
+export function attemptProductProviderEgress(
+  configuration: LocalConfiguration,
+  operation: ProviderEgressOperation,
+  endpoint: string,
+  connectionAttempt: () => unknown,
+): never {
+  void connectionAttempt;
+  throw new ProviderEgressDeniedError(
+    operation,
+    endpoint,
+    configuration.fixtureOnly,
+  );
 }
 
 export function createHealthSnapshot(checks: FoundationChecks): HealthSnapshot {

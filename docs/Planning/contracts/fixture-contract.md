@@ -6,7 +6,7 @@
 **Owner:** Team Lead
 **Conformance check:** `PT-FIX-001`
 **Architecture status:** Proposed
-**Implementation status:** Ring 2 in progress; PT-FIX-001A..N and `FIXTURE_UNDECLARED_INPUT` implemented, reviewed, and approved for bounded publication; PT-FIX-001O open
+**Implementation status:** Ring 2 in progress; PT-FIX-001A..O and `FIXTURE_UNDECLARED_INPUT` implemented, reviewed, and approved for bounded publication; complete WP-2 approval remains open
 
 ## Scope and Authority
 

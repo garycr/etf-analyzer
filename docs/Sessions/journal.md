@@ -6,6 +6,20 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-16 | WP-3 PT-APP-001B research display safety accepted | Ring-2 | @code-reviewer
+
+**Type:** CODE-REVIEW
+**review-outcome:** PASS; Critical 0 | Major 0
+**Decision:** Accept the capability-free verified-research display boundary as having no paper-order or portfolio mutation effect
+**Policy:** DEC-023; DEC-028; DEC-030; DEC-032; WP-3; PT-APP-001B; code review; test-first development
+**Authority:** Alternate-model Code Reviewer
+**Accountability:** Solo Orchestrator preserves upstream publication verification for later WP-3 implementation and continues sequentially to PT-APP-001C
+**Result:** Focused 1/1; complete default suite 295 discovered, 265 passed, 30 environment-skipped, 0 failed; lint, diagnostics, audit, and diff checks pass
+**Artifact:** docs/Governance/decisions/reviews/REV-065-wp-3-research-display-safety-review.md | docs/artifacts/gate-evidence/wp-3-research-display-safety.md | src/Application/application-boundary.ts | tests/Unit/application-boundary.test.mjs
+**authorization-boundary:** PT-APP-001B only; no draft/transition, PT-APP-001C..P, WP-4, live-provider, release, deployment, or production authority
+
+---
+
 ## 2026-09-16 | WP-3 PT-APP-001A operation catalog accepted | Ring-2 | @code-reviewer
 
 **Type:** REVIEW-RECHECK

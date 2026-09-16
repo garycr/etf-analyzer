@@ -33,6 +33,12 @@ export interface ApplicationOperationDefinition {
   readonly kind: "command" | "query";
 }
 
+export interface CompleteVerifiedResearch<Result> {
+  readonly completeness: "Complete";
+  readonly integrity: "Verified";
+  readonly result: Result;
+}
+
 export class ApplicationOperationUnknownError extends Error {
   readonly code = "APPLICATION_OPERATION_UNKNOWN";
 
@@ -75,4 +81,10 @@ export function dispatchApplicationOperation<Result>(
   handler: (definition: ApplicationOperationDefinition) => Result,
 ): Result {
   return handler(resolveApplicationOperation(operation));
+}
+
+export function displayVerifiedResearch<Result>(
+  research: CompleteVerifiedResearch<Result>,
+): Result {
+  return research.result;
 }

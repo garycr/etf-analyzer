@@ -6,6 +6,7 @@ import {
   applicationCommandOperations,
   applicationQueryOperations,
   dispatchApplicationOperation,
+  displayVerifiedResearch,
   resolveApplicationOperation,
 } from "../../dist/Application/application-boundary.js";
 
@@ -72,4 +73,24 @@ test("PT-APP-001A resolves only the closed case-sensitive operation catalog", ()
     operation: "JobGet",
     kind: "query",
   });
+});
+
+test("PT-APP-001B displaying verified research has no paper mutation effect", () => {
+  assert.equal(displayVerifiedResearch.length, 1);
+  const ownerResult = Object.freeze({
+    configurationHash: "a".repeat(64),
+    resultSchemaVersion: "1.0.0-candidate.2",
+    signals: Object.freeze([
+      Object.freeze({ instrumentId: "ETF1", state: "NoSignal" }),
+    ]),
+  });
+  const research = Object.freeze({
+    completeness: "Complete",
+    integrity: "Verified",
+    result: ownerResult,
+  });
+  const displayed = displayVerifiedResearch(research);
+
+  assert.equal(displayed, ownerResult);
+  assert.deepEqual(displayed, ownerResult);
 });

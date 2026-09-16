@@ -6,6 +6,19 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-16 | DEC-032 GitHub #71 fixture identity remediation closed | Ring-2 | @solo-orchestrator
+
+**Type:** REMEDIATION-CLOSURE
+**Decision:** Close #71 after complete application/PostgreSQL identity mediation, stable check-error mapping, exact migration re-baseline, and independent Code/Security PASS reviews
+**Policy:** DEC-028; DEC-031; DEC-032; WP-3 mandatory entry repair; test-first development; stable conformance errors
+**Authority:** Agent (Fully Agentic) with alternate-model Code and Security final PASS
+**Accountability:** Solo Orchestrator continues only WP-3, preserves fixture-only operation, and keeps all later package and production gates closed
+**Result:** PostgreSQL 16.15 `C|UTF8|UTC|on`; exact CI-equivalent suite 293/293 with zero skips; lint, diagnostics, audit, and diff checks pass
+**Artifact:** docs/artifacts/gate-evidence/wp-3-fixture-identity-error-mediation.md | docs/Governance/decisions/reviews/REV-062-wp-3-fixture-identity-code-review.md | docs/Governance/decisions/reviews/REV-063-wp-3-fixture-identity-security-review.md | GitHub #71/#73
+**authorization-boundary:** Next sequential WP-3 fixture-only increment only; no WP-4 overlap, live provider, complete Ring 2, baseline activation, release, deployment, or production authority
+
+---
+
 ## 2026-09-15 | WP-3 opened as sole active package | Ring-2 | @solo-orchestrator
 
 **Type:** PACKAGE-START

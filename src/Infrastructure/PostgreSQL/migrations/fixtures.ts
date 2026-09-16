@@ -23,7 +23,7 @@ CREATE TABLE etf.fixture_packages (
   accepted_at timestamp(3) with time zone NOT NULL,
   CONSTRAINT pk_fixture_packages PRIMARY KEY (dataset_id, dataset_version),
   CONSTRAINT uq_fixture_packages__dataset_hash UNIQUE (dataset_hash),
-  CONSTRAINT ck_fixture_packages__dataset_id_nonempty CHECK (length(dataset_id) > 0),
+  CONSTRAINT ck_fixture_packages__dataset_id CHECK (dataset_id ~ '^[a-z0-9][a-z0-9-]{0,63}$'),
   CONSTRAINT ck_fixture_packages__dataset_version CHECK (dataset_version ~ '^[0-9]{4}\\.(0[1-9]|1[0-2])\\.(0|[1-9][0-9]*)$'),
   CONSTRAINT ck_fixture_packages__dataset_hash_lower_hex CHECK (dataset_hash ~ '^[0-9a-f]{64}$')
 );
@@ -342,6 +342,8 @@ EXCEPTION
     RAISE EXCEPTION 'FIXTURE_DECIMAL_INVALID' USING ERRCODE = '22003';
   WHEN datetime_field_overflow THEN
     RAISE EXCEPTION 'FIXTURE_TEMPORAL_INVALID' USING ERRCODE = '22007';
+  WHEN check_violation THEN
+    RAISE EXCEPTION 'FIXTURE_MANIFEST_INVALID' USING ERRCODE = '22023';
   WHEN invalid_text_representation THEN
     RAISE EXCEPTION 'FIXTURE_MANIFEST_INVALID' USING ERRCODE = '22023';
 END;

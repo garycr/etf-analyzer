@@ -8,11 +8,13 @@
 
 - Migration identity: `0005-analytics-evidence`, sequence 5
 - Exact SQL-byte SHA-256: `638fdcb40695be04a30c56807e529f753fd37c80ccfdcd6ad58f04e603287cc4`
-- Resulting manifest SHA-256: `fa108eee32e09d81829c175e68387a896b99b210193c3feaad2f30cccaf34366`
+- Resulting manifest SHA-256: `9de23c5c8bd50d9a7771bc67e8a4ffc8bb84175ab9b9ce2caa641d9114407ecd`
 - PostgreSQL baseline: `16.15|UTF8|UTC|on|C`
 - Autonomous work-item trace: GitHub issue #68
 
 The 2026-09-15 PT-FIX-001F re-baseline changed only the cumulative manifest inherited from the corrected sequence-4 DEC-014 Money bounds. No sequence-5 SQL bytes changed.
+
+The 2026-09-16 GitHub #71 re-baseline again changed only the cumulative manifest inherited from sequence 4. No sequence-5 SQL bytes changed; dedicated #71 evidence owns the current validation claims.
 
 ## 2026-09-15 PT-FIX-001F Re-baseline Verification
 

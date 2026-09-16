@@ -27,10 +27,33 @@
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-031 | 2026-09-15 | Package closure | Close WP-2 conditionally and authorize WP-3 as the next sequential package | Agent (Fully Agentic) | Solo Orchestrator | Active |
+| DEC-032 | 2026-09-16 | Remediation closure | Close #71 after complete fixture identity mediation and stable PostgreSQL check errors | Agent (Fully Agentic) | Solo Orchestrator | Active |
 
 ---
 
 ## Decision Records
+
+### DEC-032: Close Fixture Identity And Stable-Error Remediation
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-032 |
+| **Date** | 2026-09-16 |
+| **Category** | Remediation closure |
+| **Decision** | Close GitHub #71 after enforcing governed fixture identity grammars in application validation, mirroring dataset identity at the PostgreSQL trust boundary, mapping `check_violation` to `FIXTURE_MANIFEST_INVALID`, and re-baselining exact sequence-4-through-6 identities |
+| **Policy** | DEC-028; DEC-031 mandatory WP-3 entry repair; test-first development; stable conformance errors; prototype-only empty-database migration policy; code and security review |
+| **Authority** | Agent (Fully Agentic), with alternate-model Code and Security final PASS reviews |
+| **Accountable** | Solo Orchestrator publishes only the bounded #71 artifacts, preserves one-package WP-3 WIP, and keeps live-provider, ring-exit, release, deployment, and production gates closed |
+| **Context** | Aggregate WP-2 review found observation identity grammars were diagnostic-only and PostgreSQL check violations escaped the stable fixture contract. Initial #71 review additionally found the separately callable database function could persist malformed dataset identities. Red tests reproduced both defects. |
+| **Alternatives** | Leave non-golden fixture acceptance denied; map errors without database identity mediation; close the complete application and database trust boundary with executable evidence |
+| **Consequences** | WP-3 may proceed to its next sequential fixture-only application increment. Application and PostgreSQL reject malformed governed identities consistently, direct database check failures expose one stable code, and exact migration/catalog identities are current. Carried payload-cardinality, non-check SQLSTATE, and combined-defect precedence Minors remain outside #71. |
+| **Reasoning** | A command boundary cannot safely accept non-golden packages while equivalent malformed identities receive different outcomes depending on whether they pass through TypeScript or call the granted database function directly. Complete mediation and stable errors remove that ambiguity before WP-3 handlers are introduced. |
+| **Assumptions** | The prototype baseline remains inactive and empty-database-only; no released, deployed, production, or legacy migration ledger contains sequence 4; WP-3 remains local and fixture-only. |
+| **Invalidation** | Activation or external application of the migration baseline; a new fixture identity grammar; exposure of fixture ingestion to a less-trusted caller; or evidence that an unmapped SQLSTATE is reachable through governed input |
+| **Status** | Active; #71 remediation complete and WP-3 may continue sequentially |
+| **Linked Artifacts** | `docs/artifacts/gate-evidence/wp-3-fixture-identity-error-mediation.md`, `docs/Governance/decisions/reviews/REV-062-wp-3-fixture-identity-code-review.md`, `docs/Governance/decisions/reviews/REV-063-wp-3-fixture-identity-security-review.md`, GitHub issues #71 and #73 |
+
+---
 
 ### DEC-031: Close WP-2 And Open WP-3
 

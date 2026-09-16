@@ -174,6 +174,18 @@ const provenanceFields = new Set([
 ]);
 
 const qualityStates = new Set(["Valid", "Partial", "Stale", "Quarantined"]);
+const adjustmentPolicies = new Set([
+  "unadjusted",
+  "split-adjusted",
+  "total-return-adjusted",
+]);
+const economicProviderIds = new Set([
+  "FRED",
+  "ALFRED",
+  "BLS",
+  "BEA",
+  "TREASURY_FISCAL_DATA",
+]);
 
 const fixtureCodePrecedence: readonly FixtureConformanceCode[] = [
   "FIXTURE_MANIFEST_INVALID",
@@ -550,12 +562,25 @@ function requireParsedFixtureFile(
 function validateObservationRecord(
   record: Readonly<Record<string, unknown>>,
   fields: readonly string[],
+  recordType: "market" | "economic",
 ): void {
   const expectedFields = new Set(fields);
   const actualFields = new Set(Object.keys(record));
   if (
     [...actualFields].some((field) => !expectedFields.has(field)) ||
     fields.some((field) => !provenanceFields.has(field) && !actualFields.has(field))
+  ) {
+    throw new FixtureConformanceError("FIXTURE_MANIFEST_INVALID");
+  }
+  const providerId = requireString(record, "providerId");
+  if (
+    recordType === "market"
+      ? !isValidMarketInstrumentId(requireString(record, "instrumentId")) ||
+        providerId !== "fixture" ||
+        !adjustmentPolicies.has(requireString(record, "adjustmentPolicy"))
+      : !economicProviderIds.has(providerId) ||
+        !isValidEconomicIdentifier(requireString(record, "seriesId")) ||
+        !isValidEconomicIdentifier(requireString(record, "vintageId"))
   ) {
     throw new FixtureConformanceError("FIXTURE_MANIFEST_INVALID");
   }
@@ -582,11 +607,19 @@ function validateClosedObservationRecords(
     "economic-vintages.jsonl",
   );
   marketFile.records.forEach((record) => {
-    validateObservationRecord(record, marketObservationFields);
+    validateObservationRecord(record, marketObservationFields, "market");
   });
   economicFile.records.forEach((record) => {
-    validateObservationRecord(record, economicVintageFields);
+    validateObservationRecord(record, economicVintageFields, "economic");
   });
+}
+
+function isValidMarketInstrumentId(value: string): boolean {
+  return /^[A-Z0-9][A-Z0-9._-]{0,63}$/u.test(value);
+}
+
+function isValidEconomicIdentifier(value: string): boolean {
+  return /^[\x20-\x7E]{1,128}$/u.test(value);
 }
 
 function validateDecimalValue(record: Readonly<Record<string, unknown>>): void {
@@ -973,21 +1006,17 @@ function diagnosticRecordComponent(
   field: string,
 ): FixtureIdentityComponent {
   const validators: Readonly<Record<string, (value: string) => boolean>> = {
-    adjustmentPolicy: (value) => [
-      "unadjusted",
-      "split-adjusted",
-      "total-return-adjusted",
-    ].includes(value),
-    instrumentId: (value) => /^[A-Z0-9][A-Z0-9._-]{0,63}$/u.test(value),
+    adjustmentPolicy: (value) => adjustmentPolicies.has(value),
+    instrumentId: isValidMarketInstrumentId,
     observationDate: isCanonicalDate,
     providerId: (value) => recordType === "market"
       ? value === "fixture"
-      : ["FRED", "ALFRED", "BLS", "BEA", "TREASURY_FISCAL_DATA"].includes(value),
+      : economicProviderIds.has(value),
     releaseTimestamp: isCanonicalTimestamp,
     revision: (value) => /^(0|[1-9][0-9]*)$/u.test(value),
-    seriesId: (value) => /^[\x20-\x7E]{1,128}$/u.test(value),
+    seriesId: isValidEconomicIdentifier,
     tradingDate: isCanonicalDate,
-    vintageId: (value) => /^[\x20-\x7E]{1,128}$/u.test(value),
+    vintageId: isValidEconomicIdentifier,
   };
   return diagnosticComponent(record[field], validators[field]);
 }
@@ -1235,6 +1264,7 @@ function collectFixtureDiagnostics(
         validateObservationRecord(
           record,
           recordType === "market" ? marketObservationFields : economicVintageFields,
+          recordType,
         );
       } catch {
         issues.push(createFixtureIssue(

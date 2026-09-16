@@ -8,11 +8,13 @@
 
 - Migration identity: `0006-controlled-access`, sequence 6
 - Exact SQL-byte SHA-256: `62d4c23bcb89cbf26d58af8a994c765d74cf64e2267c0ae52e240f2632be0235`
-- Resulting manifest SHA-256: `cac533a25d652e9bd3da840632f8b131ba98b82ed6898d0115acc56228412d02`
+- Resulting manifest SHA-256: `03e42f1f4de6d150d98058f072a24649b5c66adbc177825f211e2e94d73a8d1c`
 - PostgreSQL baseline: `16.15|UTF8|UTC|on|C`
 - Autonomous work-item trace: GitHub issue #69
 
 The 2026-09-15 PT-FIX-001F re-baseline changed only the cumulative manifest inherited from the corrected sequence-4 DEC-014 Money bounds. No sequence-6 SQL bytes changed.
+
+The 2026-09-16 GitHub #71 re-baseline again changed only the cumulative manifest inherited from sequence 4. No sequence-6 SQL bytes changed; dedicated #71 evidence owns the current validation claims.
 
 ## 2026-09-15 PT-FIX-001F Re-baseline Verification
 

@@ -203,6 +203,23 @@ test("PT-FIX-001A validates the exact golden package identity", () => {
   });
 });
 
+test("issue 71 rejects out-of-grammar fixture identities before replay and coverage", () => {
+  for (const [relativePath, field, invalidValue] of [
+    ["market-observations.jsonl", "instrumentId", "etf-1"],
+    ["market-observations.jsonl", "providerId", "FRED"],
+    ["market-observations.jsonl", "adjustmentPolicy", "banana"],
+    ["economic-vintages.jsonl", "providerId", "NETWORK_PROVIDER"],
+    ["economic-vintages.jsonl", "seriesId", "CPI\nSECRET"],
+    ["economic-vintages.jsonl", "vintageId", ""],
+  ]) {
+    const fixturePackage = packageWithRecordMutation(relativePath, ([record]) => {
+      record[field] = invalidValue;
+    });
+
+    assertFixtureError(fixturePackage, "FIXTURE_MANIFEST_INVALID");
+  }
+});
+
 test("PT-FIX-001A rejects an altered governed file byte", () => {
   const fixturePackage = goldenPackage();
   fixturePackage.files["market-observations.jsonl"] = Buffer.concat([

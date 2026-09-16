@@ -7,12 +7,14 @@
 ## Canonical Artifacts
 
 - Migration identity: `0004-fixtures`, sequence 4
-- Exact SQL-byte SHA-256: `bd34aa3c5701ef42267fccf797284507db25a9319342a1553898d2f84af1cc56`
-- Resulting manifest SHA-256: `cb0955c4952e7e3994a224c390cc8b41bb0a3a7c63a28e522051b0cd29467f69`
+- Exact SQL-byte SHA-256: `9bf81885aab5fafe8bcac9b372d7bbd0bec601fc29e0cdbc234a65fc3d5489f1`
+- Resulting manifest SHA-256: `d23310c3534fa40c6aafdaa951000bab43409bd99cc69264a33c8c5e111dc9d5`
 - PostgreSQL baseline: `16.15|UTF8|UTC|on|C`
 - Autonomous work-item trace: GitHub issue #67
 
 The 2026-09-15 PT-FIX-001F re-baseline supersedes the earlier sequence-4 hashes. It expands the Money input grammar and table bound from 18 to the DEC-014 capacity of 20 integer digits while preserving exact scale-8 rejection before casts. This empty-database prototype has no released or production migration ledger; sequences 5 and 6 retain their SQL bytes and receive new cumulative manifest hashes.
+
+The 2026-09-16 GitHub #71 re-baseline supersedes the PT-FIX-001F hashes by adding stable error mediation for PostgreSQL check violations. The prototype remains inactive and empty-database-only; dedicated #71 evidence owns the current validation claims.
 
 ## 2026-09-15 PT-FIX-001F Re-baseline Verification
 

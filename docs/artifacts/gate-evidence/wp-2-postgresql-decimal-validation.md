@@ -14,12 +14,14 @@ PostgreSQL 16.15 accepted Money values with 18, 19, and 20 integer digits across
 
 The closed sequence-1-through-6 migration set remains structurally unchanged. Sequence 4 was corrected in place because the prototype baseline is inactive, has no released or production migration ledger, and supports empty-database installation only. PostgreSQL `16.15|C|UTF8|UTC|on` produced these canonical changes:
 
-- Sequence 4 SQL SHA-256: `bd34aa3c5701ef42267fccf797284507db25a9319342a1553898d2f84af1cc56`.
-- Sequence 4 manifest SHA-256: `cb0955c4952e7e3994a224c390cc8b41bb0a3a7c63a28e522051b0cd29467f69`.
-- Sequence 5 manifest SHA-256: `fa108eee32e09d81829c175e68387a896b99b210193c3feaad2f30cccaf34366`; sequence-5 SQL is unchanged.
-- Sequence 6 manifest SHA-256: `cac533a25d652e9bd3da840632f8b131ba98b82ed6898d0115acc56228412d02`; sequence-6 SQL is unchanged.
+- Sequence 4 SQL SHA-256: `9bf81885aab5fafe8bcac9b372d7bbd0bec601fc29e0cdbc234a65fc3d5489f1`.
+- Sequence 4 manifest SHA-256: `d23310c3534fa40c6aafdaa951000bab43409bd99cc69264a33c8c5e111dc9d5`.
+- Sequence 5 manifest SHA-256: `9de23c5c8bd50d9a7771bc67e8a4ffc8bb84175ab9b9ce2caa641d9114407ecd`; sequence-5 SQL is unchanged.
+- Sequence 6 manifest SHA-256: `03e42f1f4de6d150d98058f072a24649b5c66adbc177825f211e2e94d73a8d1c`; sequence-6 SQL is unchanged.
 
 The PostgreSQL contract, executable hash assertions, and WP-1 evidence records contain these exact values. Prior journal events remain immutable historical records.
+
+These current identities supersede the PT-FIX-001F identities after the 2026-09-16 GitHub #71 stable-error amendment. The validation results below remain the historical PT-FIX-001F run; dedicated #71 evidence owns the superseding run.
 
 ## Validation
 

@@ -48,11 +48,13 @@ The final WP-1 PostgreSQL 16.15 identities are:
 | 1 | `a604802a67bed66c6ce79d2f2f856b48e184ae5b4f76803ab8ead3a135c85291` | `3ba3b63c429cf051378ce3eb4adafe0db697dec487d070669a6bc47dba2f8f7c` |
 | 2 | `9865cd75bd6249b4a567daf840f95ad3d7b52bbf534060e87a34516fd0867fdb` | `405d4e276efbf43f40c4856be1c7536b7cc0d8d37329416d8df7e8ed24bb34cc` |
 | 3 | `d514c7f3b75c6ed83dfdbd9b54b406b14814b2bf8f40bd1e04a9d70a303346a3` | `61008ff4dd4898afb0f0b168c4d063dae4894fb8257f9ee77db3af95fdde54d4` |
-| 4 | `bd34aa3c5701ef42267fccf797284507db25a9319342a1553898d2f84af1cc56` | `cb0955c4952e7e3994a224c390cc8b41bb0a3a7c63a28e522051b0cd29467f69` |
-| 5 | `638fdcb40695be04a30c56807e529f753fd37c80ccfdcd6ad58f04e603287cc4` | `fa108eee32e09d81829c175e68387a896b99b210193c3feaad2f30cccaf34366` |
-| 6 | `62d4c23bcb89cbf26d58af8a994c765d74cf64e2267c0ae52e240f2632be0235` | `cac533a25d652e9bd3da840632f8b131ba98b82ed6898d0115acc56228412d02` |
+| 4 | `9bf81885aab5fafe8bcac9b372d7bbd0bec601fc29e0cdbc234a65fc3d5489f1` | `d23310c3534fa40c6aafdaa951000bab43409bd99cc69264a33c8c5e111dc9d5` |
+| 5 | `638fdcb40695be04a30c56807e529f753fd37c80ccfdcd6ad58f04e603287cc4` | `9de23c5c8bd50d9a7771bc67e8a4ffc8bb84175ab9b9ce2caa641d9114407ecd` |
+| 6 | `62d4c23bcb89cbf26d58af8a994c765d74cf64e2267c0ae52e240f2632be0235` | `03e42f1f4de6d150d98058f072a24649b5c66adbc177825f211e2e94d73a8d1c` |
 
 **2026-09-15 PT-FIX-001F amendment.** The re-baseline corrected sequence 4 to preserve the full 20-integer-digit capacity of DEC-014 `NUMERIC(28,8)` Money values while continuing to reject excess precision and scale before PostgreSQL casts. Sequence 5 and 6 SQL bytes are unchanged; their cumulative manifest hashes changed because the canonical root includes the corrected sequence-4 definition and content hash. No released or production database is in scope.
+
+**2026-09-16 GitHub #71 amendment.** Fixture ingestion maps PostgreSQL check violations to stable `FIXTURE_MANIFEST_INVALID` failures. The prototype remains inactive and empty-database-only, so sequence 4 was re-baselined in place; sequence 5 and 6 SQL bytes remain unchanged and their cumulative manifest hashes inherit the new sequence-4 root.
 
 Each migration is one transaction under a transaction-scoped advisory lock derived from UTF-8 `etf:v1.0.0-prototype.1:migrations`. Before DDL, the deployment runner verifies the migration identity, ascending sequence, and lowercase SHA-256 of exact UTF-8 SQL bytes. A successful transaction inserts exactly one `schema_migrations` row with `sequence`, `migration_id`, `content_hash`, `applied_at`, and resulting `schema_manifest_hash`. A repeated identical identity/hash is a no-op; a missing, reordered, duplicate, changed, or unknown migration fails readiness with `APPLICATION_MIGRATIONS_INCOMPLETE` and performs no implicit repair.
 

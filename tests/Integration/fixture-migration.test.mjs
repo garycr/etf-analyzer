@@ -290,11 +290,11 @@ test(
       );
       assert.equal(
         applied.contentHash,
-        "bd34aa3c5701ef42267fccf797284507db25a9319342a1553898d2f84af1cc56",
+        "9bf81885aab5fafe8bcac9b372d7bbd0bec601fc29e0cdbc234a65fc3d5489f1",
       );
       assert.equal(
         applied.schemaManifestHash,
-        "cb0955c4952e7e3994a224c390cc8b41bb0a3a7c63a28e522051b0cd29467f69",
+        "d23310c3534fa40c6aafdaa951000bab43409bd99cc69264a33c8c5e111dc9d5",
       );
 
       const owners = await client.query(
@@ -622,9 +622,20 @@ test(
         projectPostgresSchemaManifest,
       );
       await client.query("GRANT USAGE ON SCHEMA etf TO app_runtime");
-      const payload = fixturePayload();
-      payload.marketObservations[0].providerId = "network-provider";
-      await assert.rejects(() => ingest(client, payload));
+      for (const mutate of [
+        (payload) => { payload.marketObservations[0].providerId = "network-provider"; },
+        (payload) => {
+          payload.datasetId = "ETF/fixture";
+          payload.manifest.datasetId = payload.datasetId;
+        },
+      ]) {
+        const payload = fixturePayload();
+        mutate(payload);
+        await assert.rejects(
+          () => ingest(client, payload),
+          /FIXTURE_MANIFEST_INVALID/,
+        );
+      }
       const remaining = await client.query(
         `SELECT (SELECT count(*)::integer FROM etf.fixture_packages) AS packages,
                 (SELECT count(*)::integer FROM etf.fixture_descriptors) AS descriptors,

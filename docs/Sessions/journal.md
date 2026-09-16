@@ -6,6 +6,20 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-16 | WP-3 PT-APP-001H owning error preservation accepted | Ring-2 | @code-reviewer
+
+**Type:** CODE-AND-SECURITY-REVIEW
+**review-outcome:** PASS; Critical 0 | Major 0 | Minor 0 | Sev 1/2 security 0
+**Decision:** Accept exact 14-code owner-failure presentation with fixed redacted cause messages, empty bounded context, null recovery, and no dispatch capability
+**Policy:** DEC-023; DEC-028; DEC-030; DEC-032; WP-3; PT-APP-001H; code review; security review; test-first development
+**Authority:** Alternate-model Code Reviewer and Security Reviewer
+**Accountability:** Solo Orchestrator preserves runtime unknown-code admission for PT-APP-001M, actionable recovery for PT-APP-001L, and precedence for PT-APP-001O before continuing sequentially to PT-APP-001I
+**Result:** Focused 1/1; complete default suite 303 discovered, 273 passed, 30 environment-skipped, 0 failed; test quality 4.86/5; lint, diagnostics, audit, and diff checks pass
+**Artifact:** docs/Governance/decisions/reviews/REV-075-wp-3-owning-error-preservation-code-review.md | docs/Governance/decisions/reviews/REV-076-wp-3-owning-error-preservation-security-review.md | docs/artifacts/gate-evidence/wp-3-owning-error-preservation.md
+**authorization-boundary:** PT-APP-001H only; no PT-APP-001I..P completion, WP-4 overlap, live provider, release, deployment, or production authority
+
+---
+
 ## 2026-09-16 | WP-3 PT-APP-001G readiness and analytical separation accepted | Ring-2 | @code-reviewer
 
 **Type:** CODE-AND-SECURITY-REVIEW

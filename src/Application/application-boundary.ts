@@ -144,6 +144,32 @@ export interface ReadinessSnapshot {
   };
 }
 
+export const ownerFailureCodes = Object.freeze([
+  "ORDER_INVALID_TRANSITION",
+  "ORDER_VERSION_CONFLICT",
+  "FIXTURE_REQUIRED_QUARANTINED",
+  "ANALYTICS_INPUT_INCOMPLETE",
+  "ANALYTICS_INTEGRITY_FAILED",
+  "ANALYTICS_PUBLICATION_BLOCKED",
+  "APPLICATION_REQUEST_INVALID",
+  "APPLICATION_IDEMPOTENCY_CONFLICT",
+  "APPLICATION_JOB_NOT_RESTARTABLE",
+  "APPLICATION_REDACTION_FAILED",
+  "ORDER_IDEMPOTENCY_CONFLICT",
+  "FIXTURE_IDEMPOTENCY_CONFLICT",
+  "ANALYTICS_ACCESS_DENIAL_AUDIT_FAILED",
+  "LEDGER_INTEGRITY_FAILED",
+] as const);
+
+export type OwnerFailureCode = (typeof ownerFailureCodes)[number];
+
+export interface OwnerFailurePresentation {
+  readonly code: OwnerFailureCode;
+  readonly message: string;
+  readonly boundedIdentifiers: Readonly<Record<string, never>>;
+  readonly recovery: null;
+}
+
 export interface FailedJobPresentation<Job extends FailedJobForPresentation> {
   readonly job: Job;
   readonly error: {
@@ -236,6 +262,43 @@ export function displayVerifiedResearch<Result>(
   research: CompleteVerifiedResearch<Result>,
 ): Result {
   return research.result;
+}
+
+const ownerFailureMessages: Readonly<Record<OwnerFailureCode, string>> =
+  Object.freeze({
+    ORDER_INVALID_TRANSITION: "The paper order transition is not allowed.",
+    ORDER_VERSION_CONFLICT:
+      "The paper order changed. Reload the current order before retrying.",
+    FIXTURE_REQUIRED_QUARANTINED: "Required fixture data is quarantined.",
+    ANALYTICS_INPUT_INCOMPLETE: "Required analytical input is incomplete.",
+    ANALYTICS_INTEGRITY_FAILED:
+      "Analytical evidence failed integrity verification.",
+    ANALYTICS_PUBLICATION_BLOCKED: "Analytical publication is blocked.",
+    APPLICATION_REQUEST_INVALID: "The application request is invalid.",
+    APPLICATION_IDEMPOTENCY_CONFLICT:
+      "The application command identity was reused with different content.",
+    APPLICATION_JOB_NOT_RESTARTABLE: "The job cannot be restarted.",
+    APPLICATION_REDACTION_FAILED:
+      "Safe diagnostic redaction could not be verified.",
+    ORDER_IDEMPOTENCY_CONFLICT:
+      "The paper order command identity was reused with different content.",
+    FIXTURE_IDEMPOTENCY_CONFLICT:
+      "The fixture identity was reused with different content.",
+    ANALYTICS_ACCESS_DENIAL_AUDIT_FAILED:
+      "The analytics access denial could not be recorded.",
+    LEDGER_INTEGRITY_FAILED: "Ledger integrity verification failed.",
+  });
+const emptyBoundedIdentifiers = Object.freeze({});
+
+export function presentOwnerFailure(
+  code: OwnerFailureCode,
+): OwnerFailurePresentation {
+  return Object.freeze({
+    code,
+    message: ownerFailureMessages[code],
+    boundedIdentifiers: emptyBoundedIdentifiers,
+    recovery: null,
+  });
 }
 
 export function evaluateReadiness(

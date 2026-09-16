@@ -113,6 +113,17 @@ function assertFixtureError(fixturePackage, code) {
   );
 }
 
+function assertSelectionError(fixturePackage, evaluationInstant, code) {
+  assert.throws(
+    () => selectFixturePackageAt(fixturePackage, evaluationInstant),
+    (error) => {
+      assert.ok(error instanceof FixtureConformanceError);
+      assert.equal(error.code, code);
+      return true;
+    },
+  );
+}
+
 function assertManifestInvalid(fixturePackage) {
   assertFixtureError(fixturePackage, "FIXTURE_MANIFEST_INVALID");
 }
@@ -511,6 +522,58 @@ for (const [qualityState, expectedCode] of [
       );
     });
   }
+}
+
+for (const [qualityState, expectedCode] of [
+  ["Partial", "FIXTURE_REQUIRED_PARTIAL"],
+  ["Stale", "FIXTURE_REQUIRED_STALE"],
+  ["Quarantined", "FIXTURE_REQUIRED_QUARANTINED"],
+]) {
+  test(`PT-FIX-001K does not fall back from a newer ${qualityState} market revision`, () => {
+    const fixturePackage = packageWithRecordMutation(
+      "market-observations.jsonl",
+      (records) => {
+        records[0].revision = "1";
+        records[0].sourceAvailableAt = "2026-01-30T21:59:59.999Z";
+        records.push({
+          ...structuredClone(records[0]),
+          qualityCodes: [`SOURCE_${qualityState.toUpperCase()}`],
+          qualityState,
+          revision: "2",
+          sourceAvailableAt: "2026-01-30T22:00:00.000Z",
+        });
+      },
+    );
+
+    assertSelectionError(
+      fixturePackage,
+      "2026-01-30T22:00:00.000Z",
+      expectedCode,
+    );
+  });
+
+  test(`PT-FIX-001K does not fall back from a newer ${qualityState} economic vintage`, () => {
+    const fixturePackage = packageWithRecordMutation(
+      "economic-vintages.jsonl",
+      (records) => {
+        records[0].releaseTimestamp = "2026-01-15T13:29:59.999Z";
+        records[0].vintageId = "before";
+        records.push({
+          ...structuredClone(records[0]),
+          qualityCodes: [`SOURCE_${qualityState.toUpperCase()}`],
+          qualityState,
+          releaseTimestamp: "2026-01-15T13:30:00.000Z",
+          vintageId: "at",
+        });
+      },
+    );
+
+    assertSelectionError(
+      fixturePackage,
+      "2026-01-30T22:00:00.000Z",
+      expectedCode,
+    );
+  });
 }
 
 test("PT-FIX-001D/E selection preserves package validation precedence", () => {

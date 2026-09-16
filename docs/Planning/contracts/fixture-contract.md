@@ -6,7 +6,7 @@
 **Owner:** Team Lead
 **Conformance check:** `PT-FIX-001`
 **Architecture status:** Proposed
-**Implementation status:** Ring 2 in progress; PT-FIX-001A..M except PT-FIX-001K implemented, reviewed, and approved for bounded publication; all other scenarios open
+**Implementation status:** Ring 2 in progress; PT-FIX-001A..M implemented, reviewed, and approved for bounded publication; all other scenarios open
 
 ## Scope and Authority
 

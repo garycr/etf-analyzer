@@ -4,13 +4,13 @@
 
 **Project:** ETF Analyzer  
 **Last Updated:** 2026-09-15
-**Current Ring:** Ring 2 - Development (WP-1 and WP-2 complete; WP-3 authorized next)
+**Current Ring:** Ring 2 - Development (WP-1 and WP-2 complete; WP-3 active in GitHub #73)
 
 ---
 
 ## 1. Executive Overview
 
-Ring 1 converted the selected MAI-ST strategy into one sequential Tier 1 delivery stream and approved the WP-1..WP-8 WBS, schedule, and cost/token baselines. Ring 2 WP-1 completed the executable foundation with REV-044 PASS. WP-2 completed deterministic fixture ingestion and `PT-FIX-001A..O` with REV-059 conditional PASS and final default-suite results of 292 discovered, 262 passed, 30 environment-skipped, and 0 failed. GitHub #71 tracks identity-grammar and stable PostgreSQL error mapping required before WP-3 accepts non-golden fixtures. Architecture remains Proposed, and WP-3 is the only next package.
+Ring 1 converted the selected MAI-ST strategy into one sequential Tier 1 delivery stream and approved the WP-1..WP-8 WBS, schedule, and cost/token baselines. Ring 2 WP-1 completed the executable foundation with REV-044 PASS. WP-2 completed deterministic fixture ingestion and `PT-FIX-001A..O` with REV-059 conditional PASS; issue #70 is closed. WP-3 is active under issue #73 as the only package. GitHub #71 tracks identity-grammar and stable PostgreSQL error mapping required before WP-3 accepts non-golden fixtures. Architecture remains Proposed.
 
 ---
 
@@ -73,7 +73,7 @@ No application implementation exists yet; production readiness is not claimed.
 **Production Readiness:** Not Ready - planning only  
 **Ring Recommendation:** Execute Ring 2 sequentially, continuing with WP-3 only
 
-Execute WP-3 after opening its work item, with #71 closed before any non-golden fixture ingestion path is accepted. Do not overlap WP-4, activate a product baseline, accept Proposed architecture, connect a live provider or broker, deploy, release, or take production action.
+Execute WP-3 under GitHub issue #73, with #71 closed before any non-golden fixture ingestion path is accepted. Do not overlap WP-4, activate a product baseline, accept Proposed architecture, connect a live provider or broker, deploy, release, or take production action.
 
 ### Lessons Learned
 

@@ -7,7 +7,7 @@
 | # | Task | Status | Notes |
 |---|------|--------|-------|
 | 1 | Appoint schema custodian and freeze parallel contracts | Completed | GitHub issue #21; Workspace Owner closed prototype contract planning in DEC-023; executable agreement remains Ring 2 evidence |
-| 2 | Implement application command/query boundary | Ready | WP-3 next; `PT-APP-001A..P`; close #71 before accepting non-golden fixture input |
+| 2 | Implement application command/query boundary | In progress | GitHub issue #73; WP-3 only; `PT-APP-001A..P`; close #71 before accepting non-golden fixture input |
 | 3 | Assess providers and formalize fixture outage policy | Ready | GitHub issues #17, #3, #4, #5, and #10 |
 | 4 | Restate cross-cutting NFR acceptance criteria | Ready | GitHub issue #22; accessibility, latency, readiness, recovery, observability |
 | 5 | Add Mermaid render and version validation | Ready | GitHub issue #12; deferred from Ring 0 |

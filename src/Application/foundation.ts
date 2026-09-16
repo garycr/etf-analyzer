@@ -63,7 +63,12 @@ const logLevels = new Set<LocalConfiguration["logLevel"]>([
 ]);
 
 const sensitiveFieldPattern =
-  /(connectionstring|credential|databaseurl|password|postgresurl|secret|token)/i;
+  /(apikey|brokerageartifact|commandpayload|connectionstring|credential|databaseurl|environmentsecret|kubernetessecret|password|postgresurl|protectedanchorkey|rawfixturesource|rawprovider|requestpayload|secret|sourceurl|sql|stack|symbol|token|userenteredtext)/i;
+
+function redactSensitiveField(name: string, value: unknown): unknown {
+  const normalizedName = name.replaceAll(/[^a-z0-9]/gi, "");
+  return sensitiveFieldPattern.test(normalizedName) ? "[REDACTED]" : value;
+}
 
 export function loadLocalConfiguration(
   environment: Readonly<Record<string, string | undefined>>,
@@ -111,12 +116,8 @@ export function serializeLogEvent(
   event: string,
   fields: Readonly<Record<string, unknown>>,
 ): string {
-  const redactedFields = Object.fromEntries(
-    Object.entries(fields).map(([name, value]) => [
-      name,
-      sensitiveFieldPattern.test(name) ? "[REDACTED]" : value,
-    ]),
+  return JSON.stringify(
+    { event, fields, level: "info" },
+    redactSensitiveField,
   );
-
-  return JSON.stringify({ event, fields: redactedFields, level: "info" });
 }

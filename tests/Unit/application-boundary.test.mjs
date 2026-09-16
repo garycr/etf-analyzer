@@ -8,6 +8,7 @@ import {
   dispatchApplicationOperation,
   displayVerifiedResearch,
   evaluateReadiness,
+  exportDiagnosticMetadata,
   ownerFailureCodes,
   presentCanonicalValue,
   presentFailedJob,
@@ -524,4 +525,112 @@ test("PT-APP-001J retains exact research warning metadata on refresh", () => {
     () => presentResearchWarning("Unclassified"),
     /Research warning result kind is not supported/,
   );
+});
+
+test("PT-APP-001K exports only allowlisted metadata and fails closed", () => {
+  const correlationId = "90000000-0000-4000-8000-000000000001";
+  const configurationHash = "a".repeat(64);
+  const created = [];
+  const recordedFailures = [];
+  const createExport = (records) => {
+    created.push(records);
+    return { exportId: "diagnostic-export-1", records };
+  };
+  const recordFailure = (failure) => recordedFailures.push(failure);
+
+  const success = exportDiagnosticMetadata(
+    [{
+      code: "ANALYTICS_INPUT_INCOMPLETE",
+      codes: ["ANALYTICS_INPUT_INCOMPLETE", "ANALYTICS_PUBLICATION_BLOCKED"],
+      correlationId,
+      datasetId: "golden-fixture",
+      datasetVersion: "1.0.0",
+      jobId: "90000000-0000-4000-8000-000000000002",
+      status: "Failed",
+      occurredAt: "2026-09-16T17:00:00.000Z",
+      acceptedCount: 0,
+      durationMs: 12,
+      contractVersion: "1.0.0-candidate.2",
+      configurationHash,
+      password: "protected-password",
+      rawProviderBytes: "protected-provider-bytes",
+      stackTrace: "protected-stack",
+      commandPayload: { token: "protected-token" },
+    }],
+    createExport,
+    recordFailure,
+  );
+
+  assert.deepEqual(success, {
+    outcome: "Succeeded",
+    export: {
+      exportId: "diagnostic-export-1",
+      records: [{
+        code: "ANALYTICS_INPUT_INCOMPLETE",
+        codes: ["ANALYTICS_INPUT_INCOMPLETE", "ANALYTICS_PUBLICATION_BLOCKED"],
+        correlationId,
+        datasetId: "golden-fixture",
+        datasetVersion: "1.0.0",
+        jobId: "90000000-0000-4000-8000-000000000002",
+        status: "Failed",
+        occurredAt: "2026-09-16T17:00:00.000Z",
+        acceptedCount: 0,
+        durationMs: 12,
+        contractVersion: "1.0.0-candidate.2",
+        configurationHash,
+      }],
+    },
+  });
+  assert.equal(JSON.stringify(success).includes("protected"), false);
+  assert.equal(created.length, 1);
+  assert.equal(recordedFailures.length, 0);
+  assert.ok(Object.isFrozen(success));
+  assert.ok(Object.isFrozen(success.export));
+  assert.ok(Object.isFrozen(created[0]));
+  assert.ok(Object.isFrozen(created[0][0]));
+  assert.ok(Object.isFrozen(created[0][0].codes));
+
+  const failure = exportDiagnosticMetadata(
+    [
+      { correlationId, status: "Failed" },
+      {
+        correlationId: "90000000-0000-4000-8000-000000000003",
+        unclassifiedDetail: "must-not-escape",
+      },
+    ],
+    createExport,
+    recordFailure,
+  );
+
+  assert.deepEqual(failure, {
+    outcome: "Failed",
+    error: {
+      code: "APPLICATION_REDACTION_FAILED",
+      boundedIdentifiers: {
+        correlationId: "90000000-0000-4000-8000-000000000003",
+      },
+    },
+  });
+  assert.equal(created.length, 1);
+  assert.deepEqual(recordedFailures, [failure.error]);
+  assert.equal(JSON.stringify(failure).includes("must-not-escape"), false);
+  assert.ok(Object.isFrozen(failure));
+  assert.ok(Object.isFrozen(failure.error));
+  assert.ok(Object.isFrozen(failure.error.boundedIdentifiers));
+
+  for (const unsafeRecord of [
+    { correlationId, status: { password: "protected-password" } },
+    { correlationId, code: "protected-secret" },
+    { correlationId, configurationHash: "protected-secret" },
+  ]) {
+    const unsafeFailure = exportDiagnosticMetadata(
+      [unsafeRecord],
+      createExport,
+      recordFailure,
+    );
+    assert.equal(unsafeFailure.outcome, "Failed");
+    assert.equal(JSON.stringify(unsafeFailure).includes("protected"), false);
+  }
+  assert.equal(created.length, 1);
+  assert.equal(recordedFailures.length, 4);
 });

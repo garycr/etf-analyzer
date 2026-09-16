@@ -74,12 +74,26 @@ test("structured logs redact the configured PostgreSQL URL field", () => {
 
 test("structured logs redact every supported sensitive field name", () => {
   for (const fieldName of [
+    "apiKey",
+    "brokerageArtifact",
+    "commandPayload",
     "connectionString",
     "credential",
+    "environmentSecret",
+    "kubernetesSecret",
     "password",
     "PostgresURL",
+    "protectedAnchorKey",
+    "rawFixtureSource",
+    "rawProviderBytes",
+    "requestPayload",
     "secret",
+    "sourceUrl",
+    "sqlText",
+    "stackTrace",
+    "symbol",
     "token",
+    "userEnteredText",
   ]) {
     const event = JSON.parse(
       serializeLogEvent("foundation.started", { [fieldName]: "sensitive" }),
@@ -87,6 +101,43 @@ test("structured logs redact every supported sensitive field name", () => {
 
     assert.equal(event.fields[fieldName], "[REDACTED]", fieldName);
   }
+});
+
+test("structured logs recursively redact sensitive fields in objects and arrays", () => {
+  const event = JSON.parse(
+    serializeLogEvent("diagnostics.failed", {
+      safe: {
+        correlationId: "80000000-0000-4000-8000-000000000001",
+        nested: [
+          { password: "protected-password", status: "Failed" },
+          {
+            details: {
+              "connection-string": "postgres://user:protected@localhost/etf",
+              database_url: "postgres://user:protected@localhost/etf",
+            },
+          },
+        ],
+      },
+      tokens: [{ credential: "protected-credential" }],
+    }),
+  );
+
+  assert.deepEqual(event.fields, {
+    safe: {
+      correlationId: "80000000-0000-4000-8000-000000000001",
+      nested: [
+        { password: "[REDACTED]", status: "Failed" },
+        {
+          details: {
+            "connection-string": "[REDACTED]",
+            database_url: "[REDACTED]",
+          },
+        },
+      ],
+    },
+    tokens: "[REDACTED]",
+  });
+  assert.equal(JSON.stringify(event).includes("protected"), false);
 });
 
 test("health becomes ready only when every database check passes", () => {

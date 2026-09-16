@@ -6,6 +6,20 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-16 | WP-3 PT-APP-001K diagnostic redaction accepted | Ring-2 | @code-reviewer
+
+**Type:** CODE-AND-SECURITY-REVIEW
+**review-outcome:** PASS; Critical 0 | Major 0 | Minor 0 open | Sev 1/2 security 0
+**Decision:** Accept allowlist-only diagnostic export with semantic value grammars, whole-batch fail-closure, bounded offending-record attribution, immutable output, and recursive structured-log redaction across the prohibited vocabulary
+**Policy:** DEC-023; DEC-028; DEC-030; DEC-032; WP-3; PT-APP-001K; issue #22 redaction acceptance; code review; security review; test-first development
+**Authority:** Alternate-model Code Reviewer final recheck and Security Reviewer final recheck PASS
+**Accountability:** Solo Orchestrator preserves renderer accessibility for PT-APP-001L, runtime admission for PT-APP-001M, replay/precedence for PT-APP-001N/O, and summary composition for PT-APP-001P before continuing sequentially
+**Result:** Focused 3/3; complete default suite 307 discovered, 277 passed, 30 environment-skipped, 0 failed; test quality 4.71/5; lint, diagnostics, audit, and diff checks pass
+**Artifact:** docs/Governance/decisions/reviews/REV-081-wp-3-diagnostic-redaction-code-review.md | docs/Governance/decisions/reviews/REV-082-wp-3-diagnostic-redaction-security-review.md | docs/artifacts/gate-evidence/wp-3-diagnostic-redaction.md
+**authorization-boundary:** PT-APP-001K and issue #22 redaction acceptance input only; no PT-APP-001L..P completion, unrestricted diagnostic text, WP-4 overlap, live provider, release, deployment, or production authority
+
+---
+
 ## 2026-09-16 | WP-3 PT-APP-001J research warning metadata accepted | Ring-2 | @code-reviewer
 
 **Type:** CODE-AND-SECURITY-REVIEW

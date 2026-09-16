@@ -285,6 +285,8 @@ Focusing, announcing, or rendering a recovery action never invokes it. Keyboard 
 
 Diagnostic export is allowlist-only. Permitted fields are stable error/warning codes; bounded local identifiers (`requestId`, `correlationId`, `jobId`, `orderId`, `evidenceId`, dataset ID/version); canonical statuses; UTC timestamps; non-sensitive counts/durations; schema/contract/baseline versions; and lowercase SHA-256 evidence or configuration hashes.
 
+Callers must supply each allowlisted field only from its owning domain value. Passing provider strings, credentials, tokens, user-entered text, or other secret material through an identifier-shaped field is a contract violation even when the value satisfies the bounded identifier grammar; such fields are not generic diagnostic text channels.
+
 Prohibited content includes credentials, API keys, passwords, tokens, Kubernetes Secret values, environment secrets, raw provider or fixture-source bytes, query-bearing source URLs, full command/request payloads, stack traces, SQL text/values, protected anchor keys, brokerage artifacts, and values denied by evidence policy. Symbols and user-entered text are excluded unless a future reviewed allowlist explicitly requires them.
 
 Redaction occurs before logging, tracing, presentation, persistence of diagnostic bundles, or export. If safe redaction cannot be proven, the application returns `APPLICATION_REDACTION_FAILED`, produces no export, and records only that stable code plus bounded correlation metadata.

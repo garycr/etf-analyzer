@@ -207,6 +207,20 @@ export type ResearchWarningPresentation =
     readonly warningText: null;
   };
 
+type DiagnosticScalar = string | number;
+type DiagnosticValue = DiagnosticScalar | readonly string[];
+export type DiagnosticRecord = Readonly<Record<string, unknown>>;
+export type ExportedDiagnosticRecord = Readonly<Record<string, DiagnosticValue>>;
+
+export interface DiagnosticRedactionFailure {
+  readonly code: "APPLICATION_REDACTION_FAILED";
+  readonly boundedIdentifiers: Readonly<{ correlationId?: string }>;
+}
+
+export type DiagnosticExportResult<Result extends Readonly<Record<string, unknown>>> =
+  | { readonly outcome: "Succeeded"; readonly export: Readonly<Result> }
+  | { readonly outcome: "Failed"; readonly error: DiagnosticRedactionFailure };
+
 export interface FailedJobPresentation<Job extends FailedJobForPresentation> {
   readonly job: Job;
   readonly error: {
@@ -414,6 +428,176 @@ export function presentResearchWarning(
       resultKind satisfies never;
       throw new Error("Research warning result kind is not supported");
   }
+}
+
+const allowedDiagnosticFields = new Set([
+  "code",
+  "codes",
+  "warningCode",
+  "warningCodes",
+  "requestId",
+  "correlationId",
+  "jobId",
+  "orderId",
+  "evidenceId",
+  "datasetId",
+  "datasetVersion",
+  "status",
+  "occurredAt",
+  "createdAt",
+  "completedAt",
+  "checkedAt",
+  "acceptedCount",
+  "rejectedCount",
+  "itemCount",
+  "durationMs",
+  "schemaVersion",
+  "contractVersion",
+  "baselineVersion",
+  "contentHash",
+  "evidenceHash",
+  "configurationHash",
+]);
+const prohibitedDiagnosticFieldPattern =
+  /(apikey|brokerageartifact|commandpayload|connectionstring|credential|databaseurl|environmentsecret|kubernetessecret|password|protectedanchorkey|rawfixturesource|rawprovider|requestpayload|secret|sourceurl|sql|stack|symbol|token|userenteredtext)/i;
+const stableCodePattern = /^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+$/u;
+const uuidPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
+const utcInstantPattern =
+  /^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]\.[0-9]{3}Z$/u;
+const sha256Pattern = /^[0-9a-f]{64}$/u;
+const boundedIdentifierPattern = /^[A-Za-z0-9][A-Za-z0-9._:@/-]{0,127}$/u;
+const versionPattern = /^(?:v)?[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?$/u;
+const canonicalDiagnosticStatuses = new Set([
+  "Pending",
+  "Running",
+  "Succeeded",
+  "Failed",
+  "Ready",
+  "NotReady",
+  "Draft",
+  "Submitted",
+  "Accepted",
+  "Partial",
+  "Filled",
+  "Rejected",
+  "Canceled",
+  "Expired",
+  "Valid",
+  "Invalid",
+  "Complete",
+  "Incomplete",
+  "Verified",
+  "Blocked",
+  "Quarantined",
+]);
+
+function isAllowedDiagnosticValue(
+  name: string,
+  value: unknown,
+): value is DiagnosticValue {
+  switch (name) {
+    case "code":
+    case "warningCode":
+      return typeof value === "string" && stableCodePattern.test(value);
+    case "codes":
+    case "warningCodes":
+      return Array.isArray(value) &&
+        value.every((item) =>
+          typeof item === "string" && stableCodePattern.test(item)
+        );
+    case "requestId":
+    case "correlationId":
+    case "jobId":
+    case "orderId":
+      return typeof value === "string" && uuidPattern.test(value);
+    case "evidenceId":
+    case "datasetId":
+    case "datasetVersion":
+      return typeof value === "string" && boundedIdentifierPattern.test(value);
+    case "status":
+      return typeof value === "string" && canonicalDiagnosticStatuses.has(value);
+    case "occurredAt":
+    case "createdAt":
+    case "completedAt":
+    case "checkedAt":
+      return typeof value === "string" && utcInstantPattern.test(value);
+    case "acceptedCount":
+    case "rejectedCount":
+    case "itemCount":
+    case "durationMs":
+      return typeof value === "number" &&
+        Number.isSafeInteger(value) && value >= 0;
+    case "schemaVersion":
+    case "contractVersion":
+    case "baselineVersion":
+      return typeof value === "string" && versionPattern.test(value);
+    case "contentHash":
+    case "evidenceHash":
+    case "configurationHash":
+      return typeof value === "string" && sha256Pattern.test(value);
+    default:
+      return false;
+  }
+}
+
+function classifyDiagnosticRecord(
+  record: DiagnosticRecord,
+): ExportedDiagnosticRecord | null {
+  const exportedEntries: [string, DiagnosticValue][] = [];
+  for (const [name, value] of Object.entries(record)) {
+    const normalizedName = name.replaceAll(/[^a-z0-9]/gi, "");
+    if (prohibitedDiagnosticFieldPattern.test(normalizedName)) {
+      continue;
+    }
+    if (!allowedDiagnosticFields.has(name)) {
+      return null;
+    }
+    if (!isAllowedDiagnosticValue(name, value)) {
+      return null;
+    }
+    exportedEntries.push([
+      name,
+      Array.isArray(value) ? Object.freeze([...value]) : value,
+    ]);
+  }
+  return Object.freeze(Object.fromEntries(exportedEntries));
+}
+
+export function exportDiagnosticMetadata<
+  Result extends Readonly<Record<string, unknown>>,
+>(
+  records: readonly DiagnosticRecord[],
+  createExport: (records: readonly ExportedDiagnosticRecord[]) => Result,
+  recordFailure: (failure: DiagnosticRedactionFailure) => void,
+): DiagnosticExportResult<Result> {
+  const exportedRecords: ExportedDiagnosticRecord[] = [];
+  for (const record of records) {
+    const exportedRecord = classifyDiagnosticRecord(record);
+    if (exportedRecord === null) {
+      const correlationId = typeof record.correlationId === "string" &&
+          uuidPattern.test(record.correlationId)
+        ? record.correlationId
+        : undefined;
+      const boundedIdentifiers = correlationId === undefined
+        ? Object.freeze({})
+        : Object.freeze({ correlationId });
+      const error = Object.freeze({
+        code: "APPLICATION_REDACTION_FAILED" as const,
+        boundedIdentifiers,
+      });
+      recordFailure(error);
+      return Object.freeze({ outcome: "Failed" as const, error });
+    }
+    exportedRecords.push(exportedRecord);
+  }
+
+  const frozenRecords = Object.freeze(exportedRecords);
+  const diagnosticExport = Object.freeze({ ...createExport(frozenRecords) });
+  return Object.freeze({
+    outcome: "Succeeded" as const,
+    export: diagnosticExport,
+  });
 }
 
 export function evaluateReadiness(

@@ -13,7 +13,8 @@ export type FixtureConformanceCode =
   | "FIXTURE_REQUIRED_PARTIAL"
   | "FIXTURE_REQUIRED_QUARANTINED"
   | "FIXTURE_REQUIRED_STALE"
-  | "FIXTURE_TEMPORAL_INVALID";
+  | "FIXTURE_TEMPORAL_INVALID"
+  | "FIXTURE_UNDECLARED_INPUT";
 
 const approvedDatasetHashes = new Map<string, string>([
   [
@@ -64,6 +65,11 @@ interface FileDescriptor {
 interface ParsedFixtureFile {
   readonly descriptor: FileDescriptor;
   readonly records: readonly Readonly<Record<string, unknown>>[];
+}
+
+interface DeclaredCoverage {
+  readonly economicInputs: ReadonlySet<string>;
+  readonly marketInputs: ReadonlySet<string>;
 }
 
 const manifestFields = [
@@ -382,11 +388,12 @@ function validateObservationDescriptors(descriptors: readonly FileDescriptor[]):
   }
 }
 
-function validateCoverage(manifest: Readonly<Record<string, unknown>>): void {
+function validateCoverage(manifest: Readonly<Record<string, unknown>>): DeclaredCoverage {
   if (!Array.isArray(manifest.marketCoverage) || !Array.isArray(manifest.economicCoverage)) {
     throw new FixtureConformanceError("FIXTURE_MANIFEST_INVALID");
   }
 
+  const marketInputs = new Set<string>();
   const marketIdentities = manifest.marketCoverage.map((item) => {
     const coverage = requireClosedRecord(item, marketCoverageFields);
     const adjustmentPolicy = requireString(coverage, "adjustmentPolicy");
@@ -394,10 +401,16 @@ function validateCoverage(manifest: Readonly<Record<string, unknown>>): void {
     const dates = requireStringArray(coverage.requiredTradingDates);
     dates.forEach(requireCanonicalDate);
     requireStrictlySortedUnique(dates, compareUtf8);
+    dates.forEach((tradingDate) => marketInputs.add(canonicalizeJson([
+      instrumentId,
+      adjustmentPolicy,
+      tradingDate,
+    ])));
     return [instrumentId, adjustmentPolicy] as const;
   });
   requireStrictlySortedUnique(marketIdentities, compareStringTuple);
 
+  const economicInputs = new Set<string>();
   const economicIdentities = manifest.economicCoverage.map((item) => {
     const coverage = requireClosedRecord(item, economicCoverageFields);
     const providerId = requireString(coverage, "providerId");
@@ -405,9 +418,16 @@ function validateCoverage(manifest: Readonly<Record<string, unknown>>): void {
     const dates = requireStringArray(coverage.observationDates);
     dates.forEach(requireCanonicalDate);
     requireStrictlySortedUnique(dates, compareUtf8);
+    dates.forEach((observationDate) => economicInputs.add(canonicalizeJson([
+      providerId,
+      seriesId,
+      observationDate,
+    ])));
     return [providerId, seriesId] as const;
   });
   requireStrictlySortedUnique(economicIdentities, compareStringTuple);
+
+  return { economicInputs, marketInputs };
 }
 
 function validateRecordProvenance(
@@ -433,6 +453,41 @@ function validateRecordProvenance(
       ) {
         throw new FixtureConformanceError("FIXTURE_PROVENANCE_INVALID");
       }
+    }
+  }
+}
+
+function validateDeclaredCoverage(
+  declaredCoverage: DeclaredCoverage,
+  parsedFiles: readonly ParsedFixtureFile[],
+): void {
+  const marketFile = requireParsedFixtureFile(
+    parsedFiles,
+    "market-observations.jsonl",
+  );
+  for (const record of marketFile.records) {
+    const inputKey = canonicalizeJson([
+      requireString(record, "instrumentId"),
+      requireString(record, "adjustmentPolicy"),
+      requireString(record, "tradingDate"),
+    ]);
+    if (!declaredCoverage.marketInputs.has(inputKey)) {
+      throw new FixtureConformanceError("FIXTURE_UNDECLARED_INPUT");
+    }
+  }
+
+  const economicFile = requireParsedFixtureFile(
+    parsedFiles,
+    "economic-vintages.jsonl",
+  );
+  for (const record of economicFile.records) {
+    const inputKey = canonicalizeJson([
+      requireString(record, "providerId"),
+      requireString(record, "seriesId"),
+      requireString(record, "observationDate"),
+    ]);
+    if (!declaredCoverage.economicInputs.has(inputKey)) {
+      throw new FixtureConformanceError("FIXTURE_UNDECLARED_INPUT");
     }
   }
 }
@@ -671,7 +726,7 @@ function validateFixturePackageContents(
   validateObservationDescriptors(descriptors);
   const expectedPaths = descriptors.map(({ relativePath }) => relativePath);
   requireStrictlySortedUnique(expectedPaths, compareUtf8);
-  validateCoverage(manifest);
+  const declaredCoverage = validateCoverage(manifest);
   const actualPaths = Object.keys(fixturePackage.files).sort(compareUtf8);
 
   if (
@@ -732,6 +787,7 @@ function validateFixturePackageContents(
   const economicReplay = validateEconomicReplay(parsedFiles);
   validateObservationValues(parsedFiles);
   validateRecordProvenance(parsedFiles, fileHashes);
+  validateDeclaredCoverage(declaredCoverage, parsedFiles);
 
   return {
     manifest,

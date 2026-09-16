@@ -315,33 +315,30 @@ test("PT-FIX-001D includes an economic vintage released exactly at T", () => {
   const fixturePackage = packageWithRecordMutation(
     "economic-vintages.jsonl",
     (records) => {
-      records[0].releaseTimestamp = "2026-01-15T13:29:59.999Z";
+      records[0].releaseTimestamp = "2026-01-30T21:59:59.999Z";
       records[0].vintageId = "before";
       records.push({
         ...structuredClone(records[0]),
-        releaseTimestamp: "2026-01-15T13:30:00.000Z",
+        releaseTimestamp: "2026-01-30T22:00:00.000Z",
         vintageId: "at",
       });
       records.push({
         ...structuredClone(records[0]),
-        releaseTimestamp: "2026-01-15T13:30:00.001Z",
+        releaseTimestamp: "2026-01-30T22:00:00.001Z",
         vintageId: "after",
       });
     },
   );
-  const changedManifest = JSON.parse(fixturePackage.manifest.toString("utf8"));
-  changedManifest.marketCoverage[0].requiredTradingDates = [];
-  updateManifest(fixturePackage, changedManifest);
   const originalBytes = Buffer.from(fixturePackage.files["economic-vintages.jsonl"]);
 
   const selection = selectFixturePackageAt(
     fixturePackage,
-    "2026-01-15T13:30:00.000Z",
+    "2026-01-30T22:00:00.000Z",
   );
 
   assert.equal(selection.economicVintages.length, 1);
   assert.equal(selection.economicVintages[0].vintageId, "at");
-  assert.equal(selection.economicVintages[0].releaseTimestamp, "2026-01-15T13:30:00.000Z");
+  assert.equal(selection.economicVintages[0].releaseTimestamp, "2026-01-30T22:00:00.000Z");
   assert.deepEqual(fixturePackage.files["economic-vintages.jsonl"], originalBytes);
 });
 
@@ -389,15 +386,17 @@ test("PT-FIX-001G suppresses selection when a required input is unavailable", ()
 });
 
 test("PT-FIX-001G suppresses selection when required economic input is unavailable", () => {
-  const fixturePackage = packageWithManifestMutation((value) => {
-    value.datasetVersion = "2026.01.1";
-    value.marketCoverage[0].requiredTradingDates = [];
-  });
+  const fixturePackage = packageWithRecordMutation(
+    "economic-vintages.jsonl",
+    ([record]) => {
+      record.releaseTimestamp = "2026-01-30T22:00:00.001Z";
+    },
+  );
 
   assert.throws(
     () => selectFixturePackageAt(
       fixturePackage,
-      "2026-01-15T13:29:59.999Z",
+      "2026-01-30T22:00:00.000Z",
     ),
     (error) =>
       error instanceof FixtureConformanceError &&
@@ -576,6 +575,85 @@ for (const [qualityState, expectedCode] of [
   });
 }
 
+for (const [field, value] of [
+  ["instrumentId", "UNDECLARED-ETF"],
+  ["adjustmentPolicy", "unadjusted"],
+  ["tradingDate", "2026-01-31"],
+]) {
+  test(`fixture validation rejects a market observation with undeclared ${field}`, () => {
+    const fixturePackage = packageWithRecordMutation(
+      "market-observations.jsonl",
+      (records) => {
+        records.push({
+          ...structuredClone(records[0]),
+          [field]: value,
+          ingestionJobId: "fixture-build-2",
+        });
+      },
+    );
+
+    assertFixtureError(fixturePackage, "FIXTURE_UNDECLARED_INPUT");
+  });
+}
+
+for (const [field, value] of [
+  ["providerId", "BLS"],
+  ["seriesId", "UNDECLARED-CPI"],
+  ["observationDate", "2025-12-02"],
+]) {
+  test(`fixture validation rejects an economic vintage with undeclared ${field}`, () => {
+    const fixturePackage = packageWithRecordMutation(
+      "economic-vintages.jsonl",
+      (records) => {
+        records.push({
+          ...structuredClone(records[0]),
+          [field]: value,
+          ingestionJobId: "fixture-build-2",
+        });
+      },
+    );
+
+    assertFixtureError(fixturePackage, "FIXTURE_UNDECLARED_INPUT");
+  });
+}
+
+test("fixture validation reports invalid provenance before undeclared input", () => {
+  const fixturePackage = packageWithRecordMutation(
+    "market-observations.jsonl",
+    (records) => {
+      records.push({
+        ...structuredClone(records[0]),
+        ingestionJobId: "fixture-build-2",
+        instrumentId: "UNDECLARED-ETF",
+        normalizationId: "",
+      });
+    },
+  );
+
+  assertFixtureError(fixturePackage, "FIXTURE_PROVENANCE_INVALID");
+});
+
+test("fixture selection reports undeclared input before required-input failures", () => {
+  const fixturePackage = packageWithRecordMutation(
+    "market-observations.jsonl",
+    (records) => {
+      records[0].qualityCodes = ["SOURCE_PARTIAL"];
+      records[0].qualityState = "Partial";
+      records.push({
+        ...structuredClone(records[0]),
+        ingestionJobId: "fixture-build-2",
+        instrumentId: "UNDECLARED-ETF",
+      });
+    },
+  );
+
+  assertSelectionError(
+    fixturePackage,
+    "2026-01-30T22:00:00.000Z",
+    "FIXTURE_UNDECLARED_INPUT",
+  );
+});
+
 test("PT-FIX-001D/E selection preserves package validation precedence", () => {
   const fixturePackage = packageWithRecordMutation(
     "market-observations.jsonl",
@@ -654,6 +732,13 @@ test("PT-FIX-001D/E returns market groups in canonical tuple order", () => {
       });
     },
   );
+  const changedManifest = JSON.parse(fixturePackage.manifest.toString("utf8"));
+  changedManifest.marketCoverage.push({
+    adjustmentPolicy: "split-adjusted",
+    instrumentId: "ZZZ",
+    requiredTradingDates: ["2026-01-30"],
+  });
+  updateManifest(fixturePackage, changedManifest);
 
   const selection = selectFixturePackageAt(
     fixturePackage,
@@ -677,6 +762,13 @@ test("PT-FIX-001D/E returns economic groups in canonical tuple order", () => {
       });
     },
   );
+  const changedManifest = JSON.parse(fixturePackage.manifest.toString("utf8"));
+  changedManifest.economicCoverage.push({
+    observationDates: ["2025-12-01"],
+    providerId: "TREASURY_FISCAL_DATA",
+    seriesId: "ZZZ",
+  });
+  updateManifest(fixturePackage, changedManifest);
 
   const selection = selectFixturePackageAt(
     fixturePackage,
@@ -1024,6 +1116,16 @@ test("PT-FIX-001H accepts empty coverage date arrays structurally", () => {
   });
 
   assertFixtureError(fixturePackage, "FIXTURE_IDEMPOTENCY_CONFLICT");
+});
+
+test("fixture validation rejects records when all coverage date arrays are empty", () => {
+  const fixturePackage = packageWithManifestMutation((value) => {
+    value.datasetVersion = "2026.01.1";
+    value.marketCoverage[0].requiredTradingDates = [];
+    value.economicCoverage[0].observationDates = [];
+  });
+
+  assertFixtureError(fixturePackage, "FIXTURE_UNDECLARED_INPUT");
 });
 
 test("PT-FIX-001H rejects a missing required observation descriptor", () => {

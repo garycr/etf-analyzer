@@ -51,6 +51,44 @@ export interface JobRestartRequest {
   readonly jobId: string;
 }
 
+export interface FailedJobForPresentation {
+  readonly jobId: string;
+  readonly status: "Failed";
+  readonly restartability: "Restartable" | "NotRestartable";
+  readonly acceptedCount: number;
+  readonly controllingError: {
+    readonly code: string;
+  };
+}
+
+export type FailedJobRecovery =
+  | {
+    readonly actionId: "retry-job";
+    readonly label: "Retry job";
+    readonly targetOperation: "JobRestart";
+    readonly focusTarget: "job-status";
+    readonly requiresConfirmation: false;
+  }
+  | {
+    readonly actionId: "review-job";
+    readonly label: "Review job details";
+    readonly targetOperation: "JobGet";
+    readonly focusTarget: "job-details";
+    readonly requiresConfirmation: false;
+  };
+
+export interface FailedJobPresentation<Job extends FailedJobForPresentation> {
+  readonly job: Job;
+  readonly error: {
+    readonly code: string;
+    readonly message: string;
+    readonly boundedIdentifiers: { readonly jobId: string };
+    readonly recovery: FailedJobRecovery;
+  };
+  readonly recoveryTarget: { readonly jobId: string };
+  readonly dependentResearch: "Blocked";
+}
+
 export interface PaperOrderConfirmation {
   readonly actorId: "local-user";
   readonly confirmedAt: string;
@@ -131,6 +169,41 @@ export function displayVerifiedResearch<Result>(
   research: CompleteVerifiedResearch<Result>,
 ): Result {
   return research.result;
+}
+
+export function presentFailedJob<Job extends FailedJobForPresentation>(
+  job: Job,
+): FailedJobPresentation<Job> {
+  const recovery = job.restartability === "Restartable"
+    ? Object.freeze({
+      actionId: "retry-job" as const,
+      label: "Retry job" as const,
+      targetOperation: "JobRestart" as const,
+      focusTarget: "job-status" as const,
+      requiresConfirmation: false as const,
+    })
+    : Object.freeze({
+      actionId: "review-job" as const,
+      label: "Review job details" as const,
+      targetOperation: "JobGet" as const,
+      focusTarget: "job-details" as const,
+      requiresConfirmation: false as const,
+    });
+  const message = job.restartability === "Restartable"
+    ? "The job failed. Correct the reported cause, then retry the job."
+    : "The job failed and cannot be restarted. Review the job details.";
+
+  return Object.freeze({
+    job,
+    error: Object.freeze({
+      code: job.controllingError.code,
+      message,
+      boundedIdentifiers: Object.freeze({ jobId: job.jobId }),
+      recovery,
+    }),
+    recoveryTarget: Object.freeze({ jobId: job.jobId }),
+    dependentResearch: "Blocked",
+  });
 }
 
 export function restartDurableJob<Result>(

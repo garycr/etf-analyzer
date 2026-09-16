@@ -7,6 +7,7 @@ import {
   applicationQueryOperations,
   dispatchApplicationOperation,
   displayVerifiedResearch,
+  presentFailedJob,
   restartDurableJob,
   submitConfirmedPaperOrder,
   resolveApplicationOperation,
@@ -232,4 +233,63 @@ test("PT-APP-001D preserves restart refusal without retry or translation", () =>
     (error) => error === ownerError,
   );
   assert.equal(dispatchCount, 1);
+});
+
+test("PT-APP-001E zero accepted rows remains a visible failed job", () => {
+  const vectors = [
+    {
+      code: "FIXTURE_REQUIRED_INPUT_MISSING",
+      restartability: "Restartable",
+      recovery: {
+        actionId: "retry-job",
+        label: "Retry job",
+        targetOperation: "JobRestart",
+        focusTarget: "job-status",
+        requiresConfirmation: false,
+      },
+    },
+    {
+      code: "APPLICATION_DEPENDENCY_UNAVAILABLE",
+      restartability: "NotRestartable",
+      recovery: {
+        actionId: "review-job",
+        label: "Review job details",
+        targetOperation: "JobGet",
+        focusTarget: "job-details",
+        requiresConfirmation: false,
+      },
+    },
+  ];
+
+  for (const [index, vector] of vectors.entries()) {
+    const job = Object.freeze({
+      jobId: `40000000-0000-4000-8000-00000000000${index + 1}`,
+      status: "Failed",
+      restartability: vector.restartability,
+      acceptedCount: 0,
+      rejectedCount: 1,
+      controllingError: Object.freeze({ code: vector.code }),
+    });
+    const result = presentFailedJob(job);
+
+    assert.equal(result.job, job);
+    assert.equal(result.job.status, "Failed");
+    assert.deepEqual(result, {
+      job,
+      error: {
+        code: vector.code,
+        message:
+          vector.restartability === "Restartable"
+            ? "The job failed. Correct the reported cause, then retry the job."
+            : "The job failed and cannot be restarted. Review the job details.",
+        boundedIdentifiers: { jobId: job.jobId },
+        recovery: vector.recovery,
+      },
+      recoveryTarget: { jobId: job.jobId },
+      dependentResearch: "Blocked",
+    });
+    assert.equal("outcome" in result, false);
+    assert.equal("data" in result, false);
+    assert.equal(JSON.stringify(result).includes("Succeeded"), false);
+  }
 });

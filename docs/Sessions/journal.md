@@ -6,6 +6,20 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-16 | WP-3 PT-APP-001E failed-job visibility accepted | Ring-2 | @code-reviewer
+
+**Type:** CODE-AND-SECURITY-REVIEW
+**review-outcome:** PASS; Critical 0 | Major 0 | Sev 1/2 security 0
+**Decision:** Accept capability-free Failed-job presentation with stable controlling code, exact redacted recovery metadata, zero-row fail-closure, and blocked dependent research
+**Policy:** DEC-023; DEC-028; DEC-030; DEC-032; WP-3; PT-APP-001E; code review; security review; test-first development
+**Authority:** Alternate-model Code Reviewer and Security Reviewer
+**Accountability:** Solo Orchestrator preserves envelope/error composition for PT-APP-001H/J/L and runtime admission for PT-APP-001M before continuing sequentially to PT-APP-001F
+**Result:** Focused 1/1; complete default suite 300 discovered, 270 passed, 30 environment-skipped, 0 failed; lint, diagnostics, audit, and diff checks pass
+**Artifact:** docs/Governance/decisions/reviews/REV-069-wp-3-failed-job-visibility-code-review.md | docs/Governance/decisions/reviews/REV-070-wp-3-failed-job-visibility-security-review.md | docs/artifacts/gate-evidence/wp-3-failed-job-visibility.md
+**authorization-boundary:** PT-APP-001E only; no PT-APP-001F..P completion, WP-4 overlap, live provider, release, deployment, or production authority
+
+---
+
 ## 2026-09-16 | WP-3 PT-APP-001D durable job restart accepted | Ring-2 | @code-reviewer
 
 **Type:** CODE-AND-SECURITY-REVIEW

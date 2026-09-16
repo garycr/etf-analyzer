@@ -5,6 +5,7 @@ import {
   ApplicationRequestInvalidError,
   ApplicationResultInvalidError,
   ApplicationOperationUnknownError,
+  ApplicationUnauthorizedError,
   applicationCommandOperations,
   applicationQueryOperations,
   activateBlockedStateRecovery,
@@ -24,6 +25,7 @@ import {
   presentResearchWarning,
   readinessDependencyNames,
   restartDurableJob,
+  selectControllingApplicationError,
   submitConfirmedPaperOrder,
   validateApplicationSuccessData,
   resolveApplicationOperation,
@@ -1506,7 +1508,7 @@ test("PT-APP-001N rejects malformed envelopes and canonicalizes normalized paylo
 
   const watchlistPayload = { instrumentId: "ETF-A", expectedVersion: "1" };
   for (const malformedRequestJson of [
-    JSON.stringify(envelope("WatchlistRemove", watchlistPayload, { actorId: "other-user" })),
+    JSON.stringify(envelope("WatchlistRemove", watchlistPayload, { actorId: null })),
     JSON.stringify(envelope("WatchlistRemove", watchlistPayload, { requestedAt: "2026-01-30" })),
     JSON.stringify({ ...envelope("WatchlistRemove", watchlistPayload), extra: true }),
     JSON.stringify(envelope("WatchlistGet", {})),
@@ -1605,4 +1607,175 @@ test("PT-APP-001N fails closed on synchronous same-key reentrancy", () => {
   assert.throws(dispatch, (error) => error === firstError);
   assert.equal(readinessCalls, 1);
   assert.equal(ownerCalls, 1);
+});
+
+test("PT-APP-001O selects one deterministic controlling error", () => {
+  const requestId = (suffix) => `72000000-0000-4000-8000-${suffix}`;
+  const candidate = (phase, code, requestIdentity, overrides = {}) => ({
+    phase,
+    code,
+    operation: "PaperOrderTransition",
+    requestId: requestIdentity,
+    ...overrides,
+  });
+  const vectors = [
+    [
+      candidate("Operation", "APPLICATION_OPERATION_UNKNOWN", requestId("000000000001"), { operation: "Unknown" }),
+      candidate("Request", "APPLICATION_REQUEST_INVALID", requestId("000000000001")),
+      "APPLICATION_OPERATION_UNKNOWN",
+      requestId("000000000001"),
+    ],
+    [
+      candidate("Request", "APPLICATION_REQUEST_INVALID", requestId("000000000002")),
+      candidate("Authorization", "APPLICATION_UNAUTHORIZED", requestId("000000000002")),
+      "APPLICATION_REQUEST_INVALID",
+      requestId("000000000002"),
+    ],
+    [
+      candidate("Authorization", "APPLICATION_UNAUTHORIZED", requestId("000000000003")),
+      candidate("Replay", "APPLICATION_IDEMPOTENCY_CONFLICT", requestId("000000000003")),
+      "APPLICATION_UNAUTHORIZED",
+      requestId("000000000003"),
+    ],
+    [
+      candidate("Replay", "APPLICATION_IDEMPOTENCY_CONFLICT", requestId("000000000004")),
+      candidate("Admission", "APPLICATION_DATABASE_UNAVAILABLE", requestId("000000000004")),
+      "APPLICATION_IDEMPOTENCY_CONFLICT",
+      requestId("000000000004"),
+    ],
+    [
+      candidate("Admission", "APPLICATION_MIGRATIONS_INCOMPLETE", requestId("000000000005")),
+      candidate("Admission", "APPLICATION_DATABASE_UNAVAILABLE", requestId("000000000005")),
+      "APPLICATION_DATABASE_UNAVAILABLE",
+      requestId("000000000005"),
+    ],
+    [
+      candidate("Admission", "APPLICATION_DATABASE_UNAVAILABLE", requestId("000000000006")),
+      candidate("Owner", "ORDER_IDEMPOTENCY_CONFLICT", requestId("000000000006"), { ownerRank: 10 }),
+      "APPLICATION_DATABASE_UNAVAILABLE",
+      requestId("000000000006"),
+    ],
+    [
+      candidate("Owner", "ANALYTICS_INPUT_INCOMPLETE", requestId("000000000007"), { ownerRank: 40 }),
+      candidate("Owner", "ANALYTICS_INTEGRITY_FAILED", requestId("000000000007"), { ownerRank: 80 }),
+      "ANALYTICS_INPUT_INCOMPLETE",
+      requestId("000000000007"),
+    ],
+    [
+      candidate("Owner", "ORDER_IDEMPOTENCY_CONFLICT", requestId("000000000008"), { ownerRank: 10 }),
+      candidate("Persistence", "APPLICATION_PERSISTENCE_FAILED", requestId("000000000008")),
+      "ORDER_IDEMPOTENCY_CONFLICT",
+      requestId("000000000008"),
+    ],
+    [
+      candidate("Persistence", "APPLICATION_PERSISTENCE_FAILED", requestId("000000000009")),
+      candidate("Result", "APPLICATION_RESULT_INVALID", requestId("000000000009")),
+      "APPLICATION_PERSISTENCE_FAILED",
+      requestId("000000000009"),
+    ],
+    [
+      candidate("Operation", "APPLICATION_OPERATION_UNKNOWN", requestId("000000000011"), { operation: undefined }),
+      candidate("Operation", "APPLICATION_OPERATION_UNKNOWN", requestId("000000000010"), { operation: "invalid" }),
+      "APPLICATION_OPERATION_UNKNOWN",
+      requestId("000000000010"),
+    ],
+    [
+      candidate("Operation", "APPLICATION_OPERATION_UNKNOWN", undefined, { operation: "invalid-a" }),
+      candidate("Operation", "APPLICATION_OPERATION_UNKNOWN", requestId("000000000012"), { operation: "invalid-b" }),
+      "APPLICATION_OPERATION_UNKNOWN",
+      null,
+    ],
+  ];
+
+  for (const [first, second, expectedCode, expectedRequestId] of vectors) {
+    const selected = selectControllingApplicationError([second, first]);
+    assert.deepEqual(selected, {
+      code: expectedCode,
+      requestId: expectedRequestId,
+    });
+    assert.ok(Object.isFrozen(selected));
+  }
+});
+
+test("PT-APP-001O rejects invalid candidates and applies tuple ties", () => {
+  const sameRankCandidates = Object.freeze([
+    Object.freeze({
+      phase: "Admission",
+      code: "APPLICATION_MIGRATIONS_INCOMPLETE",
+      operation: "WatchlistPut",
+      requestId: "76000000-0000-4000-8000-000000000002",
+    }),
+    Object.freeze({
+      phase: "Admission",
+      code: "APPLICATION_DATABASE_UNAVAILABLE",
+      operation: "WatchlistGet",
+      requestId: "76000000-0000-4000-8000-000000000001",
+    }),
+  ]);
+  assert.deepEqual(selectControllingApplicationError(sameRankCandidates), {
+    code: "APPLICATION_DATABASE_UNAVAILABLE",
+    requestId: "76000000-0000-4000-8000-000000000001",
+  });
+  assert.equal(sameRankCandidates[0].code, "APPLICATION_MIGRATIONS_INCOMPLETE");
+
+  for (const invalidCandidates of [
+    [],
+    [{ phase: "Result", code: "APPLICATION_OPERATION_UNKNOWN" }],
+    [{ phase: "Owner", code: "ANALYTICS_INPUT_INCOMPLETE" }],
+    [{ phase: "Owner", code: "ANALYTICS_INPUT_INCOMPLETE", ownerRank: 0 }],
+    [{ phase: "Admission", code: "APPLICATION_DATABASE_UNAVAILABLE", ownerRank: 10 }],
+    [{ phase: "Unknown", code: "APPLICATION_DATABASE_UNAVAILABLE" }],
+    [{ phase: "Admission", code: "not-stable" }],
+  ]) {
+    assert.throws(
+      () => selectControllingApplicationError(invalidCandidates),
+      (error) => error instanceof ApplicationResultInvalidError,
+    );
+  }
+});
+
+test("PT-APP-001O applies precedence on the command admission path", () => {
+  const replayStore = createInMemoryApplicationReplayStore();
+  const validRequest = {
+    operation: "WatchlistRemove",
+    requestId: "77000000-0000-4000-8000-000000000001",
+    correlationId: "77000000-0000-4000-8000-000000000002",
+    actorId: "local-user",
+    prototypeCandidate: "v1.0.0-prototype.1",
+    contractVersion: "1.0.0-candidate.2",
+    requestedAt: "2026-01-30T12:00:00.000Z",
+    commandId: "77000000-0000-4000-8000-000000000003",
+    payload: { instrumentId: "ETF-A", expectedVersion: "1" },
+  };
+  let readinessCalls = 0;
+  let ownerCalls = 0;
+  const dispatch = (request) => dispatchReplayProtectedApplicationCommand(
+    JSON.stringify(request),
+    replayStore,
+    () => { readinessCalls += 1; },
+    () => { ownerCalls += 1; },
+  );
+
+  const unknownWithoutActor = { ...validRequest, operation: "UnknownOperation" };
+  delete unknownWithoutActor.actorId;
+  assert.throws(
+    () => dispatch(unknownWithoutActor),
+    (error) =>
+      error instanceof ApplicationOperationUnknownError &&
+      error.requestId === validRequest.requestId,
+  );
+  assert.throws(
+    () => dispatch({ ...validRequest, actorId: "other-user", extra: true }),
+    (error) =>
+      error instanceof ApplicationRequestInvalidError &&
+      error.requestId === validRequest.requestId,
+  );
+  assert.throws(
+    () => dispatch({ ...validRequest, actorId: "other-user" }),
+    (error) =>
+      error instanceof ApplicationUnauthorizedError &&
+      error.requestId === validRequest.requestId,
+  );
+  assert.equal(readinessCalls, 0);
+  assert.equal(ownerCalls, 0);
 });

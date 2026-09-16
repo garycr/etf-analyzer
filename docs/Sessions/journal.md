@@ -6,6 +6,20 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-16 | WP-3 PT-APP-001O deterministic error precedence accepted | Ring-2 | @code-reviewer
+
+**Type:** CODE-AND-SECURITY-REVIEW
+**review-outcome:** PASS; Critical 0 | Major 0 open | Minor 0 open | Security findings 0 blocking
+**Decision:** Accept closed phase/code ranks, owner internal precedence, Unicode code-point tuple ties, verified selected request identity, and one ranked operation/request/authorization selection on live command admission
+**Policy:** DEC-023; DEC-028; DEC-030; DEC-032; DEC-033; DEC-034; DEC-035; WP-3; PT-APP-001O; application contract; code review; security review; test-first development
+**Authority:** Alternate-model Code Reviewer and Security Reviewer final PASS
+**Accountability:** Solo Orchestrator continues sequentially to PT-APP-001P closed Job transitions and aggregate WP-3 closure, while preserving lower-phase owners and excluding persistent distributed replay and WP-4 claims
+**Result:** Focused PT-O 3/3 and N/O 6/6; complete default suite 316 discovered, 286 passed, 30 environment-skipped, 0 failed; test quality 5/5; lint, diagnostics, dependency audit, and diff checks pass
+**Artifact:** docs/Governance/decisions/reviews/REV-090-wp-3-error-precedence-code-review.md | docs/Governance/decisions/reviews/REV-091-wp-3-error-precedence-security-review.md | docs/artifacts/gate-evidence/wp-3-error-precedence.md
+**authorization-boundary:** PT-APP-001O and live command operation/request/authorization precedence only; no PT-APP-001P or aggregate WP-3 completion, distributed persistence guarantee, API/broker/provider/event/queue/scheduler/WP-4 surface, live provider, release, deployment, or production authority
+
+---
+
 ## 2026-09-16 | WP-3 PT-APP-001N deterministic application replay accepted | Ring-2 | @code-reviewer
 
 **Type:** CODE-AND-SECURITY-REVIEW

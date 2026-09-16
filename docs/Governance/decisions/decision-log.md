@@ -30,10 +30,33 @@
 | DEC-032 | 2026-09-16 | Remediation closure | Close #71 after complete fixture identity mediation and stable PostgreSQL check errors | Agent (Fully Agentic) | Solo Orchestrator | Active |
 | DEC-033 | 2026-09-16 | Contract admission | Close PT-APP-001M with exact duplicate-aware request and coherent result admission | Agent (Fully Agentic) | Solo Orchestrator | Active |
 | DEC-034 | 2026-09-16 | Replay integrity | Close PT-APP-001N with atomic application replay distinct from owning idempotency | Agent (Fully Agentic) | Solo Orchestrator | Active |
+| DEC-035 | 2026-09-16 | Error precedence | Close PT-APP-001O with deterministic ranked selection on live command admission | Agent (Fully Agentic) | Solo Orchestrator | Active |
 
 ---
 
 ## Decision Records
+
+### DEC-035: Close Deterministic Error Precedence
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-035 |
+| **Date** | 2026-09-16 |
+| **Category** | Error precedence |
+| **Decision** | Close PT-APP-001O after enforcing closed numeric phase ranks, phase/code membership, owner internal ranks, Unicode code-point tuple ties, verified selected request identity, and ranked operation/request/authorization detection on live command admission |
+| **Policy** | DEC-023; DEC-028; DEC-030; DEC-032; DEC-033; DEC-034; approved WP-3 application contract; test-first development; code review; security review |
+| **Authority** | Agent (Fully Agentic), with alternate-model Code Reviewer and Security Reviewer final PASS dispositions |
+| **Accountable** | Solo Orchestrator publishes only PT-APP-001O artifacts, continues next to PT-APP-001P, and keeps distributed replay persistence, WP-4, release, deployment, and production authority closed |
+| **Context** | The application contract defined deterministic precedence, but no executable selector or live command-admission integration enforced it. Initial review confirmed the pure selector yet found the production path did not consume it. |
+| **Alternatives** | Preserve first-thrown validation order; expose only a pure selector; allow callers to supply numeric phase ranks; integrate ranked detection at a future transport layer; collect and select operation, request, and authorization defects at the transport-independent command boundary |
+| **Consequences** | Every valid candidate set has one order-independent controlling error; invalid phase/code or owner-rank combinations fail closed. Unknown operation controls malformed request, malformed request controls unauthorized actor, and valid unauthorized requests fail before replay, readiness, payload admission, or owner effects. |
+| **Reasoning** | A normative precedence matrix is meaningful only when the live boundary detects independently and selects once. Closed owner-assigned ranks and code-point ties prevent insertion order, locale, or caller-supplied labels from changing the public result. |
+| **Assumptions** | The catalog and local-user authorization remain closed; current live collection is bounded to operation, request, and authorization candidates; lower replay-through-result phases continue to enforce their existing ordering until PT-APP-001P composes the final result surface. |
+| **Invalidation** | A catalog/authentication model change; a new phase or stable code; externally assigned owner ranks; locale-based ordering requirements; transport-specific precedence replacing this boundary; or asynchronous/multi-stage candidate collection |
+| **Status** | Active; PT-APP-001O complete and PT-APP-001P is next sequentially |
+| **Linked Artifacts** | `docs/artifacts/gate-evidence/wp-3-error-precedence.md`, `docs/Governance/decisions/reviews/REV-090-wp-3-error-precedence-code-review.md`, `docs/Governance/decisions/reviews/REV-091-wp-3-error-precedence-security-review.md`, GitHub issue #73 |
+
+---
 
 ### DEC-034: Close Deterministic Application Replay
 

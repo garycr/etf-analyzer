@@ -68,6 +68,29 @@ export interface ApplicationReplayStore {
   ): Result;
 }
 
+export type ApplicationValidationPhase =
+  | "Operation"
+  | "Request"
+  | "Authorization"
+  | "Replay"
+  | "Admission"
+  | "Owner"
+  | "Persistence"
+  | "Result";
+
+export interface ApplicationErrorCandidate {
+  readonly phase: ApplicationValidationPhase;
+  readonly code: string;
+  readonly operation?: unknown;
+  readonly requestId?: unknown;
+  readonly ownerRank?: number;
+}
+
+export interface ControllingApplicationError {
+  readonly code: string;
+  readonly requestId: string | null;
+}
+
 export interface CompleteVerifiedResearch<Result> {
   readonly completeness: "Complete";
   readonly integrity: "Verified";
@@ -410,19 +433,34 @@ export type PaperOrderSubmissionResult<Result> =
 
 export class ApplicationOperationUnknownError extends Error {
   readonly code = "APPLICATION_OPERATION_UNKNOWN";
+  readonly requestId: string | null;
 
-  constructor() {
+  constructor(requestId: string | null = null) {
     super("Application operation is unknown");
     this.name = "ApplicationOperationUnknownError";
+    this.requestId = requestId;
   }
 }
 
 export class ApplicationRequestInvalidError extends Error {
   readonly code = "APPLICATION_REQUEST_INVALID";
+  readonly requestId: string | null;
 
-  constructor() {
+  constructor(requestId: string | null = null) {
     super("The application request is invalid");
     this.name = "ApplicationRequestInvalidError";
+    this.requestId = requestId;
+  }
+}
+
+export class ApplicationUnauthorizedError extends Error {
+  readonly code = "APPLICATION_UNAUTHORIZED";
+  readonly requestId: string | null;
+
+  constructor(requestId: string | null = null) {
+    super("The local actor is not authorized for the application operation");
+    this.name = "ApplicationUnauthorizedError";
+    this.requestId = requestId;
   }
 }
 
@@ -596,6 +634,26 @@ function requireClosedRecord(
     return invalidApplicationRequest();
   }
   return value as Record<string, unknown>;
+}
+
+function isClosedRecord(
+  value: unknown,
+  fields: readonly string[],
+): value is Record<string, unknown> {
+  if (!isPlainRecord(value)) return false;
+  const actualFields = Object.keys(value).sort();
+  const expectedFields = [...fields].sort();
+  return actualFields.length === expectedFields.length &&
+    actualFields.every((field, index) => field === expectedFields[index]);
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return !(
+    value === null ||
+    Array.isArray(value) ||
+    typeof value !== "object" ||
+    Object.getPrototypeOf(value) !== Object.prototype
+  );
 }
 
 function isString(value: unknown): value is string {
@@ -871,6 +929,100 @@ export function resolveApplicationOperation(
   return definition;
 }
 
+const applicationPhaseRanks: Readonly<Record<ApplicationValidationPhase, number>> =
+  Object.freeze({
+    Operation: 10,
+    Request: 20,
+    Authorization: 30,
+    Replay: 40,
+    Admission: 50,
+    Owner: 60,
+    Persistence: 70,
+    Result: 80,
+  });
+const applicationCodesByPhase: Readonly<
+  Record<ApplicationValidationPhase, ReadonlySet<string>>
+> = Object.freeze({
+  Operation: new Set(["APPLICATION_OPERATION_UNKNOWN"]),
+  Request: new Set(["APPLICATION_REQUEST_INVALID"]),
+  Authorization: new Set(["APPLICATION_UNAUTHORIZED"]),
+  Replay: new Set(["APPLICATION_IDEMPOTENCY_CONFLICT"]),
+  Admission: new Set([
+    "APPLICATION_JOB_NOT_FOUND",
+    "APPLICATION_JOB_NOT_RESTARTABLE",
+    "APPLICATION_DATABASE_UNAVAILABLE",
+    "APPLICATION_MIGRATIONS_INCOMPLETE",
+    "APPLICATION_CONFIGURATION_INVALID",
+    "APPLICATION_DEPENDENCY_UNAVAILABLE",
+    "ANALYTICS_ACCESS_DENIAL_AUDIT_FAILED",
+    "LEDGER_INTEGRITY_FAILED",
+  ]),
+  Owner: new Set([
+    "ORDER_INVALID_TRANSITION",
+    "ORDER_VERSION_CONFLICT",
+    "ORDER_IDEMPOTENCY_CONFLICT",
+    "FIXTURE_REQUIRED_QUARANTINED",
+    "FIXTURE_IDEMPOTENCY_CONFLICT",
+    "ANALYTICS_INPUT_INCOMPLETE",
+    "ANALYTICS_INTEGRITY_FAILED",
+    "ANALYTICS_PUBLICATION_BLOCKED",
+    "ANALYTICS_ACCESS_DENIAL_AUDIT_FAILED",
+    "LEDGER_INTEGRITY_FAILED",
+  ]),
+  Persistence: new Set(["APPLICATION_PERSISTENCE_FAILED"]),
+  Result: new Set([
+    "APPLICATION_REDACTION_FAILED",
+    "APPLICATION_RESULT_INVALID",
+  ]),
+});
+
+function compareApplicationErrorCandidates(
+  left: ApplicationErrorCandidate,
+  right: ApplicationErrorCandidate,
+): number {
+  const phaseComparison = applicationPhaseRanks[left.phase] - applicationPhaseRanks[right.phase];
+  if (phaseComparison !== 0) return phaseComparison;
+  if (left.phase === "Owner" && right.phase === "Owner") {
+    const ownerComparison = left.ownerRank! - right.ownerRank!;
+    if (ownerComparison !== 0) return ownerComparison;
+  }
+  const leftOperation = typeof left.operation === "string" && operationDefinitions.has(left.operation)
+    ? left.operation
+    : "";
+  const rightOperation = typeof right.operation === "string" && operationDefinitions.has(right.operation)
+    ? right.operation
+    : "";
+  const operationComparison = compareCodePoints(leftOperation, rightOperation);
+  if (operationComparison !== 0) return operationComparison;
+  const leftRequestId = isUuid(left.requestId) ? left.requestId : "";
+  const rightRequestId = isUuid(right.requestId) ? right.requestId : "";
+  const requestComparison = compareCodePoints(leftRequestId, rightRequestId);
+  if (requestComparison !== 0) return requestComparison;
+  return compareCodePoints(left.code, right.code);
+}
+
+export function selectControllingApplicationError(
+  candidates: readonly ApplicationErrorCandidate[],
+): ControllingApplicationError {
+  if (candidates.length === 0) invalidApplicationResult();
+  for (const candidate of candidates) {
+    if (
+      !(candidate.phase in applicationPhaseRanks) ||
+      !isString(candidate.code) ||
+      !stableCodePattern.test(candidate.code) ||
+      !applicationCodesByPhase[candidate.phase]?.has(candidate.code) ||
+      (candidate.phase === "Owner" &&
+        (!Number.isSafeInteger(candidate.ownerRank) || candidate.ownerRank! <= 0)) ||
+      (candidate.phase !== "Owner" && candidate.ownerRank !== undefined)
+    ) invalidApplicationResult();
+  }
+  const selected = [...candidates].sort(compareApplicationErrorCandidates)[0]!;
+  return Object.freeze({
+    code: selected.code,
+    requestId: isUuid(selected.requestId) ? selected.requestId : null,
+  });
+}
+
 export function dispatchApplicationOperation<Result>(
   operation: string,
   handler: (definition: ApplicationOperationDefinition) => Result,
@@ -892,57 +1044,113 @@ export function dispatchValidatedApplicationRequest<Result>(
   return ownerDispatch(definition, validatedPayload);
 }
 
+const applicationCommandEnvelopeFields = Object.freeze([
+  "operation",
+  "requestId",
+  "correlationId",
+  "actorId",
+  "prototypeCandidate",
+  "contractVersion",
+  "requestedAt",
+  "commandId",
+  "payload",
+]);
+
+function throwSelectedCommandAdmissionError(
+  selected: ControllingApplicationError,
+): never {
+  switch (selected.code) {
+    case "APPLICATION_OPERATION_UNKNOWN":
+      throw new ApplicationOperationUnknownError(selected.requestId);
+    case "APPLICATION_REQUEST_INVALID":
+      throw new ApplicationRequestInvalidError(selected.requestId);
+    case "APPLICATION_UNAUTHORIZED":
+      throw new ApplicationUnauthorizedError(selected.requestId);
+    default:
+      return invalidApplicationResult();
+  }
+}
+
 function admitApplicationCommandEnvelope(requestJson: string): ApplicationCommandEnvelope {
   const request = parseApplicationPayload(requestJson);
-  const record = requireClosedRecord(request, [
-    "operation",
-    "requestId",
-    "correlationId",
-    "actorId",
-    "prototypeCandidate",
-    "contractVersion",
-    "requestedAt",
-    "commandId",
-    "payload",
-  ]);
+  const requestId = isUuid(request.requestId) ? request.requestId : null;
+  const definition = typeof request.operation === "string"
+    ? operationDefinitions.get(request.operation)
+    : undefined;
+  const candidates: ApplicationErrorCandidate[] = [];
+  if (definition === undefined) {
+    candidates.push({
+      phase: "Operation",
+      code: "APPLICATION_OPERATION_UNKNOWN",
+      operation: request.operation,
+      requestId: request.requestId,
+    });
+  }
   if (
-    typeof record.operation !== "string" ||
-    !isUuid(record.requestId) ||
-    !isUuid(record.correlationId) ||
-    record.actorId !== "local-user" ||
-    record.prototypeCandidate !== "v1.0.0-prototype.1" ||
-    record.contractVersion !== "1.0.0-candidate.2" ||
-    !isUtcInstant(record.requestedAt) ||
-    !isUuid(record.commandId)
-  ) invalidApplicationRequest();
+    !isClosedRecord(request, applicationCommandEnvelopeFields) ||
+    !isUuid(request.requestId) ||
+    !isUuid(request.correlationId) ||
+    !isString(request.actorId) ||
+    request.prototypeCandidate !== "v1.0.0-prototype.1" ||
+    request.contractVersion !== "1.0.0-candidate.2" ||
+    !isUtcInstant(request.requestedAt) ||
+    !isUuid(request.commandId) ||
+    !isPlainRecord(request.payload) ||
+    (definition !== undefined && definition.kind !== "command")
+  ) {
+    candidates.push({
+      phase: "Request",
+      code: "APPLICATION_REQUEST_INVALID",
+      operation: request.operation,
+      requestId: request.requestId,
+    });
+  }
+  if (isString(request.actorId) && request.actorId !== "local-user") {
+    candidates.push({
+      phase: "Authorization",
+      code: "APPLICATION_UNAUTHORIZED",
+      operation: request.operation,
+      requestId: request.requestId,
+    });
+  }
+  if (candidates.length > 0) {
+    throwSelectedCommandAdmissionError(selectControllingApplicationError(candidates));
+  }
 
-  const definition = resolveApplicationOperation(record.operation);
-  if (definition.kind !== "command") invalidApplicationRequest();
+  if (
+    definition === undefined ||
+    definition.kind !== "command" ||
+    requestId === null ||
+    !isUuid(request.correlationId) ||
+    request.actorId !== "local-user" ||
+    request.prototypeCandidate !== "v1.0.0-prototype.1" ||
+    request.contractVersion !== "1.0.0-candidate.2" ||
+    !isUtcInstant(request.requestedAt) ||
+    !isUuid(request.commandId) ||
+    !isPlainRecord(request.payload)
+  ) return invalidApplicationResult();
   const commandDefinition = definition as AdmittedApplicationCommand["definition"];
-  const payloadRecord = requireClosedRecord(
-    record.payload,
-    Object.keys(record.payload as object),
-  );
+  const payloadRecord = request.payload;
   const replayPayload = normalizeApplicationReplayPayload(
     commandDefinition.operation,
     payloadRecord,
   );
   const canonicalContent = canonicalizeJson({
-    operation: definition.operation,
-    actorId: record.actorId,
-    prototypeCandidate: record.prototypeCandidate,
-    contractVersion: record.contractVersion,
+    operation: commandDefinition.operation,
+    actorId: request.actorId,
+    prototypeCandidate: request.prototypeCandidate,
+    contractVersion: request.contractVersion,
     payload: replayPayload,
   });
   return Object.freeze({
     definition: commandDefinition,
-    requestId: record.requestId,
-    correlationId: record.correlationId,
-    actorId: record.actorId,
-    prototypeCandidate: record.prototypeCandidate,
-    contractVersion: record.contractVersion,
-    requestedAt: record.requestedAt,
-    commandId: record.commandId,
+    requestId,
+    correlationId: request.correlationId,
+    actorId: request.actorId,
+    prototypeCandidate: request.prototypeCandidate,
+    contractVersion: request.contractVersion,
+    requestedAt: request.requestedAt,
+    commandId: request.commandId,
     payload: payloadRecord,
     canonicalContent,
   });

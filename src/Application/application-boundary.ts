@@ -170,6 +170,26 @@ export interface OwnerFailurePresentation {
   readonly recovery: null;
 }
 
+export type CanonicalValueClass =
+  | "OrderStatus"
+  | "Readiness"
+  | "UTCInstant"
+  | "SourceTime"
+  | "RetrievedAt"
+  | "CompletedAt"
+  | "Timezone"
+  | "Date"
+  | "TradeDate"
+  | "UnitPrice"
+  | "Money"
+  | "Rate";
+
+export interface CanonicalValuePresentation {
+  readonly wireValue: string;
+  readonly visibleText: string;
+  readonly accessibleText: string;
+}
+
 export interface FailedJobPresentation<Job extends FailedJobForPresentation> {
   readonly job: Job;
   readonly error: {
@@ -298,6 +318,58 @@ export function presentOwnerFailure(
     message: ownerFailureMessages[code],
     boundedIdentifiers: emptyBoundedIdentifiers,
     recovery: null,
+  });
+}
+
+function presentUtcInstant(wireValue: string): string {
+  return `${wireValue.slice(0, 10)} ${wireValue.slice(11, -1)} UTC`;
+}
+
+export function presentCanonicalValue(
+  valueClass: CanonicalValueClass,
+  wireValue: string,
+): CanonicalValuePresentation {
+  let visibleText: string;
+  switch (valueClass) {
+    case "OrderStatus":
+      visibleText = wireValue === "Partial" ? "Partially Filled" : wireValue;
+      break;
+    case "Readiness":
+      visibleText = wireValue === "NotReady" ? "Not Ready" : wireValue;
+      break;
+    case "UTCInstant":
+      visibleText = presentUtcInstant(wireValue);
+      break;
+    case "SourceTime":
+      visibleText = `Source time: ${presentUtcInstant(wireValue)}`;
+      break;
+    case "RetrievedAt":
+      visibleText = `Retrieved at: ${presentUtcInstant(wireValue)}`;
+      break;
+    case "CompletedAt":
+      visibleText = `Completed at: ${presentUtcInstant(wireValue)}`;
+      break;
+    case "Timezone":
+      visibleText = `Display timezone: ${wireValue}`;
+      break;
+    case "TradeDate":
+      visibleText = `Trade date: ${wireValue}`;
+      break;
+    case "Date":
+    case "UnitPrice":
+    case "Money":
+    case "Rate":
+      visibleText = wireValue;
+      break;
+    default:
+      valueClass satisfies never;
+      throw new Error("Canonical value class is not supported");
+  }
+
+  return Object.freeze({
+    wireValue,
+    visibleText,
+    accessibleText: visibleText,
   });
 }
 

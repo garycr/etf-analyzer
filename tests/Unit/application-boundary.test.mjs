@@ -9,6 +9,7 @@ import {
   displayVerifiedResearch,
   evaluateReadiness,
   ownerFailureCodes,
+  presentCanonicalValue,
   presentFailedJob,
   presentOwnerFailure,
   readinessDependencyNames,
@@ -452,5 +453,38 @@ test("PT-APP-001H preserves owning codes with fixed redacted causes", () => {
     });
     assert.ok(Object.isFrozen(error));
     assert.ok(Object.isFrozen(error.boundedIdentifiers));
+  }
+});
+
+test("PT-APP-001I presents canonical values without semantic drift", () => {
+  const vectors = [
+    ["OrderStatus", "Partial", "Partially Filled"],
+    ["Readiness", "NotReady", "Not Ready"],
+    ["UTCInstant", "2026-01-31T00:00:00.000Z", "2026-01-31 00:00:00.000 UTC"],
+    ["SourceTime", "2026-01-30T22:00:00.000Z", "Source time: 2026-01-30 22:00:00.000 UTC"],
+    ["RetrievedAt", "2026-01-30T22:01:00.000Z", "Retrieved at: 2026-01-30 22:01:00.000 UTC"],
+    ["CompletedAt", "2026-01-31T00:00:00.000Z", "Completed at: 2026-01-31 00:00:00.000 UTC"],
+    ["Timezone", "UTC", "Display timezone: UTC"],
+    ["Date", "2026-01-30", "2026-01-30"],
+    ["TradeDate", "2026-01-30", "Trade date: 2026-01-30"],
+    ["UnitPrice", "100.0000000000", "100.0000000000"],
+    ["Money", "1000.00000000", "1000.00000000"],
+    ["Rate", "0.012500000000", "0.012500000000"],
+  ];
+
+  for (const [valueClass, wireValue, displayValue] of vectors) {
+    const presentation = presentCanonicalValue(valueClass, wireValue);
+
+    assert.deepEqual(presentation, {
+      wireValue,
+      visibleText: displayValue,
+      accessibleText: displayValue,
+    });
+    assert.deepEqual(Object.keys(presentation), [
+      "wireValue",
+      "visibleText",
+      "accessibleText",
+    ]);
+    assert.ok(Object.isFrozen(presentation));
   }
 });

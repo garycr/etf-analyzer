@@ -5,12 +5,14 @@ import {
   ApplicationOperationUnknownError,
   applicationCommandOperations,
   applicationQueryOperations,
+  activateBlockedStateRecovery,
   dispatchApplicationOperation,
   displayVerifiedResearch,
   evaluateReadiness,
   exportDiagnosticMetadata,
   ownerFailureCodes,
   presentCanonicalValue,
+  presentBlockedState,
   presentFailedJob,
   presentOwnerFailure,
   presentResearchWarning,
@@ -633,4 +635,221 @@ test("PT-APP-001K exports only allowlisted metadata and fails closed", () => {
   }
   assert.equal(created.length, 1);
   assert.equal(recordedFailures.length, 4);
+});
+
+test("PT-APP-001L blocked states expose perceivable explicit recovery", () => {
+  const vectors = [
+    {
+      state: "FailedRestartable",
+      context: { jobId: "73000000-0000-4000-8000-000000000001" },
+      recovery: {
+        actionId: "retry-job",
+        label: "Retry job",
+        targetOperation: "JobRestart",
+        focusTarget: "job-status",
+        requiresConfirmation: false,
+      },
+      payload: { jobId: "73000000-0000-4000-8000-000000000001" },
+      announcement: "PoliteStatus",
+    },
+    {
+      state: "FailedNotRestartable",
+      context: { jobId: "73000000-0000-4000-8000-000000000002" },
+      recovery: {
+        actionId: "review-job",
+        label: "Review job details",
+        targetOperation: "JobGet",
+        focusTarget: "job-details",
+        requiresConfirmation: false,
+      },
+      payload: { jobId: "73000000-0000-4000-8000-000000000002" },
+      announcement: "PoliteStatus",
+    },
+    {
+      state: "InputQuarantined",
+      context: { evidenceId: "73000000-0000-4000-8000-000000000003" },
+      recovery: {
+        actionId: "review-evidence",
+        label: "Review data issue",
+        targetOperation: "EvidenceGet",
+        focusTarget: "evidence-details",
+        requiresConfirmation: false,
+      },
+      payload: { evidenceId: "73000000-0000-4000-8000-000000000003" },
+      announcement: "AssertiveAlert",
+    },
+    {
+      state: "VersionConflict",
+      context: { orderId: "73000000-0000-4000-8000-000000000004" },
+      recovery: {
+        actionId: "reload-order",
+        label: "Reload current order",
+        targetOperation: "PaperOrderGet",
+        focusTarget: "order-details",
+        requiresConfirmation: false,
+      },
+      payload: { orderId: "73000000-0000-4000-8000-000000000004" },
+      announcement: "PoliteStatus",
+    },
+    {
+      state: "IntegrityBlocked",
+      context: {},
+      recovery: {
+        actionId: "review-integrity",
+        label: "Review integrity status",
+        targetOperation: "ReadinessGet",
+        focusTarget: "readiness-details",
+        requiresConfirmation: false,
+      },
+      payload: {},
+      announcement: "AssertiveAlert",
+    },
+    {
+      state: "NotReady",
+      context: {},
+      recovery: {
+        actionId: "review-readiness",
+        label: "Review readiness details",
+        targetOperation: "ReadinessGet",
+        focusTarget: "readiness-details",
+        requiresConfirmation: false,
+      },
+      payload: {},
+      announcement: "AssertiveAlert",
+    },
+    {
+      state: "DraftAwaitingConfirmation",
+      context: {
+        orderId: "73000000-0000-4000-8000-000000000005",
+        aggregateVersion: "4",
+        confirmation: {
+          actorId: "local-user",
+          confirmedAt: "2026-01-30T12:00:00.000Z",
+          confirmationText: "Submit paper order",
+        },
+      },
+      recovery: {
+        actionId: "submit-paper-order",
+        label: "Submit paper order",
+        targetOperation: "PaperOrderTransition",
+        focusTarget: "order-status",
+        requiresConfirmation: true,
+      },
+      payload: {
+        orderId: "73000000-0000-4000-8000-000000000005",
+        transitionCommandId: "73000000-0000-4000-8000-000000000006",
+        expectedVersion: "4",
+        transition: "OT-02",
+        transitionPayload: {
+          confirmation: {
+            actorId: "local-user",
+            confirmedAt: "2026-01-30T12:00:00.000Z",
+            confirmationText: "Submit paper order",
+          },
+        },
+      },
+      announcement: "PoliteStatus",
+    },
+    {
+      state: "MissingIdentity",
+      context: {},
+      recovery: null,
+      payload: null,
+      announcement: "PoliteStatus",
+      causeText: "This item is no longer available. Return to the previous view to continue.",
+    },
+    {
+      state: "AccessDenied",
+      context: { orderId: "73000000-0000-4000-8000-000000000007" },
+      recovery: null,
+      payload: null,
+      announcement: "AssertiveAlert",
+      causeText: "Access to this item was denied. Verify local access before trying again.",
+    },
+    {
+      state: "NoSafeOperation",
+      context: { code: "APPLICATION_DEPENDENCY_UNAVAILABLE" },
+      recovery: null,
+      payload: null,
+      announcement: "PoliteStatus",
+      causeText: "This action cannot be completed safely. Review readiness details or contact the workspace owner.",
+    },
+  ];
+  const dispatches = [];
+  let commandIdsCreated = 0;
+  const createTransitionCommandId = () => {
+    commandIdsCreated += 1;
+    return "73000000-0000-4000-8000-000000000006";
+  };
+
+  for (const vector of vectors) {
+    const dispatchesBeforePresentation = dispatches.length;
+    const commandIdsBeforePresentation = commandIdsCreated;
+    const presented = presentBlockedState(
+      { state: vector.state, context: vector.context },
+      null,
+    );
+    assert.equal(dispatches.length, dispatchesBeforePresentation);
+    assert.equal(commandIdsCreated, commandIdsBeforePresentation);
+    assert.equal(presented.state, vector.state);
+    assert.ok(presented.statusText.length > 0);
+    assert.ok(presented.causeText.length > 0);
+    if (vector.causeText !== undefined) {
+      assert.equal(presented.causeText, vector.causeText);
+    }
+    assert.equal(presented.programmaticRole, vector.announcement === "AssertiveAlert" ? "alert" : "status");
+    assert.equal(presented.announcement, vector.announcement);
+    assert.deepEqual(presented.recovery, vector.recovery);
+    assert.equal(presented.keyboardOperable, vector.recovery !== null);
+    assert.deepEqual(presented.focusPlan, {
+      processing: "trigger",
+      validationFailure: "first-actionable-error",
+      success: vector.recovery?.focusTarget ?? null,
+    });
+    assert.ok(Object.isFrozen(presented));
+    assert.ok(Object.isFrozen(presented.focusPlan));
+    if (presented.recovery !== null) {
+      assert.ok(Object.isFrozen(presented.recovery));
+    }
+
+    const repeated = presentBlockedState(
+      { state: vector.state, context: vector.context },
+      vector.state,
+    );
+    assert.equal(repeated.announcement, "None");
+    assert.equal(repeated.programmaticRole, presented.programmaticRole);
+    assert.equal(dispatches.length, dispatchesBeforePresentation);
+    assert.equal(commandIdsCreated, commandIdsBeforePresentation);
+
+    for (const activationMethod of ["Keyboard", "Pointer"]) {
+      const beforeDispatch = dispatches.length;
+      const outcome = activateBlockedStateRecovery(
+        { state: vector.state, context: vector.context },
+        activationMethod,
+        createTransitionCommandId,
+        (operation, payload) => {
+          dispatches.push({ operation, payload });
+          return Object.freeze({ accepted: true });
+        },
+      );
+      if (vector.recovery === null) {
+        assert.deepEqual(outcome, { outcome: "NotDispatched" });
+        assert.equal(dispatches.length, beforeDispatch);
+      } else {
+        assert.equal(outcome.outcome, "Dispatched");
+        assert.equal(outcome.activationMethod, activationMethod);
+        assert.deepEqual(dispatches.at(-1), {
+          operation: vector.recovery.targetOperation,
+          payload: vector.payload,
+        });
+      }
+    }
+  }
+
+  assert.equal(commandIdsCreated, 2);
+  assert.equal(dispatches.length, 14);
+  assert.deepEqual(
+    dispatches.filter(({ operation }) => operation === "PaperOrderTransition")[0],
+    dispatches.filter(({ operation }) => operation === "PaperOrderTransition")[1],
+  );
 });

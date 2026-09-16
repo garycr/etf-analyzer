@@ -207,6 +207,114 @@ export type ResearchWarningPresentation =
     readonly warningText: null;
   };
 
+export type BlockedState =
+  | "FailedRestartable"
+  | "FailedNotRestartable"
+  | "InputQuarantined"
+  | "VersionConflict"
+  | "IntegrityBlocked"
+  | "NotReady"
+  | "DraftAwaitingConfirmation"
+  | "MissingIdentity"
+  | "AccessDenied"
+  | "NoSafeOperation";
+
+export type BlockedStateRequest =
+  | {
+    readonly state: "FailedRestartable" | "FailedNotRestartable";
+    readonly context: Readonly<{ jobId: string }>;
+  }
+  | {
+    readonly state: "InputQuarantined";
+    readonly context: Readonly<{ evidenceId: string }>;
+  }
+  | {
+    readonly state: "VersionConflict";
+    readonly context: Readonly<{ orderId: string }>;
+  }
+  | {
+    readonly state: "IntegrityBlocked" | "NotReady" | "MissingIdentity";
+    readonly context: Readonly<Record<string, never>>;
+  }
+  | {
+    readonly state: "DraftAwaitingConfirmation";
+    readonly context: Readonly<{
+      orderId: string;
+      aggregateVersion: string;
+      confirmation: PaperOrderConfirmation;
+    }>;
+  }
+  | {
+    readonly state: "AccessDenied";
+    readonly context: Readonly<{ orderId: string }>;
+  }
+  | {
+    readonly state: "NoSafeOperation";
+    readonly context: Readonly<{ code: string }>;
+  };
+
+export type BlockedStateRecovery = FailedJobRecovery
+  | {
+    readonly actionId: "review-evidence";
+    readonly label: "Review data issue";
+    readonly targetOperation: "EvidenceGet";
+    readonly focusTarget: "evidence-details";
+    readonly requiresConfirmation: false;
+  }
+  | {
+    readonly actionId: "reload-order";
+    readonly label: "Reload current order";
+    readonly targetOperation: "PaperOrderGet";
+    readonly focusTarget: "order-details";
+    readonly requiresConfirmation: false;
+  }
+  | {
+    readonly actionId: "review-integrity";
+    readonly label: "Review integrity status";
+    readonly targetOperation: "ReadinessGet";
+    readonly focusTarget: "readiness-details";
+    readonly requiresConfirmation: false;
+  }
+  | {
+    readonly actionId: "review-readiness";
+    readonly label: "Review readiness details";
+    readonly targetOperation: "ReadinessGet";
+    readonly focusTarget: "readiness-details";
+    readonly requiresConfirmation: false;
+  }
+  | {
+    readonly actionId: "submit-paper-order";
+    readonly label: "Submit paper order";
+    readonly targetOperation: "PaperOrderTransition";
+    readonly focusTarget: "order-status";
+    readonly requiresConfirmation: true;
+  };
+
+export interface BlockedStatePresentation {
+  readonly state: BlockedState;
+  readonly statusText: string;
+  readonly causeText: string;
+  readonly programmaticRole: "status" | "alert";
+  readonly announcement: "None" | "PoliteStatus" | "AssertiveAlert";
+  readonly recovery: BlockedStateRecovery | null;
+  readonly keyboardOperable: boolean;
+  readonly focusPlan: Readonly<{
+    processing: "trigger";
+    validationFailure: "first-actionable-error";
+    success: BlockedStateRecovery["focusTarget"] | null;
+  }>;
+}
+
+export type RecoveryActivationMethod = "Keyboard" | "Pointer";
+
+export type BlockedStateRecoveryActivation<Result> =
+  | { readonly outcome: "NotDispatched" }
+  | {
+    readonly outcome: "Dispatched";
+    readonly activationMethod: RecoveryActivationMethod;
+    readonly result: Result;
+  };
+
 type DiagnosticScalar = string | number;
 type DiagnosticValue = DiagnosticScalar | readonly string[];
 export type DiagnosticRecord = Readonly<Record<string, unknown>>;
@@ -428,6 +536,211 @@ export function presentResearchWarning(
       resultKind satisfies never;
       throw new Error("Research warning result kind is not supported");
   }
+}
+
+const blockedStateMetadata: Readonly<Record<BlockedState, Readonly<{
+  statusText: string;
+  causeText: string;
+  announcement: "PoliteStatus" | "AssertiveAlert";
+}>>> = Object.freeze({
+  FailedRestartable: Object.freeze({
+    statusText: "Job failed",
+    causeText: "The job failed and can be retried after its cause is corrected.",
+    announcement: "PoliteStatus",
+  }),
+  FailedNotRestartable: Object.freeze({
+    statusText: "Job failed",
+    causeText: "The job failed and cannot be restarted.",
+    announcement: "PoliteStatus",
+  }),
+  InputQuarantined: Object.freeze({
+    statusText: "Input quarantined",
+    causeText: "Required input did not pass data-quality controls.",
+    announcement: "AssertiveAlert",
+  }),
+  VersionConflict: Object.freeze({
+    statusText: "Paper order changed",
+    causeText: "The paper order version changed before the requested action.",
+    announcement: "PoliteStatus",
+  }),
+  IntegrityBlocked: Object.freeze({
+    statusText: "Integrity blocked",
+    causeText: "Integrity verification blocks this operation.",
+    announcement: "AssertiveAlert",
+  }),
+  NotReady: Object.freeze({
+    statusText: "Application not ready",
+    causeText: "A required readiness dependency is unavailable.",
+    announcement: "AssertiveAlert",
+  }),
+  DraftAwaitingConfirmation: Object.freeze({
+    statusText: "Confirmation required",
+    causeText: "The draft paper order requires explicit confirmation.",
+    announcement: "PoliteStatus",
+  }),
+  MissingIdentity: Object.freeze({
+    statusText: "Item unavailable",
+    causeText: "This item is no longer available. Return to the previous view to continue.",
+    announcement: "PoliteStatus",
+  }),
+  AccessDenied: Object.freeze({
+    statusText: "Access denied",
+    causeText: "Access to this item was denied. Verify local access before trying again.",
+    announcement: "AssertiveAlert",
+  }),
+  NoSafeOperation: Object.freeze({
+    statusText: "Recovery unavailable",
+    causeText: "This action cannot be completed safely. Review readiness details or contact the workspace owner.",
+    announcement: "PoliteStatus",
+  }),
+});
+
+function createBlockedStateRecovery(
+  state: BlockedState,
+): BlockedStateRecovery | null {
+  switch (state) {
+    case "FailedRestartable":
+      return Object.freeze({
+        actionId: "retry-job",
+        label: "Retry job",
+        targetOperation: "JobRestart",
+        focusTarget: "job-status",
+        requiresConfirmation: false,
+      });
+    case "FailedNotRestartable":
+      return Object.freeze({
+        actionId: "review-job",
+        label: "Review job details",
+        targetOperation: "JobGet",
+        focusTarget: "job-details",
+        requiresConfirmation: false,
+      });
+    case "InputQuarantined":
+      return Object.freeze({
+        actionId: "review-evidence",
+        label: "Review data issue",
+        targetOperation: "EvidenceGet",
+        focusTarget: "evidence-details",
+        requiresConfirmation: false,
+      });
+    case "VersionConflict":
+      return Object.freeze({
+        actionId: "reload-order",
+        label: "Reload current order",
+        targetOperation: "PaperOrderGet",
+        focusTarget: "order-details",
+        requiresConfirmation: false,
+      });
+    case "IntegrityBlocked":
+      return Object.freeze({
+        actionId: "review-integrity",
+        label: "Review integrity status",
+        targetOperation: "ReadinessGet",
+        focusTarget: "readiness-details",
+        requiresConfirmation: false,
+      });
+    case "NotReady":
+      return Object.freeze({
+        actionId: "review-readiness",
+        label: "Review readiness details",
+        targetOperation: "ReadinessGet",
+        focusTarget: "readiness-details",
+        requiresConfirmation: false,
+      });
+    case "DraftAwaitingConfirmation":
+      return Object.freeze({
+        actionId: "submit-paper-order",
+        label: "Submit paper order",
+        targetOperation: "PaperOrderTransition",
+        focusTarget: "order-status",
+        requiresConfirmation: true,
+      });
+    case "MissingIdentity":
+    case "AccessDenied":
+    case "NoSafeOperation":
+      return null;
+  }
+}
+
+export function presentBlockedState(
+  request: BlockedStateRequest,
+  previousState: BlockedState | null,
+): BlockedStatePresentation {
+  const metadata = blockedStateMetadata[request.state];
+  const recovery = createBlockedStateRecovery(request.state);
+  const announcement = previousState === request.state
+    ? "None" as const
+    : metadata.announcement;
+  return Object.freeze({
+    state: request.state,
+    statusText: metadata.statusText,
+    causeText: metadata.causeText,
+    programmaticRole: metadata.announcement === "AssertiveAlert" ? "alert" : "status",
+    announcement,
+    recovery,
+    keyboardOperable: recovery !== null,
+    focusPlan: Object.freeze({
+      processing: "trigger" as const,
+      validationFailure: "first-actionable-error" as const,
+      success: recovery?.focusTarget ?? null,
+    }),
+  });
+}
+
+function createRecoveryPayload(
+  request: BlockedStateRequest,
+  createTransitionCommandId: () => string,
+): Readonly<Record<string, unknown>> | null {
+  switch (request.state) {
+    case "FailedRestartable":
+    case "FailedNotRestartable":
+      return Object.freeze({ jobId: request.context.jobId });
+    case "InputQuarantined":
+      return Object.freeze({ evidenceId: request.context.evidenceId });
+    case "VersionConflict":
+      return Object.freeze({ orderId: request.context.orderId });
+    case "IntegrityBlocked":
+    case "NotReady":
+      return Object.freeze({});
+    case "DraftAwaitingConfirmation":
+      return Object.freeze({
+        orderId: request.context.orderId,
+        transitionCommandId: createTransitionCommandId(),
+        expectedVersion: request.context.aggregateVersion,
+        transition: "OT-02" as const,
+        transitionPayload: Object.freeze({
+          confirmation: Object.freeze({ ...request.context.confirmation }),
+        }),
+      });
+    case "MissingIdentity":
+    case "AccessDenied":
+    case "NoSafeOperation":
+      return null;
+  }
+}
+
+export function activateBlockedStateRecovery<Result>(
+  request: BlockedStateRequest,
+  activationMethod: RecoveryActivationMethod,
+  createTransitionCommandId: () => string,
+  dispatch: (
+    operation: ApplicationOperation,
+    payload: Readonly<Record<string, unknown>>,
+  ) => Result,
+): BlockedStateRecoveryActivation<Result> {
+  const recovery = createBlockedStateRecovery(request.state);
+  if (recovery === null) {
+    return Object.freeze({ outcome: "NotDispatched" });
+  }
+  const payload = createRecoveryPayload(request, createTransitionCommandId);
+  if (payload === null) {
+    return Object.freeze({ outcome: "NotDispatched" });
+  }
+  return Object.freeze({
+    outcome: "Dispatched",
+    activationMethod,
+    result: dispatch(recovery.targetOperation, payload),
+  });
 }
 
 const allowedDiagnosticFields = new Set([

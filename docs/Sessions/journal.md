@@ -6,6 +6,20 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-16 | WP-3 PT-APP-001L accessible recovery accepted | Ring-2 | @code-reviewer
+
+**Type:** CODE-ACCESSIBILITY-AND-SECURITY-REVIEW
+**review-outcome:** PASS; Critical 0 | Major 0 | Minor 0 open | Accessibility Sev 1/2 0 | Security Sev 1/2 0
+**Decision:** Accept the ten-state blocked presentation matrix with visible non-color cause text, stable programmatic roles, bounded announcement urgency, immutable focus plans, exact recovery payloads, explicit keyboard/pointer activation parity, and null-recovery fail-safe behavior
+**Policy:** DEC-023; DEC-028; DEC-030; DEC-032; WP-3; PT-APP-001L; WCAG 2.1 AA; code review; accessibility review; security review; test-first development
+**Authority:** Alternate-model Code Reviewer, UI/UX Designer accessibility reviewer, and Security Reviewer final PASS
+**Accountability:** Solo Orchestrator preserves runtime malformed-record admission for PT-APP-001M, replay for PT-APP-001N, precedence for PT-APP-001O, result composition for PT-APP-001P, and renderer/Ring-3 empirical accessibility verification
+**Result:** Focused 1/1; complete default suite 308 discovered, 278 passed, 30 environment-skipped, 0 failed; test quality 4.86/5; lint, diagnostics, audit, and diff checks pass
+**Artifact:** docs/Governance/decisions/reviews/REV-083-wp-3-accessible-recovery-code-review.md | docs/Governance/decisions/reviews/REV-084-wp-3-accessible-recovery-accessibility-review.md | docs/Governance/decisions/reviews/REV-085-wp-3-accessible-recovery-security-review.md | docs/artifacts/gate-evidence/wp-3-accessible-recovery.md
+**authorization-boundary:** PT-APP-001L design-time metadata only; no renderer WCAG/AT completion, PT-APP-001M..P completion, WP-4 overlap, live provider, release, deployment, or production authority
+
+---
+
 ## 2026-09-16 | WP-3 PT-APP-001K diagnostic redaction accepted | Ring-2 | @code-reviewer
 
 **Type:** CODE-AND-SECURITY-REVIEW

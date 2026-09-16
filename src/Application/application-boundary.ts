@@ -1,3 +1,5 @@
+import { canonicalizeJson } from "../Infrastructure/CanonicalJson/canonical-json.js";
+
 export const applicationCommandOperations = Object.freeze([
   "WatchlistPut",
   "WatchlistRemove",
@@ -31,6 +33,39 @@ export type ApplicationOperation =
 export interface ApplicationOperationDefinition {
   readonly operation: ApplicationOperation;
   readonly kind: "command" | "query";
+}
+
+export interface ApplicationReplayKey {
+  readonly operation: ApplicationCommandOperation;
+  readonly commandId: string;
+}
+
+export interface AdmittedApplicationCommand {
+  readonly definition: ApplicationOperationDefinition & {
+    readonly operation: ApplicationCommandOperation;
+    readonly kind: "command";
+  };
+  readonly requestId: string;
+  readonly correlationId: string;
+  readonly actorId: "local-user";
+  readonly prototypeCandidate: "v1.0.0-prototype.1";
+  readonly contractVersion: "1.0.0-candidate.2";
+  readonly requestedAt: string;
+  readonly commandId: string;
+  readonly payload: Readonly<Record<string, unknown>>;
+  readonly canonicalContent: string;
+}
+
+interface ApplicationCommandEnvelope extends Omit<AdmittedApplicationCommand, "payload"> {
+  readonly payload: Record<string, unknown>;
+}
+
+export interface ApplicationReplayStore {
+  execute<Result>(
+    key: ApplicationReplayKey,
+    canonicalContent: string,
+    executeNew: () => Result,
+  ): Result;
 }
 
 export interface CompleteVerifiedResearch<Result> {
@@ -397,6 +432,15 @@ export class ApplicationResultInvalidError extends Error {
   constructor() {
     super("The application result is invalid");
     this.name = "ApplicationResultInvalidError";
+  }
+}
+
+export class ApplicationIdempotencyConflictError extends Error {
+  readonly code = "APPLICATION_IDEMPOTENCY_CONFLICT";
+
+  constructor() {
+    super("The application command identity was reused with different content");
+    this.name = "ApplicationIdempotencyConflictError";
   }
 }
 
@@ -846,6 +890,168 @@ export function dispatchValidatedApplicationRequest<Result>(
   const payload = parseApplicationPayload(payloadJson);
   const validatedPayload = validateApplicationPayload(definition.operation, payload);
   return ownerDispatch(definition, validatedPayload);
+}
+
+function admitApplicationCommandEnvelope(requestJson: string): ApplicationCommandEnvelope {
+  const request = parseApplicationPayload(requestJson);
+  const record = requireClosedRecord(request, [
+    "operation",
+    "requestId",
+    "correlationId",
+    "actorId",
+    "prototypeCandidate",
+    "contractVersion",
+    "requestedAt",
+    "commandId",
+    "payload",
+  ]);
+  if (
+    typeof record.operation !== "string" ||
+    !isUuid(record.requestId) ||
+    !isUuid(record.correlationId) ||
+    record.actorId !== "local-user" ||
+    record.prototypeCandidate !== "v1.0.0-prototype.1" ||
+    record.contractVersion !== "1.0.0-candidate.2" ||
+    !isUtcInstant(record.requestedAt) ||
+    !isUuid(record.commandId)
+  ) invalidApplicationRequest();
+
+  const definition = resolveApplicationOperation(record.operation);
+  if (definition.kind !== "command") invalidApplicationRequest();
+  const commandDefinition = definition as AdmittedApplicationCommand["definition"];
+  const payloadRecord = requireClosedRecord(
+    record.payload,
+    Object.keys(record.payload as object),
+  );
+  const replayPayload = normalizeApplicationReplayPayload(
+    commandDefinition.operation,
+    payloadRecord,
+  );
+  const canonicalContent = canonicalizeJson({
+    operation: definition.operation,
+    actorId: record.actorId,
+    prototypeCandidate: record.prototypeCandidate,
+    contractVersion: record.contractVersion,
+    payload: replayPayload,
+  });
+  return Object.freeze({
+    definition: commandDefinition,
+    requestId: record.requestId,
+    correlationId: record.correlationId,
+    actorId: record.actorId,
+    prototypeCandidate: record.prototypeCandidate,
+    contractVersion: record.contractVersion,
+    requestedAt: record.requestedAt,
+    commandId: record.commandId,
+    payload: payloadRecord,
+    canonicalContent,
+  });
+}
+
+function normalizeApplicationReplayPayload(
+  operation: ApplicationCommandOperation,
+  payload: Record<string, unknown>,
+): Readonly<Record<string, unknown>> {
+  if (
+    operation === "AnalyticsRun" &&
+    Array.isArray(payload.inputEvidenceIds) &&
+    payload.inputEvidenceIds.every(isString)
+  ) {
+    return Object.freeze({
+      ...payload,
+      inputEvidenceIds: Object.freeze(
+        [...payload.inputEvidenceIds].sort(compareCodePoints),
+      ),
+    });
+  }
+  return payload;
+}
+
+class ApplicationReplayInProgressError extends Error {
+  constructor() {
+    super("Application replay execution is already in progress");
+    this.name = "ApplicationReplayInProgressError";
+  }
+}
+
+class InMemoryApplicationReplayStore implements ApplicationReplayStore {
+  readonly #entries = new Map<string, Readonly<
+    | { canonicalContent: string; outcome: "Executing" }
+    | { canonicalContent: string; outcome: "Returned"; result: unknown }
+    | { canonicalContent: string; outcome: "Threw"; error: unknown }
+  >>();
+
+  execute<Result>(
+    key: ApplicationReplayKey,
+    canonicalContent: string,
+    executeNew: () => Result,
+  ): Result {
+    const serializedKey = canonicalizeJson([key.operation, key.commandId]);
+    const existing = this.#entries.get(serializedKey);
+    if (existing !== undefined) {
+      if (existing.canonicalContent !== canonicalContent) {
+        throw new ApplicationIdempotencyConflictError();
+      }
+      if (existing.outcome === "Executing") {
+        throw new ApplicationReplayInProgressError();
+      }
+      if (existing.outcome === "Threw") {
+        throw existing.error;
+      }
+      return existing.result as Result;
+    }
+    this.#entries.set(serializedKey, Object.freeze({
+      canonicalContent,
+      outcome: "Executing",
+    }));
+    try {
+      const result = executeNew();
+      this.#entries.set(serializedKey, Object.freeze({
+        canonicalContent,
+        outcome: "Returned",
+        result,
+      }));
+      return result;
+    } catch (error) {
+      this.#entries.set(serializedKey, Object.freeze({
+        canonicalContent,
+        outcome: "Threw",
+        error,
+      }));
+      throw error;
+    }
+  }
+}
+
+export function createInMemoryApplicationReplayStore(): ApplicationReplayStore {
+  return new InMemoryApplicationReplayStore();
+}
+
+export function dispatchReplayProtectedApplicationCommand<Result>(
+  requestJson: string,
+  replayStore: ApplicationReplayStore,
+  checkReadiness: (command: AdmittedApplicationCommand) => void,
+  ownerDispatch: (command: AdmittedApplicationCommand) => Result,
+): Result {
+  const envelope = admitApplicationCommandEnvelope(requestJson);
+  return replayStore.execute(
+    Object.freeze({
+      operation: envelope.definition.operation,
+      commandId: envelope.commandId,
+    }),
+    envelope.canonicalContent,
+    () => {
+      const command = Object.freeze({
+        ...envelope,
+        payload: validateApplicationPayload(
+          envelope.definition.operation,
+          envelope.payload,
+        ),
+      });
+      checkReadiness(command);
+      return ownerDispatch(command);
+    },
+  );
 }
 
 function invalidApplicationResult(): never {

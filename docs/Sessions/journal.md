@@ -6,6 +6,20 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-16 | WP-3 PT-APP-001N deterministic application replay accepted | Ring-2 | @code-reviewer
+
+**Type:** CODE-AND-SECURITY-REVIEW
+**review-outcome:** PASS; Critical 0 | Major 0 open | Minor 0 open | Security findings 0 open
+**Decision:** Accept exact command envelopes, RFC 8785 replay content, operation-plus-command identity, replay-before-admission precedence, cached returned and thrown outcomes, unchanged owner conflicts, and fail-closed synchronous same-key reentrancy
+**Policy:** DEC-023; DEC-028; DEC-030; DEC-032; DEC-033; DEC-034; WP-3; PT-APP-001N; application contract; code review; security review; test-first development
+**Authority:** Alternate-model Code Reviewer and Security Reviewer final PASS
+**Accountability:** Solo Orchestrator continues sequentially to PT-APP-001O precedence and PT-APP-001P result composition, preserves owner idempotency, and requires atomic persistence for any future distributed replay adapter
+**Result:** Focused 3/3; complete default suite 313 discovered, 283 passed, 30 environment-skipped, 0 failed; test quality 9.4/10; lint, diagnostics, dependency audit, and diff checks pass
+**Artifact:** docs/Governance/decisions/reviews/REV-088-wp-3-application-replay-code-review.md | docs/Governance/decisions/reviews/REV-089-wp-3-application-replay-security-review.md | docs/artifacts/gate-evidence/wp-3-application-replay.md
+**authorization-boundary:** PT-APP-001N and synchronous local reference replay only; no PT-APP-001O/P completion, distributed persistence guarantee, API/broker/provider/event/queue/scheduler/WP-4 surface, live provider, release, deployment, or production authority
+
+---
+
 ## 2026-09-16 | WP-3 PT-APP-001M exact schema admission accepted | Ring-2 | @code-reviewer
 
 **Type:** CODE-AND-SECURITY-REVIEW

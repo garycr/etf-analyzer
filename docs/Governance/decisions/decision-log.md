@@ -29,10 +29,33 @@
 | DEC-031 | 2026-09-15 | Package closure | Close WP-2 conditionally and authorize WP-3 as the next sequential package | Agent (Fully Agentic) | Solo Orchestrator | Active |
 | DEC-032 | 2026-09-16 | Remediation closure | Close #71 after complete fixture identity mediation and stable PostgreSQL check errors | Agent (Fully Agentic) | Solo Orchestrator | Active |
 | DEC-033 | 2026-09-16 | Contract admission | Close PT-APP-001M with exact duplicate-aware request and coherent result admission | Agent (Fully Agentic) | Solo Orchestrator | Active |
+| DEC-034 | 2026-09-16 | Replay integrity | Close PT-APP-001N with atomic application replay distinct from owning idempotency | Agent (Fully Agentic) | Solo Orchestrator | Active |
 
 ---
 
 ## Decision Records
+
+### DEC-034: Close Deterministic Application Replay
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-034 |
+| **Date** | 2026-09-16 |
+| **Category** | Replay integrity |
+| **Decision** | Close PT-APP-001N after enforcing exact command envelopes, RFC 8785 canonical replay content, `(operation, commandId)` key isolation, atomic new/replay/conflict decisions, cached returned and thrown outcomes, and fail-closed synchronous reentrancy |
+| **Policy** | DEC-023; DEC-028; DEC-030; DEC-032; DEC-033; approved WP-3 application contract; test-first development; code review; security review |
+| **Authority** | Agent (Fully Agentic), with alternate-model Code Reviewer and Security Reviewer final PASS dispositions |
+| **Accountable** | Solo Orchestrator continues next to PT-APP-001O, preserves owning replay authority, and does not claim persistent distributed atomicity, result-envelope completion, WP-4, release, deployment, or production authority |
+| **Context** | Exact schema admission did not yet protect application command identities from duplicate effects. Review exposed false Analytics ordering conflicts, uncached owner failures, and a synchronous reentrancy window in the reference store. |
+| **Alternatives** | Delegate all replay to owners; key only by command ID; validate readiness before replay lookup; cache successful values only; reserve application keys atomically before execution |
+| **Consequences** | Equivalent commands replay the original returned or thrown outcome without downstream callbacks; changed content fails before payload admission; owner-specific conflicts remain unchanged for new application keys. The in-memory store is a synchronous reference implementation, while future persistent adapters must provide atomic cross-process reservation. |
+| **Reasoning** | Application replay and owner idempotency protect different identities. Resolving the application key before readiness and ownership prevents duplicate orchestration while retaining narrower owner conflict semantics for genuinely new application requests. |
+| **Assumptions** | Execution is synchronous and single-process in this prototype; the command catalog and local-user authorization remain closed; injected stores honor the atomic `execute` contract. |
+| **Invalidation** | Async command callbacks; multi-process or distributed execution; replay retention requirements; catalog/version changes; different payload semantic-order rules; or a persistent adapter that cannot atomically reserve keys |
+| **Status** | Active; PT-APP-001N complete and PT-APP-001O is next sequentially |
+| **Linked Artifacts** | `docs/artifacts/gate-evidence/wp-3-application-replay.md`, `docs/Governance/decisions/reviews/REV-088-wp-3-application-replay-code-review.md`, `docs/Governance/decisions/reviews/REV-089-wp-3-application-replay-security-review.md`, GitHub issue #73 |
+
+---
 
 ### DEC-033: Close Exact Application Schema Admission
 

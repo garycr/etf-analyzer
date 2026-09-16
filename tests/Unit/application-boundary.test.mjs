@@ -11,6 +11,8 @@ import {
   dispatchApplicationOperation,
   dispatchValidatedApplicationOperation,
   dispatchValidatedApplicationRequest,
+  createInMemoryApplicationReplayStore,
+  dispatchReplayProtectedApplicationCommand,
   displayVerifiedResearch,
   evaluateReadiness,
   exportDiagnosticMetadata,
@@ -1330,4 +1332,277 @@ test("PT-APP-001M validates exact success data and canonical collection order", 
     () => validateApplicationSuccessData("EvidenceGet", { evidence: circularEvidence }),
     (error) => error instanceof ApplicationResultInvalidError,
   );
+});
+
+test("PT-APP-001N keeps application and owning replay identities distinct", () => {
+  const replayStore = createInMemoryApplicationReplayStore();
+  const originalResult = Object.freeze({ outcome: "Succeeded", marker: "original" });
+  const originalRequest = {
+    operation: "PaperOrderTransition",
+    requestId: "71000000-0000-4000-8000-000000000001",
+    correlationId: "71000000-0000-4000-8000-000000000002",
+    actorId: "local-user",
+    prototypeCandidate: "v1.0.0-prototype.1",
+    contractVersion: "1.0.0-candidate.2",
+    requestedAt: "2026-01-30T12:00:00.000Z",
+    commandId: "70000000-0000-4000-8000-000000000001",
+    payload: {
+      orderId: "30000000-0000-4000-8000-000000000001",
+      transitionCommandId: "70000000-0000-4000-8000-000000000002",
+      expectedVersion: "1",
+      transition: "OT-02",
+      transitionPayload: {
+        confirmation: {
+          actorId: "local-user",
+          confirmedAt: "2026-01-30T12:00:00.000Z",
+          confirmationText: "Submit paper order",
+        },
+      },
+    },
+  };
+  const expectedCanonicalContent = '{"actorId":"local-user","contractVersion":"1.0.0-candidate.2","operation":"PaperOrderTransition","payload":{"expectedVersion":"1","orderId":"30000000-0000-4000-8000-000000000001","transition":"OT-02","transitionCommandId":"70000000-0000-4000-8000-000000000002","transitionPayload":{"confirmation":{"actorId":"local-user","confirmationText":"Submit paper order","confirmedAt":"2026-01-30T12:00:00.000Z"}}},"prototypeCandidate":"v1.0.0-prototype.1"}';
+  let readinessCalls = 0;
+  let ownerCalls = 0;
+  const admittedCanonicalContent = [];
+  const dispatch = (request, result = originalResult) =>
+    dispatchReplayProtectedApplicationCommand(
+      JSON.stringify(request),
+      replayStore,
+      ({ canonicalContent }) => {
+        readinessCalls += 1;
+        admittedCanonicalContent.push(canonicalContent);
+      },
+      () => {
+        ownerCalls += 1;
+        if (result instanceof Error) throw result;
+        return result;
+      },
+    );
+
+  assert.equal(dispatch(originalRequest), originalResult);
+  assert.equal(dispatch({
+    ...originalRequest,
+    requestId: "71000000-0000-4000-8000-000000000003",
+    correlationId: "71000000-0000-4000-8000-000000000004",
+    requestedAt: "2026-01-30T12:01:00.000Z",
+  }), originalResult);
+  assert.equal(readinessCalls, 1);
+  assert.equal(ownerCalls, 1);
+  assert.deepEqual(admittedCanonicalContent, [expectedCanonicalContent]);
+
+  assert.throws(
+    () => dispatch({
+      ...originalRequest,
+      requestId: "71000000-0000-4000-8000-000000000005",
+      correlationId: "71000000-0000-4000-8000-000000000006",
+      requestedAt: "2026-01-30T12:02:00.000Z",
+      payload: {
+        ...originalRequest.payload,
+        transitionPayload: {
+          confirmation: {
+            ...originalRequest.payload.transitionPayload.confirmation,
+            confirmationText: "Submit changed paper order",
+          },
+        },
+      },
+    }),
+    (error) => error.code === "APPLICATION_IDEMPOTENCY_CONFLICT",
+  );
+  assert.equal(readinessCalls, 1);
+  assert.equal(ownerCalls, 1);
+
+  assert.throws(
+    () => dispatch({
+      ...originalRequest,
+      requestId: "71000000-0000-4000-8000-000000000009",
+      payload: {
+        ...originalRequest.payload,
+        expectedVersion: null,
+      },
+    }),
+    (error) => error.code === "APPLICATION_IDEMPOTENCY_CONFLICT",
+  );
+  assert.equal(readinessCalls, 1);
+  assert.equal(ownerCalls, 1);
+
+  const ownerConflict = Object.assign(new Error("Owner conflict"), {
+    code: "ORDER_IDEMPOTENCY_CONFLICT",
+  });
+  assert.throws(
+    () => dispatch({
+      ...originalRequest,
+      requestId: "71000000-0000-4000-8000-000000000007",
+      correlationId: "71000000-0000-4000-8000-000000000008",
+      requestedAt: "2026-01-30T12:03:00.000Z",
+      commandId: "70000000-0000-4000-8000-000000000003",
+      payload: {
+        ...originalRequest.payload,
+        transitionPayload: {
+          confirmation: {
+            ...originalRequest.payload.transitionPayload.confirmation,
+            confirmationText: "Submit owner-conflicting paper order",
+          },
+        },
+      },
+    }, ownerConflict),
+    (error) => error === ownerConflict,
+  );
+  assert.equal(readinessCalls, 2);
+  assert.equal(ownerCalls, 2);
+  assert.notEqual(admittedCanonicalContent[1], expectedCanonicalContent);
+  assert.throws(
+    () => dispatch({
+      ...originalRequest,
+      requestId: "71000000-0000-4000-8000-000000000010",
+      correlationId: "71000000-0000-4000-8000-000000000011",
+      requestedAt: "2026-01-30T12:04:00.000Z",
+      commandId: "70000000-0000-4000-8000-000000000003",
+      payload: {
+        ...originalRequest.payload,
+        transitionPayload: {
+          confirmation: {
+            ...originalRequest.payload.transitionPayload.confirmation,
+            confirmationText: "Submit owner-conflicting paper order",
+          },
+        },
+      },
+    }),
+    (error) => error === ownerConflict,
+  );
+  assert.equal(readinessCalls, 2);
+  assert.equal(ownerCalls, 2);
+});
+
+test("PT-APP-001N rejects malformed envelopes and canonicalizes normalized payloads", () => {
+  const commandId = "74000000-0000-4000-8000-000000000001";
+  const envelope = (operation, payload, overrides = {}) => ({
+    operation,
+    requestId: "74000000-0000-4000-8000-000000000002",
+    correlationId: "74000000-0000-4000-8000-000000000003",
+    actorId: "local-user",
+    prototypeCandidate: "v1.0.0-prototype.1",
+    contractVersion: "1.0.0-candidate.2",
+    requestedAt: "2026-01-30T12:00:00.000Z",
+    commandId,
+    payload,
+    ...overrides,
+  });
+  const replayStore = createInMemoryApplicationReplayStore();
+  let readinessCalls = 0;
+  let ownerCalls = 0;
+  const admittedPayloads = [];
+  const dispatchJson = (requestJson, result = Object.freeze({ outcome: "Succeeded" })) =>
+    dispatchReplayProtectedApplicationCommand(
+      requestJson,
+      replayStore,
+      () => { readinessCalls += 1; },
+      ({ payload }) => {
+        ownerCalls += 1;
+        admittedPayloads.push(payload);
+        if (result instanceof Error) throw result;
+        return result;
+      },
+    );
+
+  const watchlistPayload = { instrumentId: "ETF-A", expectedVersion: "1" };
+  for (const malformedRequestJson of [
+    JSON.stringify(envelope("WatchlistRemove", watchlistPayload, { actorId: "other-user" })),
+    JSON.stringify(envelope("WatchlistRemove", watchlistPayload, { requestedAt: "2026-01-30" })),
+    JSON.stringify({ ...envelope("WatchlistRemove", watchlistPayload), extra: true }),
+    JSON.stringify(envelope("WatchlistGet", {})),
+    '{"operation":"WatchlistRemove","requestId":"74000000-0000-4000-8000-000000000002","correlationId":"74000000-0000-4000-8000-000000000003","actorId":"local-user","prototypeCandidate":"v1.0.0-prototype.1","contractVersion":"1.0.0-candidate.2","requestedAt":"2026-01-30T12:00:00.000Z","commandId":"74000000-0000-4000-8000-000000000001","commandId":"74000000-0000-4000-8000-000000000004","payload":{"instrumentId":"ETF-A","expectedVersion":"1"}}',
+  ]) {
+    assert.throws(
+      () => dispatchJson(malformedRequestJson),
+      (error) => error instanceof ApplicationRequestInvalidError,
+    );
+  }
+  assert.equal(readinessCalls, 0);
+  assert.equal(ownerCalls, 0);
+
+  dispatchJson(JSON.stringify(envelope("WatchlistRemove", watchlistPayload)));
+  dispatchJson(JSON.stringify(envelope("WatchlistPut", {
+    instrumentId: "ETF-A",
+    displayName: "ETF A",
+    expectedVersion: "1",
+  })));
+  assert.equal(ownerCalls, 2);
+
+  const retryCommand = envelope("WatchlistRemove", watchlistPayload, {
+    commandId: "74000000-0000-4000-8000-000000000005",
+  });
+  const ownerFailure = new Error("transient owner failure");
+  assert.throws(() => dispatchJson(JSON.stringify(retryCommand), ownerFailure), (error) => error === ownerFailure);
+  assert.throws(() => dispatchJson(JSON.stringify(retryCommand)), (error) => error === ownerFailure);
+  assert.equal(ownerCalls, 3);
+
+  const analyticsBase = envelope("AnalyticsRun", {
+    jobId: "74000000-0000-4000-8000-000000000010",
+    evidenceCommandId: "74000000-0000-4000-8000-000000000011",
+    asOfDate: "2026-01-30",
+    configurationHash: "c".repeat(64),
+    inputEvidenceIds: [
+      "74000000-0000-4000-8000-000000000013",
+      "74000000-0000-4000-8000-000000000012",
+    ],
+  }, { commandId: "74000000-0000-4000-8000-000000000014" });
+  const analyticsResult = Object.freeze({ outcome: "Succeeded", job: "analytics" });
+  assert.equal(dispatchJson(JSON.stringify(analyticsBase), analyticsResult), analyticsResult);
+  assert.deepEqual(admittedPayloads.at(-1).inputEvidenceIds, [
+    "74000000-0000-4000-8000-000000000012",
+    "74000000-0000-4000-8000-000000000013",
+  ]);
+  assert.equal(
+    dispatchJson(JSON.stringify({
+      ...analyticsBase,
+      requestId: "74000000-0000-4000-8000-000000000015",
+      payload: {
+        ...analyticsBase.payload,
+        inputEvidenceIds: [...analyticsBase.payload.inputEvidenceIds].reverse(),
+      },
+    })),
+    analyticsResult,
+  );
+  assert.equal(ownerCalls, 4);
+});
+
+test("PT-APP-001N fails closed on synchronous same-key reentrancy", () => {
+  const replayStore = createInMemoryApplicationReplayStore();
+  const requestJson = JSON.stringify({
+    operation: "WatchlistRemove",
+    requestId: "75000000-0000-4000-8000-000000000001",
+    correlationId: "75000000-0000-4000-8000-000000000002",
+    actorId: "local-user",
+    prototypeCandidate: "v1.0.0-prototype.1",
+    contractVersion: "1.0.0-candidate.2",
+    requestedAt: "2026-01-30T12:00:00.000Z",
+    commandId: "75000000-0000-4000-8000-000000000003",
+    payload: { instrumentId: "ETF-A", expectedVersion: "1" },
+  });
+  let readinessCalls = 0;
+  let ownerCalls = 0;
+  const dispatch = () => dispatchReplayProtectedApplicationCommand(
+    requestJson,
+    replayStore,
+    () => { readinessCalls += 1; },
+    () => {
+      ownerCalls += 1;
+      if (ownerCalls === 1) return dispatch();
+      return Object.freeze({ outcome: "Duplicated" });
+    },
+  );
+
+  let firstError;
+  assert.throws(
+    dispatch,
+    (error) => {
+      firstError = error;
+      return error.name === "ApplicationReplayInProgressError";
+    },
+  );
+  assert.equal(readinessCalls, 1);
+  assert.equal(ownerCalls, 1);
+  assert.throws(dispatch, (error) => error === firstError);
+  assert.equal(readinessCalls, 1);
+  assert.equal(ownerCalls, 1);
 });

@@ -6,6 +6,20 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-16 | WP-3 PT-APP-001F readiness fail-closure accepted | Ring-2 | @code-reviewer
+
+**Type:** CODE-AND-SECURITY-REVIEW
+**review-outcome:** PASS; Critical 0 | Major 0 | Minor 0 | Sev 1/2 security 0
+**Decision:** Accept canonical six-dependency readiness aggregation with fail-closed owner-code preservation, independent liveness, fixed redacted recovery, and immutable output
+**Policy:** DEC-023; DEC-028; DEC-030; DEC-032; WP-3; PT-APP-001F; code review; security review; test-first development
+**Authority:** Alternate-model Code Reviewer final recheck and Security Reviewer PASS
+**Accountability:** Solo Orchestrator preserves analytical validity for PT-APP-001G, envelope and presentation behavior for PT-APP-001H/J/L, runtime admission for PT-APP-001M, and precedence/replay responsibilities for PT-APP-001N/O before continuing sequentially
+**Result:** Focused 1/1; complete default suite 301 discovered, 271 passed, 30 environment-skipped, 0 failed; lint, diagnostics, audit, and diff checks pass
+**Artifact:** docs/Governance/decisions/reviews/REV-071-wp-3-readiness-fail-closure-code-review.md | docs/Governance/decisions/reviews/REV-072-wp-3-readiness-fail-closure-security-review.md | docs/artifacts/gate-evidence/wp-3-readiness-fail-closure.md
+**authorization-boundary:** PT-APP-001F only; no PT-APP-001G..P completion, WP-4 overlap, live provider, release, deployment, or production authority
+
+---
+
 ## 2026-09-16 | WP-3 PT-APP-001E failed-job visibility accepted | Ring-2 | @code-reviewer
 
 **Type:** CODE-AND-SECURITY-REVIEW

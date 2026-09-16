@@ -7,6 +7,7 @@ import {
   applicationQueryOperations,
   dispatchApplicationOperation,
   displayVerifiedResearch,
+  evaluateReadiness,
   presentFailedJob,
   restartDurableJob,
   submitConfirmedPaperOrder,
@@ -291,5 +292,74 @@ test("PT-APP-001E zero accepted rows remains a visible failed job", () => {
     assert.equal("outcome" in result, false);
     assert.equal("data" in result, false);
     assert.equal(JSON.stringify(result).includes("Succeeded"), false);
+  }
+});
+
+test("PT-APP-001F required dependency failures produce ordered NotReady recovery", () => {
+  const vectors = [
+    ["PostgreSQL", "Live", "APPLICATION_DATABASE_UNAVAILABLE"],
+    ["Migrations", "NotLive", "APPLICATION_MIGRATIONS_INCOMPLETE"],
+    ["FixturePolicy", "Live", "APPLICATION_CONFIGURATION_INVALID"],
+    ["LocalDependency", "NotLive", "APPLICATION_DEPENDENCY_UNAVAILABLE"],
+    ["DenialAudit", "Live", "ANALYTICS_ACCESS_DENIAL_AUDIT_FAILED"],
+    ["LedgerIntegrity", "NotLive", "LEDGER_INTEGRITY_FAILED"],
+  ];
+  const dependencyOrder = vectors.map(([dependency]) => dependency);
+
+  for (const [failedDependency, liveness, errorCode] of vectors) {
+    const dependencies = Object.fromEntries(
+      [...dependencyOrder].reverse().map((dependency) => {
+        const index = dependencyOrder.indexOf(dependency);
+        return [
+          dependency,
+          dependency === failedDependency
+            ? {
+              ready: false,
+              checkedAt: `2026-09-16T16:0${index}:00.000Z`,
+              errorCode,
+            }
+            : {
+              ready: true,
+              checkedAt: `2026-09-16T16:0${index}:00.000Z`,
+            },
+        ];
+      }),
+    );
+
+    const readiness = evaluateReadiness({
+      checkedAt: "2026-09-16T16:10:00.000Z",
+      liveness,
+      dependencies,
+    });
+
+    assert.deepEqual(readiness.dependencies, dependencyOrder.map((dependency) => ({
+      dependency,
+      state: dependency === failedDependency ? "NotReady" : "Ready",
+      checkedAt: dependencies[dependency].checkedAt,
+      code: dependency === failedDependency ? errorCode : null,
+    })));
+    assert.equal(readiness.state, "NotReady");
+    assert.equal(readiness.checkedAt, "2026-09-16T16:10:00.000Z");
+    assert.equal(readiness.liveness, liveness);
+    assert.equal(readiness.displayTimezone, "UTC");
+    assert.equal(readiness.controllingError.code, errorCode);
+    assert.ok(Object.isFrozen(readiness));
+    assert.ok(Object.isFrozen(readiness.dependencies));
+    assert.ok(readiness.dependencies.every(Object.isFrozen));
+    assert.ok(Object.isFrozen(readiness.controllingError));
+    assert.ok(Object.isFrozen(readiness.controllingError.boundedIdentifiers));
+    assert.ok(Object.isFrozen(readiness.controllingError.recovery));
+    assert.deepEqual(readiness.controllingError, {
+      code: errorCode,
+      message: "Application readiness is blocked. Review readiness details.",
+      boundedIdentifiers: {},
+      recovery: {
+        actionId: "review-readiness",
+        label: "Review readiness details",
+        targetOperation: "ReadinessGet",
+        focusTarget: "readiness-details",
+        requiresConfirmation: false,
+      },
+    });
   }
 });

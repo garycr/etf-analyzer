@@ -77,6 +77,73 @@ export type FailedJobRecovery =
     readonly requiresConfirmation: false;
   };
 
+export const readinessDependencyNames = Object.freeze([
+  "PostgreSQL",
+  "Migrations",
+  "FixturePolicy",
+  "LocalDependency",
+  "DenialAudit",
+  "LedgerIntegrity",
+] as const);
+
+export type ReadinessDependencyName =
+  (typeof readinessDependencyNames)[number];
+
+type ReadinessCheck<ErrorCode extends string> =
+  | { readonly ready: true; readonly checkedAt: string }
+  | {
+    readonly ready: false;
+    readonly checkedAt: string;
+    readonly errorCode: ErrorCode;
+  };
+
+export interface ReadinessChecks {
+  readonly PostgreSQL: ReadinessCheck<"APPLICATION_DATABASE_UNAVAILABLE">;
+  readonly Migrations: ReadinessCheck<"APPLICATION_MIGRATIONS_INCOMPLETE">;
+  readonly FixturePolicy: ReadinessCheck<"APPLICATION_CONFIGURATION_INVALID">;
+  readonly LocalDependency: ReadinessCheck<"APPLICATION_DEPENDENCY_UNAVAILABLE">;
+  readonly DenialAudit: ReadinessCheck<"ANALYTICS_ACCESS_DENIAL_AUDIT_FAILED">;
+  readonly LedgerIntegrity: ReadinessCheck<"LEDGER_INTEGRITY_FAILED">;
+}
+
+export type ReadinessErrorCode =
+  ReadinessChecks[keyof ReadinessChecks] extends ReadinessCheck<infer ErrorCode>
+    ? ErrorCode
+    : never;
+
+export interface ReadinessEvaluationRequest {
+  readonly checkedAt: string;
+  readonly liveness: "Live" | "NotLive";
+  readonly dependencies: ReadinessChecks;
+}
+
+export interface ReadinessDependency {
+  readonly dependency: ReadinessDependencyName;
+  readonly state: "Ready" | "NotReady";
+  readonly checkedAt: string;
+  readonly code: string | null;
+}
+
+export interface ReadinessSnapshot {
+  readonly state: "Ready" | "NotReady";
+  readonly checkedAt: string;
+  readonly displayTimezone: "UTC";
+  readonly liveness: "Live" | "NotLive";
+  readonly dependencies: readonly ReadinessDependency[];
+  readonly controllingError: null | {
+    readonly code: ReadinessErrorCode;
+    readonly message: string;
+    readonly boundedIdentifiers: Readonly<Record<string, never>>;
+    readonly recovery: {
+      readonly actionId: "review-readiness";
+      readonly label: "Review readiness details";
+      readonly targetOperation: "ReadinessGet";
+      readonly focusTarget: "readiness-details";
+      readonly requiresConfirmation: false;
+    };
+  };
+}
+
 export interface FailedJobPresentation<Job extends FailedJobForPresentation> {
   readonly job: Job;
   readonly error: {
@@ -169,6 +236,48 @@ export function displayVerifiedResearch<Result>(
   research: CompleteVerifiedResearch<Result>,
 ): Result {
   return research.result;
+}
+
+export function evaluateReadiness(
+  request: ReadinessEvaluationRequest,
+): ReadinessSnapshot {
+  let controllingCode: ReadinessErrorCode | null = null;
+  const dependencies = readinessDependencyNames.map((dependency) => {
+    const check = request.dependencies[dependency];
+    if (!check.ready && controllingCode === null) {
+      controllingCode = check.errorCode;
+    }
+    return Object.freeze({
+      dependency,
+      state: check.ready ? "Ready" as const : "NotReady" as const,
+      checkedAt: check.checkedAt,
+      code: check.ready ? null : check.errorCode,
+    });
+  });
+
+  const controllingError = controllingCode === null
+    ? null
+    : Object.freeze({
+      code: controllingCode,
+      message: "Application readiness is blocked. Review readiness details.",
+      boundedIdentifiers: Object.freeze({}),
+      recovery: Object.freeze({
+        actionId: "review-readiness" as const,
+        label: "Review readiness details" as const,
+        targetOperation: "ReadinessGet" as const,
+        focusTarget: "readiness-details" as const,
+        requiresConfirmation: false as const,
+      }),
+    });
+
+  return Object.freeze({
+    state: controllingError === null ? "Ready" : "NotReady",
+    checkedAt: request.checkedAt,
+    displayTimezone: "UTC",
+    liveness: request.liveness,
+    dependencies: Object.freeze(dependencies),
+    controllingError,
+  });
 }
 
 export function presentFailedJob<Job extends FailedJobForPresentation>(

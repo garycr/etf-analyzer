@@ -39,6 +39,46 @@ export interface CompleteVerifiedResearch<Result> {
   readonly result: Result;
 }
 
+export interface PaperOrderSubmissionRequest {
+  readonly correlationId: string;
+  readonly expectedVersion: number;
+  readonly orderId: string;
+  readonly sourceState: "Draft";
+  readonly transitionCommandId: string;
+}
+
+export interface PaperOrderConfirmation {
+  readonly actorId: "local-user";
+  readonly confirmedAt: string;
+  readonly confirmationText: string;
+}
+
+export type PaperOrderConfirmationAttempt =
+  | { readonly status: "Absent" | "Canceled" | "Expired" | "Incomplete" }
+  | {
+    readonly status: "Completed";
+    readonly confirmation: PaperOrderConfirmation;
+  };
+
+export interface SubmitPaperOrderCommand {
+  readonly baselineVersion: "v1.0.0";
+  readonly correlationId: string;
+  readonly expectedVersion: number;
+  readonly orderId: string;
+  readonly sourceState: "Draft";
+  readonly targetState: "Submitted";
+  readonly transition: "OT-02";
+  readonly transitionCommandId: string;
+  readonly transitionPayload: {
+    readonly confirmation: PaperOrderConfirmation;
+  };
+  readonly trigger: "UserConfirmedPaperAction";
+}
+
+export type PaperOrderSubmissionResult<Result> =
+  | { readonly outcome: "NotDispatched"; readonly state: "Draft" }
+  | { readonly outcome: "Dispatched"; readonly result: Result };
+
 export class ApplicationOperationUnknownError extends Error {
   readonly code = "APPLICATION_OPERATION_UNKNOWN";
 
@@ -87,4 +127,39 @@ export function displayVerifiedResearch<Result>(
   research: CompleteVerifiedResearch<Result>,
 ): Result {
   return research.result;
+}
+
+const paperOrderNotDispatched = Object.freeze({
+  outcome: "NotDispatched" as const,
+  state: "Draft" as const,
+});
+
+export function submitConfirmedPaperOrder<Result>(
+  request: PaperOrderSubmissionRequest,
+  confirmationAttempt: PaperOrderConfirmationAttempt,
+  ownerDispatch: (command: SubmitPaperOrderCommand) => Result,
+): PaperOrderSubmissionResult<Result> {
+  if (
+    confirmationAttempt.status !== "Completed" ||
+    confirmationAttempt.confirmation.actorId !== "local-user"
+  ) {
+    return paperOrderNotDispatched;
+  }
+
+  const command = Object.freeze({
+    baselineVersion: "v1.0.0" as const,
+    correlationId: request.correlationId,
+    expectedVersion: request.expectedVersion,
+    orderId: request.orderId,
+    sourceState: "Draft" as const,
+    targetState: "Submitted" as const,
+    transition: "OT-02" as const,
+    transitionCommandId: request.transitionCommandId,
+    transitionPayload: Object.freeze({
+      confirmation: confirmationAttempt.confirmation,
+    }),
+    trigger: "UserConfirmedPaperAction" as const,
+  });
+
+  return Object.freeze({ outcome: "Dispatched", result: ownerDispatch(command) });
 }

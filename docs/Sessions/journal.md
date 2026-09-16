@@ -6,6 +6,20 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-16 | WP-3 PT-APP-001A operation catalog accepted | Ring-2 | @code-reviewer
+
+**Type:** REVIEW-RECHECK
+**review-outcome:** PASS; Critical 0 | Major 0 | Minor 0
+**Decision:** Accept the exact case-sensitive 9-command/7-query catalog, duplicate fail-closure, and resolve-before-handler dispatch guard
+**Policy:** DEC-023; DEC-028; DEC-030; DEC-032; WP-3; PT-APP-001A; code review; test-first development
+**Authority:** Alternate-model Code Reviewer final re-review
+**Accountability:** Solo Orchestrator publishes this bounded slice and continues sequentially to PT-APP-001B without claiming payload, owner, job, readiness, or diagnostics completion
+**Result:** Focused 1/1; complete default suite 294 discovered, 264 passed, 30 environment-skipped, 0 failed; lint, diagnostics, audit, and diff checks pass
+**Artifact:** docs/Governance/decisions/reviews/REV-064-wp-3-application-operation-catalog-review.md | docs/artifacts/gate-evidence/wp-3-application-operation-catalog.md | src/Application/application-boundary.ts | tests/Unit/application-boundary.test.mjs
+**authorization-boundary:** PT-APP-001A only; no PT-APP-001B..P completion, WP-4 overlap, live provider, release, deployment, or production authority
+
+---
+
 ## 2026-09-16 | DEC-032 GitHub #71 fixture identity remediation closed | Ring-2 | @solo-orchestrator
 
 **Type:** REMEDIATION-CLOSURE

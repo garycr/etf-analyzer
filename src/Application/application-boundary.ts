@@ -112,7 +112,14 @@ export interface ApplicationRequestDependencies {
   readonly ownerDispatch: (
     definition: ApplicationOperationDefinition,
     payload: Readonly<Record<string, unknown>>,
+    context?: Readonly<ApplicationOwnerCommandContext>,
   ) => unknown;
+}
+
+export interface ApplicationOwnerCommandContext {
+  readonly commandId: string;
+  readonly correlationId: string;
+  readonly requestedAt: string;
 }
 
 export interface ApplicationResultPresentation {
@@ -2428,7 +2435,15 @@ export function executeApplicationRequest(
         }
         let ownerResult: unknown;
         try {
-          ownerResult = dependencies.ownerDispatch(command.definition, payload);
+          ownerResult = dependencies.ownerDispatch(
+            command.definition,
+            payload,
+            Object.freeze({
+              commandId: command.commandId,
+              correlationId: command.correlationId,
+              requestedAt: command.requestedAt,
+            }),
+          );
         } catch (error) {
           return completeApplicationFailure(
             command.definition.operation, command.requestId, command.correlationId,

@@ -2329,3 +2329,60 @@ test("WP-3 composes command and query admission into complete result envelopes",
   });
   assert.equal(invalidOwnerResult.error.code, "APPLICATION_REDACTION_FAILED");
 });
+
+test("WP-6 command owner dispatch receives immutable admitted context", () => {
+  let observedContext;
+  const request = JSON.stringify({
+    operation: "PaperOrderDraftCreate",
+    requestId: "75000000-0000-4000-8000-000000000001",
+    correlationId: "75000000-0000-4000-8000-000000000002",
+    actorId: "local-user",
+    prototypeCandidate: "v1.0.0-prototype.1",
+    contractVersion: "1.0.0-candidate.2",
+    requestedAt: "2026-09-17T12:00:00.000Z",
+    commandId: "75000000-0000-4000-8000-000000000003",
+    payload: {
+      orderId: "75000000-0000-4000-8000-000000000004",
+      instrumentId: "GOLDEN-ETF",
+      researchEvidenceId: "75000000-0000-4000-8000-000000000005",
+      side: "Buy",
+      quantity: "2.0000000000",
+      unitPrice: "10.0000000000",
+      tradeDate: "2026-09-17",
+    },
+  });
+
+  const result = executeApplicationRequest(request, {
+    replayStore: createInMemoryApplicationReplayStore(),
+    completedAt: () => "2026-09-17T12:00:01.000Z",
+    checkReadiness: () => undefined,
+    ownerDispatch: (_definition, _payload, context) => {
+      observedContext = context;
+      return {
+        order: {
+          orderId: "75000000-0000-4000-8000-000000000004",
+          instrumentId: "GOLDEN-ETF",
+          state: "Draft",
+          aggregateVersion: "1",
+          researchEvidenceId: "75000000-0000-4000-8000-000000000005",
+          side: "Buy",
+          requestedQuantity: "2.0000000000",
+          filledQuantity: "0.0000000000",
+          openQuantity: "2.0000000000",
+          unitPrice: "10.0000000000",
+          tradeDate: "2026-09-17",
+          confirmation: null,
+          transitionHistory: [],
+        },
+      };
+    },
+  });
+
+  assert.deepEqual(observedContext, {
+    commandId: "75000000-0000-4000-8000-000000000003",
+    correlationId: "75000000-0000-4000-8000-000000000002",
+    requestedAt: "2026-09-17T12:00:00.000Z",
+  });
+  assert.equal(Object.isFrozen(observedContext), true);
+  assert.equal(result.outcome, "Succeeded");
+});

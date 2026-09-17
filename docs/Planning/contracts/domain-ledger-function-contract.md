@@ -14,7 +14,7 @@ The application canonicalizer supplies exact RFC 8785 UTF-8 text for replay cont
 
 Fields are required unless suffixed `?`. Unknown, duplicate, missing, null outside `?`, or incorrectly cased fields fail before cast or mutation.
 
-`paper_order_transition(jsonb)` accepts `{canonicalContent:String,correlationId:UUID,occurredAt:UTCInstant,operation:DraftCreate|Transition,orderId:UUID,transitionCommandId:UUID,expectedVersion:UInt,transition:OT-01|OT-02|OT-03|OT-04|OT-05|OT-06|OT-07|OT-08|OT-09|OT-10,transitionPayload:TransitionPayload}`. `DraftCreate` requires OT-01, expected version zero, and `{instrumentId:String,researchEvidenceId:UUID,side:Buy|Sell,quantity:Quantity,unitPrice:UnitPrice,tradeDate:Date}`. `Transition` rejects OT-01 and uses the application candidate.2 payload variant for the selected transition. Fill transitions invoke `ledger_append` inside the same transaction; all successful transitions invoke `audit_append` before return.
+`paper_order_transition(jsonb)` accepts `{canonicalContent:String,correlationId:UUID,occurredAt:UTCInstant,operation:DraftCreate|Transition,orderId:UUID,transitionCommandId:UUID,expectedVersion:UInt,transition:OT-01|OT-02|OT-03|OT-04|OT-05|OT-06|OT-07|OT-08|OT-09|OT-10,transitionPayload:TransitionPayload}`. `DraftCreate` requires OT-01, expected version zero, and `{instrumentId:String,researchEvidenceId:UUID,side:Buy|Sell,quantity:Quantity,unitPrice:UnitPrice,tradeDate:Date}`. `Transition` rejects OT-01 and uses the selected OT-02 through OT-10 payload variant defined by `application-contract.md` candidate.2. Fill transitions invoke `ledger_append` inside the same transaction; all successful transitions invoke `audit_append` before return.
 
 `ledger_append(jsonb)` accepts one of three records:
 

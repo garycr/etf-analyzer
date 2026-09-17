@@ -6,6 +6,32 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-17 | WP-6 first lifecycle slice validated | Ring-2 | @solo-orchestrator
+
+**Type:** IMPLEMENTATION-CHECKPOINT
+**Decision:** Implement closed OT-01 through OT-10 command canonicalization, exhaustive pure transition relation guards, and immutable admitted command context without moving authoritative state or ledger ownership out of PostgreSQL
+**Policy:** DEC-014; DEC-027; DEC-028; DEC-042; REV-105; test-first development; domain and function contracts
+**Authority:** Agent under Fully Agentic mode with asynchronous transparency through GitHub issue #79 and alternate-model REV-106 PASS
+**Accountability:** Solo Orchestrator continues WP-6 with Application/PostgreSQL composition and the remaining exact CT-ORD/CT-LED matrix; WP-6 remains open
+**Result:** PostgreSQL 16.15 C/UTF8/UTC complete suite 381/381 passed with zero skips or failures; dependency audit reports zero vulnerabilities; diagnostics are clean
+**Artifact:** src/Domain/Orders/paper-order.ts | tests/Unit/paper-order.test.mjs | REV-106 | GitHub issue #79
+**authorization-boundary:** Checkpoint only; no WP-6 closure, WP-7, brokerage, live provider, public ingress, durable event, queue, scheduler, worker, baseline, release, deployment, or production action
+
+---
+
+## 2026-09-17 | WP-6 paper order and ledger composition started | Ring-2 | @solo-orchestrator
+
+**Type:** WORK-PACKAGE-START
+**Decision:** DEC-042 assigns closed order semantics and diagnostic rebuild verification to Domain, trusted bounded dispatch to Application, and all authoritative atomic mutation/publication to existing PostgreSQL controlled functions
+**Policy:** DEC-014; DEC-023; DEC-027; DEC-028; DEC-041; approved sequential Ring 2 WBS; domain candidate.1; ledger and function contracts candidate.2
+**Authority:** Agent under Fully Agentic mode with asynchronous transparency through GitHub issues #79/#80 and alternate-model REV-105 PASS
+**Accountability:** Solo Orchestrator implements the exact OT/CT test matrix test-first, preserves one PostgreSQL mutation owner, records ADR-002 before WP-7, and does not start WP-7
+**Result:** WP-6 is active at unchanged Ring 2 completion of 62.5%; the architecture pre-code traceability condition is closed
+**Artifact:** docs/Planning/tasks/wp-6-implementation-plan.md | DEC-042 | REV-105 | GitHub issues #79/#80
+**authorization-boundary:** Local hypothetical paper orders only; no brokerage, live provider, public ingress, durable event, queue, scheduler, worker, baseline, release, deployment, or production action
+
+---
+
 ## 2026-09-17 | Workspace Owner approved DEC-041 | Ring-2 | @workspace-owner
 
 **Type:** HUMAN-DECISION

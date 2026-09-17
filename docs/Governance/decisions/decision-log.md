@@ -37,10 +37,33 @@
 | DEC-039 | 2026-09-17 | Package closure | Close WP-4 conditionally and make WP-5 eligible as the next sequential package | Workspace Owner | Solo Orchestrator | Approved |
 | DEC-040 | 2026-09-17 | Architecture | Assign WP-5 pure analytics to Domain and retain atomic evidence publication in PostgreSQL | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-041 | 2026-09-17 | Package closure | Close WP-5 and make WP-6 eligible as the next sequential package without starting it | Workspace Owner | Solo Orchestrator | Approved |
+| DEC-042 | 2026-09-17 | Architecture | Assign WP-6 closed order semantics to Domain, trusted dispatch to Application, and atomic ledger ownership to PostgreSQL | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 
 ---
 
 ## Decision Records
+
+### DEC-042: Assign WP-6 Order and Ledger Ownership
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-042 |
+| **Date** | 2026-09-17 |
+| **Category** | Architecture |
+| **Decision** | Domain owns the closed eight-state paper-order model, OT-01 through OT-10 command semantics, canonical field/order rules, and diagnostic rebuild verification; Application owns trusted identity, authorization, and bounded dispatch; existing PostgreSQL controlled functions remain the sole atomic mutation and projection-publication owners |
+| **Policy** | DEC-014; DEC-023; DEC-027; DEC-028; DEC-040; DEC-041; domain contract candidate.1; ledger and domain-ledger function contracts candidate.2; approved sequential Ring 2 WBS; test-first development; independent architecture review |
+| **Authority** | Agent under Fully Agentic mode, tracked through GitHub issues #79/#80, with alternate-model REV-105 PASS |
+| **Accountable** | Solo Orchestrator implements the exact test matrix, preserves PostgreSQL atomic ownership and least privilege, records ADR-002 before WP-7, and does not activate any adjacent runtime or release scope |
+| **Context** | Migration 0003 already owns lifecycle admission, fills, FIFO allocation, reversals, audit, commitments, anchors, and publication. WP-6 needs a bounded Domain/Application composition surface and complete executable acceptance evidence, not a second authoritative ledger. |
+| **Alternatives** | Duplicate aggregate and ledger state in memory; move FIFO/reversal logic into Application; introduce a worker or queue; retain one PostgreSQL mutation owner with pure Domain semantics and thin trusted dispatch |
+| **Consequences** | WP-6 starts at unchanged Ring 2 completion of 62.5%. Exact test titles are allocated for all OT and CT identifiers. Domain verification cannot publish projections. ADR-002 is due before WP-7 planning. |
+| **Reasoning** | Reusing the existing transactional owner preserves atomic order/ledger mutation, idempotency, optimistic concurrency, append-only evidence, and least privilege while keeping business semantics independently testable. |
+| **Assumptions** | Node 20; PostgreSQL 16; local fixture-only execution; one controlled PostgreSQL writer; no active baseline, live provider, brokerage, public ingress, worker, queue, or multi-user authority |
+| **Invalidation** | Multiple mutation writers, remote/public execution, durable asynchronous handoff, changed PostgreSQL transaction owner, live brokerage/provider semantics, or active baseline |
+| **Status** | Reviewed; REV-105 PASS; WP-6 active |
+| **Linked Artifacts** | `docs/Planning/tasks/wp-6-implementation-plan.md`, REV-105, GitHub issues #79/#80 |
+
+---
 
 ### DEC-041: Close WP-5 Deterministic Analytics
 

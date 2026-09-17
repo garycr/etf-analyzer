@@ -4,6 +4,8 @@ import test from "node:test";
 
 import pg from "pg";
 
+import { createAnalyticsEvidenceService } from "../../dist/Application/analytics-evidence-service.js";
+import { createCanonicalAnalyticsEvidence } from "../../dist/Domain/Analytics/analytics.js";
 import { canonicalizeJson } from "../../dist/Infrastructure/CanonicalJson/canonical-json.js";
 import { applyMigration } from "../../dist/Infrastructure/PostgreSQL/migration-runner.js";
 import { applicationMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/application.js";
@@ -294,6 +296,82 @@ test(
       } finally {
         await client.query("RESET ROLE");
       }
+    } finally {
+      try {
+        await cleanBootstrap(client);
+      } finally {
+        await client.query(unlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
+  "WP-5 composes canonical analytics through authorized PostgreSQL commit and read",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    await client.connect();
+    await client.query(lockSql);
+    try {
+      await cleanBootstrap(client);
+      await applyPrerequisites(client);
+      await applyMigration(
+        client,
+        analyticsEvidenceMigration,
+        "2026-09-14T00:04:00.000Z",
+        projectPostgresSchemaManifest,
+      );
+      await client.query("GRANT USAGE ON SCHEMA etf TO app_runtime");
+      const payload = evidencePayload();
+      const canonical = createCanonicalAnalyticsEvidence({
+        configuration: payload.canonicalConfiguration,
+        input: payload.canonicalInput,
+        result: payload.canonicalResult,
+      });
+      const asRuntime = async (query, parameters) => {
+        await client.query("SET SESSION AUTHORIZATION app_runtime");
+        try {
+          return await client.query(query, parameters);
+        } finally {
+          await client.query("RESET SESSION AUTHORIZATION");
+        }
+      };
+      const service = createAnalyticsEvidenceService({
+        async commit(value) {
+          const result = await asRuntime("SELECT etf.evidence_commit($1::jsonb) AS result", [value]);
+          return result.rows[0].result;
+        },
+        async read(evidenceId) {
+          const result = await asRuntime("SELECT etf.evidence_read($1) AS result", [evidenceId]);
+          return result.rows[0].result;
+        },
+        async recordDeniedAccess() {
+          throw new Error("authorized composition must not record denial");
+        },
+        async verify(evidenceId) {
+          const result = await asRuntime("SELECT etf.evidence_read($1) AS result", [evidenceId]);
+          return result.rows[0].result;
+        },
+      }, {
+        async authorize() {
+          return true;
+        },
+      }, {
+        async actorId() {
+          return "analytics-worker";
+        },
+      });
+
+      const committed = await service.commit(payload.evidenceId, JSON.stringify(payload));
+      const read = await service.read(payload.evidenceId);
+
+      assert.equal(committed.inputHash, canonical.inputHash);
+      assert.equal(committed.configurationHash, canonical.configurationHash);
+      assert.equal(committed.resultHash, canonical.resultHash);
+      assert.equal(read.evidence.bundleHash, committed.bundleHash);
+      assert.deepEqual(read.evidence.result, payload.canonicalResult);
     } finally {
       try {
         await cleanBootstrap(client);

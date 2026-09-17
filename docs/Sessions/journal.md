@@ -6,6 +6,32 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-17 | WP-5 deterministic analytics closed | Ring-2 | @solo-orchestrator
+
+**Type:** WORK-PACKAGE-CLOSE
+**Decision:** DEC-041 closes WP-5 after REV-101 Code PASS, REV-102 Security PASS, REV-103 Architecture PASS, and REV-104 Plan PASS; WP-6 becomes eligible but is not started
+**Policy:** DEC-014; DEC-020; DEC-023; DEC-028; DEC-040; approved sequential Ring 2 WBS; analytics evidence contract candidate.2
+**Authority:** Agent under Fully Agentic mode with asynchronous transparency through GitHub issues #77/#78
+**Accountability:** Solo Orchestrator selectively publishes the reviewed WP-5 implementation and evidence, closes #77/#78 after push, and preserves every downstream gate
+**Result:** PostgreSQL 16.15 complete suite 366/366 with zero skips or failures; lint, audit, diagnostics, and diff checks pass; Ring 2 reaches 62.5%
+**Artifact:** docs/artifacts/gate-evidence/wp-5-exit.md | REV-101 | REV-102 | REV-103 | REV-104 | DEC-041
+**authorization-boundary:** WP-6 is eligible but unstarted; no paper order, provider, broker, public ingress, event, queue, scheduler, worker, baseline, release, deployment, or production action
+
+---
+
+## 2026-09-17 | WP-5 deterministic analytics started | Ring-2 | @solo-orchestrator
+
+**Type:** WORK-PACKAGE-START
+**Decision:** DEC-040 assigns pure analytics and P0 rule ownership to Domain, Application orchestration only, and atomic evidence publication to existing PostgreSQL functions
+**Policy:** DEC-014; DEC-023; DEC-028; DEC-039; analytics contract candidate.2; approved sequential Ring 2 WBS
+**Authority:** Agent under Fully Agentic mode with asynchronous transparency through GitHub issues #77/#78
+**Accountability:** Solo Orchestrator remediates the conditional architecture review, completes test-first prototype CT-ANA allocation, and does not start WP-6
+**Result:** Seven golden hash domains, point-in-time cutoff/ambiguity, closed-schema admission, and BigInt half-even arithmetic pass 9 focused tests
+**Artifact:** docs/Planning/tasks/wp-5-implementation-plan.md | DEC-040 | GitHub issues #77/#78
+**authorization-boundary:** WP-5 local fixture-only analytics only; no paper order, provider, broker, event, queue, scheduler, worker, baseline, release, deployment, or production action
+
+---
+
 ## 2026-09-17 | Workspace Owner approved DEC-039 | Ring-2 | @workspace-owner
 
 **Type:** HUMAN-DECISION

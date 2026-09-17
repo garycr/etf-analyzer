@@ -35,10 +35,56 @@
 | DEC-037 | 2026-09-16 | Package closure | Close WP-3 and make WP-4 eligible as the next sequential package without starting it | Workspace Owner | Solo Orchestrator | Approved |
 | DEC-038 | 2026-09-17 | API reliability | Add a fixed transport Problem500 without fabricating an application-owned failure | Agent (Fully Agentic) | Solo Orchestrator | Active |
 | DEC-039 | 2026-09-17 | Package closure | Close WP-4 conditionally and make WP-5 eligible as the next sequential package | Workspace Owner | Solo Orchestrator | Approved |
+| DEC-040 | 2026-09-17 | Architecture | Assign WP-5 pure analytics to Domain and retain atomic evidence publication in PostgreSQL | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
+| DEC-041 | 2026-09-17 | Package closure | Close WP-5 and make WP-6 eligible as the next sequential package without starting it | Agent (Fully Agentic) | Solo Orchestrator | Approved |
 
 ---
 
 ## Decision Records
+
+### DEC-041: Close WP-5 Deterministic Analytics
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-041 |
+| **Date** | 2026-09-17 |
+| **Category** | Package closure |
+| **Decision** | Close WP-5 after REV-101 Code PASS, REV-102 Security PASS, REV-103 Architecture PASS, REV-104 Plan PASS, and a 366/366 zero-skip PostgreSQL-backed repository run; make WP-6 eligible as the next sequential package without starting it |
+| **Policy** | DEC-014; DEC-020; DEC-023; DEC-028; DEC-039; DEC-040; approved Ring 2 WBS; analytics evidence contract `1.0.0-candidate.2`; test-first development; independent code, security, architecture, and plan review |
+| **Authority** | Agent under Fully Agentic mode with asynchronous transparency through GitHub issues #77/#78 |
+| **Accountable** | Solo Orchestrator publishes selective WP-5 implementation/evidence, closes #77/#78 only after push, keeps WP-6 unstarted, and preserves baseline/release/deployment/production gates |
+| **Context** | Domain analytics, P0 rule/backtest, trusted evidence orchestration, and real PostgreSQL composition pass 366/366 tests with zero skips. Lint, audit, diagnostics, and diff validation pass. No independent Critical or Major finding remains. |
+| **Alternatives** | Keep WP-5 open despite satisfied criteria; close without live PostgreSQL evidence; broaden WP-5 into WP-6 paper orders; close the bounded package and preserve sequential eligibility |
+| **Consequences** | Ring 2 reaches 62.5%. WP-6 becomes eligible but remains unstarted. The Proposed-diagram retention wording Minor and canonicalization layering exception remain nonblocking documentation debt. |
+| **Reasoning** | The approved bounded outcome is implemented and independently reviewed with complete executable persistence evidence. Sequential closure preserves the WBS dependency chain without authorizing adjacent paper-order scope. |
+| **Assumptions** | Node 20; PostgreSQL 16; fixture-only local single-runtime execution; no active baseline, live provider, brokerage, public ingress, or multi-user authority |
+| **Invalidation** | Changed evidence transaction owner, remote/public execution, new analytics rule/provider catalog, multiple publication writers, active baseline, or evidence that canonical/resource bounds are insufficient |
+| **Status** | Approved; WP-5 closed, WP-6 eligible but not started |
+| **Linked Artifacts** | `docs/artifacts/gate-evidence/wp-5-exit.md`, REV-101, REV-102, REV-103, REV-104, DEC-040, GitHub issues #77/#78 |
+
+---
+
+### DEC-040: Assign WP-5 Analytics Ownership
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-040 |
+| **Date** | 2026-09-17 |
+| **Category** | Architecture |
+| **Decision** | Keep point-in-time selection, fixed-point arithmetic, the P0 rule/backtest, closed evidence construction, and canonical verification in `Domain/Analytics`; use Application only for orchestration; retain existing PostgreSQL `evidence_commit` and `evidence_read` as the sole atomic persistence owners |
+| **Policy** | DEC-014; DEC-023; DEC-028; DEC-039; analytics evidence contract `1.0.0-candidate.2`; ADR-001; approved WP-5 WBS; alternate-model architecture review |
+| **Authority** | Agent under Fully Agentic mode, tracked through GitHub issues #77/#78, with alternate-model Architect Reviewer CONDITIONAL PASS |
+| **Accountable** | Solo Orchestrator closes the timestamp, closed-schema, named-rule, and test-path conditions before architecture sign-off; preserves PostgreSQL least privilege and all explicit absence boundaries |
+| **Context** | WP-5 requires deterministic analytics without activating the Proposed worker architecture. Existing PostgreSQL functions already own transactionality, replay, retention, manifests, and publication concurrency. Pure Domain code can enforce point-in-time and numeric invariants without I/O. |
+| **Alternatives** | Put formulas in Application owner dispatch; duplicate publication state in memory; introduce a worker/queue; keep pure analytics in Domain and reuse the existing persistence owner |
+| **Consequences** | `analytics.ts` owns shared pure invariants and `p0-rule.ts` owns the single reviewed rule. Application remains transport-independent. No worker, queue, scheduler, event, provider, broker, or public ingress is introduced. The existing pure canonical JSON helper remains an explicitly accepted layering exception pending shared-kernel cleanup. |
+| **Reasoning** | The split preserves DDD ownership, keeps formulas independently testable, avoids two atomicity owners, and satisfies the prototype synchronously without treating a Proposed diagram as accepted architecture. |
+| **Assumptions** | Local fixture-only single-writer execution; Node 20; PostgreSQL 16; no live provider or non-loopback exposure; candidate contracts remain unactivated |
+| **Invalidation** | Multiple writers, remote execution, durable asynchronous handoff, changed evidence transaction owner, new rule catalog, live provider semantics, or an active baseline |
+| **Status** | Reviewed; REV-103 PASS closed all architecture conditions |
+| **Linked Artifacts** | `docs/Planning/tasks/wp-5-implementation-plan.md`, REV-103, analytics contract candidate.2, ADR-001, GitHub issues #77/#78 |
+
+---
 
 ### DEC-039: Close WP-4 Loopback API Adapter
 

@@ -6,6 +6,19 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-17 | Workspace Owner approved DEC-041 | Ring-2 | @workspace-owner
+
+**Type:** HUMAN-DECISION
+**Decision:** Approve DEC-041 closure of WP-5 and eligibility of WP-6 as the next sequential package without starting it
+**Policy:** DEC-028; DEC-041; REV-101; REV-102; REV-103; REV-104; approved Ring 2 WBS
+**Authority:** Workspace Owner
+**Accountability:** Solo Orchestrator preserves the WP-5 evidence, keeps WP-6 unstarted, and retains all baseline, ingress, provider, brokerage, release, deployment, and production gates
+**Result:** DEC-041 is explicitly human-approved; WP-5 remains closed; Ring 2 remains Active at 62.5%; WP-6 remains eligible but unstarted
+**Artifact:** docs/Governance/decisions/decision-log.md | docs/artifacts/gate-evidence/wp-5-exit.md | GitHub issues #77/#78 | commit 0f564585258364b6a15226232952d0dd897e2e56
+**authorization-boundary:** Approval confirms the published WP-5 closure only; it does not start WP-6 or grant baseline, release, deployment, or production authority
+
+---
+
 ## 2026-09-17 | WP-5 deterministic analytics closed | Ring-2 | @solo-orchestrator
 
 **Type:** WORK-PACKAGE-CLOSE

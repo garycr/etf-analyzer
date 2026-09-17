@@ -36,7 +36,7 @@
 | DEC-038 | 2026-09-17 | API reliability | Add a fixed transport Problem500 without fabricating an application-owned failure | Agent (Fully Agentic) | Solo Orchestrator | Active |
 | DEC-039 | 2026-09-17 | Package closure | Close WP-4 conditionally and make WP-5 eligible as the next sequential package | Workspace Owner | Solo Orchestrator | Approved |
 | DEC-040 | 2026-09-17 | Architecture | Assign WP-5 pure analytics to Domain and retain atomic evidence publication in PostgreSQL | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
-| DEC-041 | 2026-09-17 | Package closure | Close WP-5 and make WP-6 eligible as the next sequential package without starting it | Agent (Fully Agentic) | Solo Orchestrator | Approved |
+| DEC-041 | 2026-09-17 | Package closure | Close WP-5 and make WP-6 eligible as the next sequential package without starting it | Workspace Owner | Solo Orchestrator | Approved |
 
 ---
 
@@ -51,7 +51,7 @@
 | **Category** | Package closure |
 | **Decision** | Close WP-5 after REV-101 Code PASS, REV-102 Security PASS, REV-103 Architecture PASS, REV-104 Plan PASS, and a 366/366 zero-skip PostgreSQL-backed repository run; make WP-6 eligible as the next sequential package without starting it |
 | **Policy** | DEC-014; DEC-020; DEC-023; DEC-028; DEC-039; DEC-040; approved Ring 2 WBS; analytics evidence contract `1.0.0-candidate.2`; test-first development; independent code, security, architecture, and plan review |
-| **Authority** | Agent under Fully Agentic mode with asynchronous transparency through GitHub issues #77/#78 |
+| **Authority** | Workspace Owner approval on 2026-09-17 after Fully Agentic execution, independent review, and publication through GitHub issues #77/#78 |
 | **Accountable** | Solo Orchestrator publishes selective WP-5 implementation/evidence, closes #77/#78 only after push, keeps WP-6 unstarted, and preserves baseline/release/deployment/production gates |
 | **Context** | Domain analytics, P0 rule/backtest, trusted evidence orchestration, and real PostgreSQL composition pass 366/366 tests with zero skips. Lint, audit, diagnostics, and diff validation pass. No independent Critical or Major finding remains. |
 | **Alternatives** | Keep WP-5 open despite satisfied criteria; close without live PostgreSQL evidence; broaden WP-5 into WP-6 paper orders; close the bounded package and preserve sequential eligibility |

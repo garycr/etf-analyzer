@@ -2,10 +2,10 @@
 
 **Plan:** `v1.0.0-prototype.1`
 **Source strategy:** Workspace Owner-selected MAI-ST, constrained to one sequential Tier 1 delivery stream
-**Status:** Approved by Workspace Owner on 2026-09-11; WP-1 and WP-2 complete; WP-3 active under GitHub #73 with GitHub #71 as an entry prerequisite
+**Status:** Approved by Workspace Owner on 2026-09-11; WP-1 through WP-3 complete; WP-4 eligible next but not started
 **Owner:** Solo Orchestrator
 
-This approved artifact governs one sequential Ring 2 stream. WP-1 completed on 2026-09-15 with REV-044 PASS. WP-2 completed on 2026-09-15 with REV-059 conditional PASS and issue #70 closed. WP-3 is active under issue #73 as the only package; GitHub #71 must close before it accepts non-golden fixture input. WP-4 through WP-8 remain blocked by their declared dependencies.
+This approved artifact governs one sequential Ring 2 stream. WP-1 completed on 2026-09-15 with REV-044 PASS. WP-2 completed on 2026-09-15 with REV-059 conditional PASS and issue #70 closed. WP-3 completed on 2026-09-16 with REV-094/095/096/097 PASS and #71 satisfied. WP-4 is eligible as the next sequential package but is not started by DEC-037; WP-5 through WP-8 remain blocked by their declared dependencies.
 
 ## Delivery Rule
 

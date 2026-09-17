@@ -6,6 +6,20 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-16 | WP-3 aggregate application boundary accepted | Ring-2 | @solo-orchestrator
+
+**Type:** PACKAGE-CLOSURE
+**review-outcome:** PASS; Critical 0 | Major 0 open | Minor 0 open | Code/Security/Plan/Architecture PASS
+**Decision:** Close WP-3 and make WP-4 eligible as the next sequential package without starting it
+**Policy:** DEC-023; DEC-028; DEC-030..037; approved Ring 2 WBS; application contract; `PT-APP-001A..P`; test-first development
+**Authority:** Agent (Fully Agentic), asynchronously reviewable through GitHub issue #74
+**Accountability:** Solo Orchestrator closes #73 after publication, preserves WP-8 DP-33 and Ring 3 renderer accessibility gates, and grants no WP-4 implementation, release, deployment, or production authority
+**Result:** The added `WP-3 composes command and query admission into complete result envelopes` test accounts for the 317->318 discovered and 287->288 passed delta; final suite 318 discovered, 288 passed, 30 expected PostgreSQL environment skips, 0 failed; aggregate test quality 4.74/5; lint, diagnostics, zero-vulnerability audit, and diff checks pass
+**Artifact:** docs/Governance/decisions/reviews/REV-094-wp-3-aggregate-code-review.md | REV-095-wp-3-aggregate-security-review.md | REV-096-dec-037-wp-3-closure-plan-review.md | REV-097-wp-3-boundary-architecture-review.md | docs/artifacts/gate-evidence/wp-3-exit.md | GitHub #73/#74
+**authorization-boundary:** WP-3 transport-independent application boundary only; WP-4 eligible but not started; no HTTP/API adapter, distributed replay, provider/broker/event/queue/scheduler/worker, WP-8 DP-33, complete Ring 2, baseline activation, release, deployment, or production authority
+
+---
+
 ## 2026-09-16 | WP-3 PT-APP-001P closed Job state machine accepted | Ring-2 | @code-reviewer
 
 **Type:** CODE-AND-SECURITY-REVIEW

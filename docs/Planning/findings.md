@@ -3,14 +3,14 @@
 > **Purpose:** CVP briefing artifact. Updated at each Ring completion to reflect what was explored, decided, and delivered. This document does not control ring execution.
 
 **Project:** ETF Analyzer  
-**Last Updated:** 2026-09-15
-**Current Ring:** Ring 2 - Development (WP-1 and WP-2 complete; WP-3 active in GitHub #73)
+**Last Updated:** 2026-09-16
+**Current Ring:** Ring 2 - Development (WP-1 through WP-3 complete; WP-4 eligible next but not started)
 
 ---
 
 ## 1. Executive Overview
 
-Ring 1 converted the selected MAI-ST strategy into one sequential Tier 1 delivery stream and approved the WP-1..WP-8 WBS, schedule, and cost/token baselines. Ring 2 WP-1 completed the executable foundation with REV-044 PASS. WP-2 completed deterministic fixture ingestion and `PT-FIX-001A..O` with REV-059 conditional PASS; issue #70 is closed. WP-3 is active under issue #73 as the only package. GitHub #71 tracks identity-grammar and stable PostgreSQL error mapping required before WP-3 accepts non-golden fixtures. Architecture remains Proposed.
+Ring 1 converted the selected MAI-ST strategy into one sequential Tier 1 delivery stream and approved the WP-1..WP-8 WBS, schedule, and cost/token baselines. Ring 2 WP-1 completed the executable foundation with REV-044 PASS. WP-2 completed deterministic fixture ingestion with REV-059 conditional PASS. WP-3 completed the transport-independent application boundary and `PT-APP-001A..P` with aggregate REV-094/095/096/097 PASS; #71 is closed and issue #73 may close after publication. WP-4 is eligible next but not started. Architecture remains Proposed.
 
 ---
 
@@ -71,9 +71,9 @@ No application implementation exists yet; production readiness is not claimed.
 ## 6. Recommendation
 
 **Production Readiness:** Not Ready - planning only  
-**Ring Recommendation:** Execute Ring 2 sequentially, continuing with WP-3 only
+**Ring Recommendation:** Keep Ring 2 active; initialize WP-4 separately as the next sequential package
 
-Execute WP-3 under GitHub issue #73, with #71 closed before any non-golden fixture ingestion path is accepted. Do not overlap WP-4, activate a product baseline, accept Proposed architecture, connect a live provider or broker, deploy, release, or take production action.
+Publish and close WP-3 under GitHub issue #73. WP-4 may then be initialized separately; do not treat DEC-037 as WP-4 implementation authority. Do not activate a product baseline, accept Proposed architecture, satisfy WP-8 DP-33, connect a live provider or broker, deploy, release, or take production action.
 
 ### Lessons Learned
 

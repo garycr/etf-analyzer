@@ -32,10 +32,33 @@
 | DEC-034 | 2026-09-16 | Replay integrity | Close PT-APP-001N with atomic application replay distinct from owning idempotency | Agent (Fully Agentic) | Solo Orchestrator | Active |
 | DEC-035 | 2026-09-16 | Error precedence | Close PT-APP-001O with deterministic ranked selection on live command admission | Agent (Fully Agentic) | Solo Orchestrator | Active |
 | DEC-036 | 2026-09-16 | Job lifecycle | Close PT-APP-001P with an exact immutable Job state projection and transition policy | Agent (Fully Agentic) | Solo Orchestrator | Active |
+| DEC-037 | 2026-09-16 | Package closure | Close WP-3 and make WP-4 eligible as the next sequential package without starting it | Agent (Fully Agentic) | Solo Orchestrator | Active |
 
 ---
 
 ## Decision Records
+
+### DEC-037: Close WP-3 Application Boundary
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-037 |
+| **Date** | 2026-09-16 |
+| **Category** | Package closure |
+| **Decision** | Close WP-3 after aggregate Code, Security, Plan, and package-boundary Architecture PASS dispositions; make WP-4 eligible as the next sequential package without starting it |
+| **Policy** | DEC-023; DEC-028; DEC-030..036; approved Ring 2 WBS; application contract; `PT-APP-001A..P`; test-first development; code, security, plan, and architecture review |
+| **Authority** | Agent (Fully Agentic), subject to asynchronous Workspace Owner review through dedicated decision-transparency issue #74 |
+| **Accountable** | Solo Orchestrator closes #73 after publication, starts no WP-4 work through this decision, preserves WP-8 DP-33 and Ring 3 accessibility gates, and keeps release/deployment/production authority closed |
+| **Context** | All sixteen application scenarios passed focused reviews. Aggregate composition added one test, moving the suite from 317/287 to 318 discovered/288 passed with 30 expected PostgreSQL environment skips and zero failures. Aggregate review then closed capability-execution, sparse-array, redaction, and incomplete analytics stable-code mediation defects. |
+| **Alternatives** | Start WP-4 before aggregate closure; rely only on focused A-P evidence; require composed-facade tests, adversarial remediation, complete owner-code fidelity, and independent closure reviews before sequencing onward |
+| **Consequences** | The reviewed transport-independent application boundary is executable and WP-4 may be initialized separately. No API, distributed replay, live provider, broker, event, queue, scheduler, worker, baseline, release, deployment, or production authority follows. |
+| **Reasoning** | Focused scenario correctness did not prove aggregate composition. Closing only after the composed facade, security boundary, owner-error family, and synchronized governance records pass preserves the approved one-package sequence without hiding integration risk. |
+| **Assumptions** | Node 20 remains the runtime; PostgreSQL migration bytes remain unchanged; renderer-level accessibility is deferred to Ring 3; WP-4 remains a separate package and issue. |
+| **Invalidation** | A changed operation, envelope, replay identity, Job/Readiness model, stable owner-code family, opaque import schema, redaction policy, or evidence that aggregate facade behavior differs from the reviewed tests |
+| **Status** | Active; WP-3 closed and WP-4 eligible but not started |
+| **Linked Artifacts** | `docs/Governance/decisions/reviews/REV-094-wp-3-aggregate-code-review.md`, `REV-095-wp-3-aggregate-security-review.md`, `REV-096-dec-037-wp-3-closure-plan-review.md`, `REV-097-wp-3-boundary-architecture-review.md`, `docs/artifacts/gate-evidence/wp-3-exit.md`, GitHub issues #22, #73, and #74 |
+
+---
 
 ### DEC-036: Close The Application Job State Machine
 

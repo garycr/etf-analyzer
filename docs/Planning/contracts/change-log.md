@@ -188,3 +188,22 @@ Emergency changes are revert-only to the last active baseline. Forward-breaking 
 | Co-signature | Solo Orchestrator originator; distinct Team Lead custody and independent alternate-model Architect Reviewer verification complete |
 | Human approval | Workspace Owner approved both independent-review Minor findings and synchronization; no implementation, baseline activation, issue closure, parallel release, or Ring 2 authority granted |
 | Invalidation notice | Any path, method, operation, payload, owner import, warning, status/code, protocol, idempotency, Host/Origin, ingress, paper-action, or absence-boundary change requires classification, custody, independent review, and registry synchronization |
+
+### CC-009 - Application Candidate.2 Executable Status
+
+| Field | Value |
+| --- | --- |
+| Change ID | CC-009 |
+| Date | 2026-09-16 |
+| Originator | Solo Orchestrator publishing DEC-037 WP-3 closure |
+| Target baseline | Application contract `1.0.0-candidate.2` for inactive `v1.0.0-prototype.1` |
+| Affected contracts/streams | `application-contract.md`; contract registry and surface inventory; future WP-4 API adapter consumer |
+| Classification | Patch metadata synchronization; no contract member or semantic behavior changed |
+| Classification evidence | Replaces design-time/pending implementation status with executable WP-3 evidence and preserves every operation, schema, authority, and absence boundary |
+| DEC-011 floor assertion | Pass: fixture-only research, no brokerage, exact values, fail-closed security, accessibility contracts, and Proposed architecture status remain unchanged |
+| Specialist reviews | REV-094 Code PASS; REV-095 Security PASS; REV-096 Plan PASS; REV-097 package-boundary Architecture PASS |
+| Compatibility checks | `PT-APP-001A..P` plus aggregate facade composition; 318 discovered, 288 passed, 30 expected environment skips, 0 failed |
+| Custodian disposition | Executable WP-3 status accepted; candidate remains inactive and WP-4 remains separate |
+| Co-signature | Solo Orchestrator under Fully Agentic DEC-037 with asynchronous transparency issue #74 |
+| Human approval | Not required for patch status synchronization; asynchronous review remains available through #74 |
+| Invalidation notice | Any operation/schema/error/replay/job/readiness/redaction/recovery change remains governed by the existing candidate invalidation rule |

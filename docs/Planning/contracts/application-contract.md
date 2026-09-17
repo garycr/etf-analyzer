@@ -6,7 +6,7 @@
 **Owner:** Team Lead
 **Conformance check:** `PT-APP-001A..P`
 **Architecture status:** Proposed
-**Implementation status:** Not started
+**Implementation status:** WP-3 executable; aggregate REV-094/095/096/097 PASS and DEC-037 closure
 
 ## Scope and Authority
 
@@ -318,7 +318,7 @@ Redaction occurs before logging, tracing, presentation, persistence of diagnosti
 | `PT-APP-001O` | Numeric error precedence, deterministic ties, and collision behavior |
 | `PT-APP-001P` | Closed job enums/transitions without cancellation, queue, or event scope |
 
-Ring 2 must bind these scenarios to the public application service interface with injected clocks and fixed identities. Every scenario runs independently without network/provider access. Until bindings execute, `PT-APP-001` is a plan, not passing implementation evidence.
+Ring 2 binds these scenarios to the public application service interface with injected clocks and fixed identities. Every scenario runs independently without network/provider access. REV-094 and `docs/artifacts/gate-evidence/wp-3-exit.md` record aggregate executable PASS.
 
 ## Test Quality Assessment
 
@@ -372,4 +372,4 @@ Adding, removing, renaming, or changing an operation; changing envelope fields, 
 
 ## Boundary
 
-This is an inactive planning candidate. It does not make `PT-APP-001` executable, satisfy aggregate `PT-CONTRACT-001`, unblock API/store/provider/stream guards, define an HTTP or database contract, close #21/#22, activate a baseline, accept Proposed architecture, authorize implementation/dependencies/deployment, release parallel work, or advance Ring 2.
+This remains an inactive contract candidate with executable WP-3 conformance. It does not satisfy aggregate `PT-CONTRACT-001`, close #21/#22, define or implement an HTTP adapter, unblock store/provider/stream guards, activate a baseline, accept Proposed architecture, satisfy WP-8 DP-33, authorize deployment, release parallel work, complete Ring 2, or grant production authority.

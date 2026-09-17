@@ -20,6 +20,7 @@ import {
   dispatchReplayProtectedApplicationCommand,
   displayVerifiedResearch,
   evaluateReadiness,
+  executeApplicationRequest,
   exportDiagnosticMetadata,
   ownerFailureCodes,
   presentCanonicalValue,
@@ -441,8 +442,20 @@ test("PT-APP-001H preserves owning codes with fixed redacted causes", () => {
     ["ORDER_VERSION_CONFLICT", "The paper order changed. Reload the current order before retrying."],
     ["FIXTURE_REQUIRED_QUARANTINED", "Required fixture data is quarantined."],
     ["ANALYTICS_INPUT_INCOMPLETE", "Required analytical input is incomplete."],
+    ["ANALYTICS_INPUT_STALE", "Required analytical input is stale."],
+    ["ANALYTICS_INPUT_QUARANTINED", "Required analytical input is quarantined."],
+    ["ANALYTICS_AMBIGUOUS_VINTAGE", "The analytical input vintage is ambiguous."],
+    ["ANALYTICS_AMBIGUOUS_MARKET_REVISION", "The analytical market revision is ambiguous."],
+    ["ANALYTICS_RIGHTS_RESTRICTED", "Provider rights do not permit the required analytical evidence."],
     ["ANALYTICS_INTEGRITY_FAILED", "Analytical evidence failed integrity verification."],
+    ["ANALYTICS_EVIDENCE_ACCESS_DENIED", "Access to analytical evidence is denied."],
     ["ANALYTICS_PUBLICATION_BLOCKED", "Analytical publication is blocked."],
+    ["ANALYTICS_NUMERIC_CLASS_INVALID", "An analytical numeric value is invalid."],
+    ["ANALYTICS_CAPACITY_BLOCKED", "Analytical evidence capacity is exhausted."],
+    ["ANALYTICS_EVIDENCE_COMMIT_FAILED", "Analytical evidence could not be committed."],
+    ["ANALYTICS_DETERMINISM_FAILED", "Analytical reproducibility verification failed."],
+    ["ANALYTICS_IDEMPOTENCY_CONFLICT", "The analytical evidence identity was reused with different content."],
+    ["ANALYTICS_PUBLICATION_VERSION_CONFLICT", "The analytical publication changed before completion."],
     ["APPLICATION_REQUEST_INVALID", "The application request is invalid."],
     ["APPLICATION_IDEMPOTENCY_CONFLICT", "The application command identity was reused with different content."],
     ["APPLICATION_JOB_NOT_RESTARTABLE", "The job cannot be restarted."],
@@ -649,6 +662,24 @@ test("PT-APP-001K exports only allowlisted metadata and fails closed", () => {
   }
   assert.equal(created.length, 1);
   assert.equal(recordedFailures.length, 4);
+
+  let prohibitedGetterReads = 0;
+  const accessorRecord = { correlationId };
+  Object.defineProperty(accessorRecord, "password", {
+    enumerable: true,
+    get() {
+      prohibitedGetterReads += 1;
+      return "protected-password";
+    },
+  });
+  const accessorFailure = exportDiagnosticMetadata(
+    [accessorRecord],
+    createExport,
+    recordFailure,
+  );
+  assert.equal(accessorFailure.outcome, "Failed");
+  assert.equal(accessorFailure.error.code, "APPLICATION_REDACTION_FAILED");
+  assert.equal(prohibitedGetterReads, 0);
 });
 
 test("PT-APP-001L blocked states expose perceivable explicit recovery", () => {
@@ -1156,16 +1187,42 @@ test("PT-APP-001M validates exact success data and canonical collection order", 
   };
   const analyticsResult = Object.freeze({
     domain: "etf.analytics.result.v1",
-    resultSchemaVersion: "1.0.0-candidate.2",
+    resultSchemaVersion: "1.0.0",
     configurationHash: "b".repeat(64),
     signals: Object.freeze([]),
     trades: Object.freeze([]),
-    metrics: Object.freeze({}),
+    metrics: Object.freeze([]),
     warnings: Object.freeze([]),
   });
   const evidence = Object.freeze({
-    evidenceSchemaVersion: "1.0.0-candidate.2",
+    domain: "etf.analytics.bundle.v1",
+    evidenceSchemaVersion: "1.0.0",
     evidenceId: "evidence-fixture-1",
+    baselineVersion: "v1.0.0",
+    inputSetId: "input-fixture-1",
+    evaluationAt: "2026-01-31T00:00:00.000Z",
+    ruleId: "p0-rule",
+    ruleVersion: "1.0.0",
+    parameters: Object.freeze({ lookbackSessions: "20" }),
+    codeHash: "1".repeat(64),
+    seed: "42",
+    benchmark: Object.freeze({ instrumentId: "BENCH-1", version: "1" }),
+    providerPolicyReferences: Object.freeze(["fixture-policy-1"]),
+    environment: Object.freeze({ dependencyLockHash: "2".repeat(64), runtime: "node-20" }),
+    assumptions: Object.freeze({
+      costRate: "0.001000000000",
+      fillTiming: "next-session-open",
+      slippageRate: "0.000500000000",
+    }),
+    result: analyticsResult,
+    inputHash: "3".repeat(64),
+    configurationHash: "b".repeat(64),
+    resultHash: "4".repeat(64),
+    bundleHash: "5".repeat(64),
+    reproducibilityStatus: "Complete",
+    reproducibilityReason: null,
+    retentionPolicyVersion: "RET-A-1.0",
+    retentionEpoch: "2026-01-31T00:00:00.000Z",
   });
   const analyticsJob = {
     ...job,
@@ -1202,7 +1259,10 @@ test("PT-APP-001M validates exact success data and canonical collection order", 
   ];
 
   for (const [operation, data] of vectors) {
-    const validated = validateApplicationSuccessData(operation, data);
+    let validated;
+    assert.doesNotThrow(() => {
+      validated = validateApplicationSuccessData(operation, data);
+    }, operation);
     assert.ok(Object.isFrozen(validated), operation);
     assert.deepEqual(Object.keys(validated).sort(), Object.keys(data).sort(), operation);
     assert.throws(
@@ -1272,6 +1332,32 @@ test("PT-APP-001M validates exact success data and canonical collection order", 
     }),
     (error) => error instanceof ApplicationResultInvalidError,
   );
+  let resultGetterReads = 0;
+  const accessorItem = { ...watchlistItems[0] };
+  Object.defineProperty(accessorItem, "displayName", {
+    enumerable: true,
+    get() {
+      resultGetterReads += 1;
+      return "ETF A";
+    },
+  });
+  const symbolItem = { ...watchlistItems[0] };
+  symbolItem[Symbol("capability")] = () => undefined;
+  const hiddenItem = { ...watchlistItems[0] };
+  Object.defineProperty(hiddenItem, "hidden", { value: "must-not-pass" });
+  for (const [label, orderedItems] of [
+    ["accessor", [accessorItem]],
+    ["symbol", [symbolItem]],
+    ["hidden", [hiddenItem]],
+    ["sparse", new Array(1)],
+  ]) {
+    assert.throws(
+      () => validateApplicationSuccessData("WatchlistGet", { orderedItems, version: "2" }),
+      (error) => error instanceof ApplicationResultInvalidError,
+      label,
+    );
+  }
+  assert.equal(resultGetterReads, 0);
 
   assert.throws(
     () => validateApplicationSuccessData("PaperOrderGet", {
@@ -1289,9 +1375,94 @@ test("PT-APP-001M validates exact success data and canonical collection order", 
     { ...job, status: "Succeeded", controllingError: job.controllingError },
     { ...job, status: "Failed", completedAt: null },
     { ...job, status: "Running", startedAt: null, completedAt: null, controllingError: null },
+    { ...job, attempt: "0" },
+    {
+      ...job,
+      checkpoint: {
+        checkpointId: "10000000-0000-4000-8000-000000000003",
+        attempt: "2",
+        sequence: "1",
+        committedAt: "2026-01-30T00:01:30.000Z",
+        contentHash: "b".repeat(64),
+      },
+    },
+    {
+      ...job,
+      controllingError: { ...job.controllingError, message: "secret database host" },
+    },
+    {
+      ...job,
+      controllingError: {
+        ...job.controllingError,
+        boundedIdentifiers: { password: "must-not-pass" },
+      },
+    },
+    {
+      ...job,
+      controllingError: {
+        ...job.controllingError,
+        recovery: {
+          ...job.controllingError.recovery,
+          label: "Run arbitrary command",
+          targetOperation: "DiagnosticsExportCreate",
+        },
+      },
+    },
+    {
+      ...job,
+      controllingError: {
+        ...job.controllingError,
+        recovery: {
+          actionId: "review-job",
+          label: "Review job details",
+          targetOperation: "JobGet",
+          focusTarget: "job-details",
+          requiresConfirmation: false,
+        },
+      },
+    },
   ]) {
     assert.throws(
       () => validateApplicationSuccessData("JobGet", { job: contradictoryJob }),
+      (error) => error instanceof ApplicationResultInvalidError,
+    );
+  }
+  for (const contradictoryReadiness of [
+    { ...readiness, state: "Ready", controllingError: null },
+    {
+      ...readiness,
+      dependencies: readiness.dependencies.map((dependency) => ({
+        ...dependency,
+        state: "Ready",
+        code: null,
+      })),
+    },
+    {
+      ...readiness,
+      dependencies: readiness.dependencies.map((dependency) =>
+        dependency.dependency === "PostgreSQL"
+          ? { ...dependency, code: "ORDER_VERSION_CONFLICT" }
+          : dependency
+      ),
+      controllingError: {
+        ...readiness.controllingError,
+        code: "ORDER_VERSION_CONFLICT",
+        message: "The paper order changed. Reload the current order before retrying.",
+      },
+    },
+    {
+      ...readiness,
+      controllingError: {
+        ...readiness.controllingError,
+        code: "APPLICATION_MIGRATIONS_INCOMPLETE",
+        message: "Required database migrations are incomplete.",
+      },
+    },
+  ]) {
+    assert.throws(
+      () => validateApplicationSuccessData("ReadinessGet", {
+        readiness: contradictoryReadiness,
+      }),
       (error) => error instanceof ApplicationResultInvalidError,
     );
   }
@@ -1318,6 +1489,18 @@ test("PT-APP-001M validates exact success data and canonical collection order", 
       totalEquity: "0.00000000",
     },
   }));
+  for (const [operation, data] of [
+    ["AnalyticsResultGet", { result: Object.freeze({ ...analyticsResult, secret: "no" }) }],
+    ["AnalyticsResultGet", { result: Object.freeze({ ...analyticsResult, domain: "wrong" }) }],
+    ["EvidenceGet", { evidence: Object.freeze({ ...evidence, secret: "no" }) }],
+    ["EvidenceGet", { evidence: Object.freeze({ ...evidence, evidenceSchemaVersion: "unknown" }) }],
+  ]) {
+    assert.throws(
+      () => validateApplicationSuccessData(operation, data),
+      (error) => error instanceof ApplicationResultInvalidError,
+      operation,
+    );
+  }
   const opaqueClassInstance = Object.freeze(new class {
     evidenceSchemaVersion = "1.0.0-candidate.2";
   }());
@@ -1339,6 +1522,57 @@ test("PT-APP-001M validates exact success data and canonical collection order", 
     () => validateApplicationSuccessData("EvidenceGet", { evidence: circularEvidence }),
     (error) => error instanceof ApplicationResultInvalidError,
   );
+  let opaqueAccessorReads = 0;
+  const accessorArray = [];
+  Object.defineProperty(accessorArray, "0", {
+    enumerable: true,
+    get() {
+      opaqueAccessorReads += 1;
+      return {};
+    },
+  });
+  Object.freeze(accessorArray);
+  const symbolArray = [];
+  symbolArray[Symbol("capability")] = "no";
+  Object.freeze(symbolArray);
+  const hiddenArray = [];
+  Object.defineProperty(hiddenArray, "hidden", { value: "no" });
+  Object.freeze(hiddenArray);
+  const cyclicArray = [];
+  cyclicArray.push(cyclicArray);
+  Object.freeze(cyclicArray);
+  let proxyArrayReads = 0;
+  const proxyArray = new Proxy(Object.freeze([]), {
+    get(target, property, receiver) {
+      proxyArrayReads += 1;
+      return Reflect.get(target, property, receiver);
+    },
+  });
+  for (const [label, metrics] of [
+    ["accessor", accessorArray],
+    ["symbol", symbolArray],
+    ["hidden", hiddenArray],
+    ["function", Object.freeze([() => undefined])],
+    ["sparse", Object.freeze(new Array(1))],
+    ["cycle", cyclicArray],
+    ["non-plain nested", Object.freeze([Object.freeze(new Date(0))])],
+  ]) {
+    assert.throws(
+      () => validateApplicationSuccessData("AnalyticsResultGet", {
+        result: Object.freeze({ ...analyticsResult, metrics }),
+      }),
+      (error) => error instanceof ApplicationResultInvalidError,
+      label,
+    );
+  }
+  assert.throws(
+    () => validateApplicationSuccessData("AnalyticsResultGet", {
+      result: Object.freeze({ ...analyticsResult, metrics: proxyArray }),
+    }),
+    (error) => error instanceof ApplicationResultInvalidError,
+  );
+  assert.equal(opaqueAccessorReads, 0);
+  assert.equal(proxyArrayReads, 0);
 });
 
 test("PT-APP-001N keeps application and owning replay identities distinct", () => {
@@ -1427,7 +1661,7 @@ test("PT-APP-001N keeps application and owning replay identities distinct", () =
         expectedVersion: null,
       },
     }),
-    (error) => error.code === "APPLICATION_IDEMPOTENCY_CONFLICT",
+    (error) => error.code === "APPLICATION_REQUEST_INVALID",
   );
   assert.equal(readinessCalls, 1);
   assert.equal(ownerCalls, 1);
@@ -1918,4 +2152,180 @@ test("PT-APP-001P admits only the closed immutable job transitions", () => {
     );
   }
   assert.equal(statusReads, 0);
+});
+
+test("WP-3 composes command and query admission into complete result envelopes", () => {
+  const replayStore = createInMemoryApplicationReplayStore();
+  const commandEnvelope = (operation, payload, overrides = {}) => ({
+    operation,
+    requestId: "74000000-0000-4000-8000-000000000002",
+    correlationId: "74000000-0000-4000-8000-000000000003",
+    actorId: "local-user",
+    prototypeCandidate: "v1.0.0-prototype.1",
+    contractVersion: "1.0.0-candidate.2",
+    requestedAt: "2026-01-30T12:00:00.000Z",
+    commandId: "74000000-0000-4000-8000-000000000001",
+    payload,
+    ...overrides,
+  });
+  let readinessCalls = 0;
+  let ownerCalls = 0;
+  let clockCalls = 0;
+  const completedAt = () => {
+    clockCalls += 1;
+    return `2026-01-30T12:00:0${clockCalls}.000Z`;
+  };
+  const dependencies = {
+    replayStore,
+    completedAt,
+    checkReadiness: () => { readinessCalls += 1; },
+    ownerDispatch: (definition) => {
+      ownerCalls += 1;
+      if (definition.operation === "WatchlistRemove") return { version: "2" };
+      if (definition.operation === "WatchlistGet") {
+        return { orderedItems: [], version: "2" };
+      }
+      throw Object.assign(new Error("secret database host"), {
+        code: "FIXTURE_REQUIRED_QUARANTINED",
+      });
+    },
+  };
+  const commandJson = JSON.stringify(commandEnvelope(
+    "WatchlistRemove",
+    { instrumentId: "ETF-A", expectedVersion: "1" },
+  ));
+
+  const commandResult = executeApplicationRequest(commandJson, dependencies);
+  const replayedResult = executeApplicationRequest(commandJson, dependencies);
+  assert.equal(replayedResult, commandResult);
+  assert.deepEqual(commandResult, {
+    operation: "WatchlistRemove",
+    requestId: "74000000-0000-4000-8000-000000000002",
+    correlationId: "74000000-0000-4000-8000-000000000003",
+    outcome: "Succeeded",
+    completedAt: "2026-01-30T12:00:01.000Z",
+    data: { version: "2" },
+    warnings: [],
+    presentation: {
+      statusText: "Succeeded",
+      announcement: "None",
+      warningText: null,
+      researchWarningRequired: false,
+    },
+  });
+  assert.equal(readinessCalls, 1);
+  assert.equal(ownerCalls, 1);
+  assert.equal(clockCalls, 1);
+
+  const queryJson = JSON.stringify({
+    operation: "WatchlistGet",
+    requestId: "75000000-0000-4000-8000-000000000002",
+    correlationId: "75000000-0000-4000-8000-000000000003",
+    actorId: "local-user",
+    prototypeCandidate: "v1.0.0-prototype.1",
+    contractVersion: "1.0.0-candidate.2",
+    requestedAt: "2026-01-30T12:00:00.000Z",
+    payload: {},
+  });
+  const queryResult = executeApplicationRequest(queryJson, dependencies);
+  assert.equal(queryResult.outcome, "Succeeded");
+  assert.deepEqual(queryResult.data, { orderedItems: [], version: "2" });
+  assert.equal(ownerCalls, 2);
+  assert.equal(readinessCalls, 2);
+
+  const failedJson = JSON.stringify(commandEnvelope(
+    "FixtureIngestionStart",
+    {
+      jobId: "76000000-0000-4000-8000-000000000001",
+      datasetId: "prices",
+      datasetVersion: "2026-01-30",
+      fixturePackageHash: "a".repeat(64),
+    },
+    { commandId: "76000000-0000-4000-8000-000000000004" },
+  ));
+  const failedResult = executeApplicationRequest(failedJson, dependencies);
+  assert.deepEqual(failedResult.error, {
+    code: "FIXTURE_REQUIRED_QUARANTINED",
+    message: "Required fixture data is quarantined.",
+    boundedIdentifiers: {},
+    recovery: null,
+  });
+  assert.equal(JSON.stringify(failedResult).includes("secret"), false);
+  assert.equal(failedResult.outcome, "Failed");
+  assert.equal("data" in failedResult, false);
+
+  const malformedReplay = executeApplicationRequest(
+    JSON.stringify(commandEnvelope(
+      "WatchlistRemove",
+      { instrumentId: "ETF-A", expectedVersion: "1", extra: true },
+    )),
+    dependencies,
+  );
+  assert.equal(malformedReplay.error.code, "APPLICATION_REQUEST_INVALID");
+
+  const wrongReadinessCode = executeApplicationRequest(queryJson, {
+    ...dependencies,
+    checkReadiness: () => {
+      throw Object.assign(new Error("wrong phase"), { code: "ORDER_VERSION_CONFLICT" });
+    },
+  });
+  assert.equal(wrongReadinessCode.error.code, "APPLICATION_DEPENDENCY_UNAVAILABLE");
+
+  const wrongOwnerCode = executeApplicationRequest(queryJson, {
+    ...dependencies,
+    ownerDispatch: () => {
+      throw new ApplicationOperationUnknownError();
+    },
+  });
+  assert.equal(wrongOwnerCode.error.code, "APPLICATION_DEPENDENCY_UNAVAILABLE");
+  const unknownOwnerCode = executeApplicationRequest(queryJson, {
+    ...dependencies,
+    ownerDispatch: () => {
+      throw Object.assign(new Error("must not escape"), {
+        code: "ANALYTICS_UNKNOWN_FAILURE",
+      });
+    },
+  });
+  assert.equal(unknownOwnerCode.error.code, "APPLICATION_DEPENDENCY_UNAVAILABLE");
+  assert.equal(JSON.stringify(unknownOwnerCode).includes("must not escape"), false);
+
+  const analyticsQueryJson = JSON.stringify({
+    ...JSON.parse(queryJson),
+    operation: "AnalyticsResultGet",
+    payload: { publicationTargetId: "75000000-0000-4000-8000-000000000004" },
+  });
+  for (const code of [
+    "ANALYTICS_INPUT_INCOMPLETE",
+    "ANALYTICS_INPUT_STALE",
+    "ANALYTICS_INPUT_QUARANTINED",
+    "ANALYTICS_AMBIGUOUS_VINTAGE",
+    "ANALYTICS_AMBIGUOUS_MARKET_REVISION",
+    "ANALYTICS_RIGHTS_RESTRICTED",
+    "ANALYTICS_INTEGRITY_FAILED",
+    "ANALYTICS_EVIDENCE_ACCESS_DENIED",
+    "ANALYTICS_ACCESS_DENIAL_AUDIT_FAILED",
+    "ANALYTICS_NUMERIC_CLASS_INVALID",
+    "ANALYTICS_CAPACITY_BLOCKED",
+    "ANALYTICS_EVIDENCE_COMMIT_FAILED",
+    "ANALYTICS_PUBLICATION_BLOCKED",
+    "ANALYTICS_DETERMINISM_FAILED",
+    "ANALYTICS_IDEMPOTENCY_CONFLICT",
+    "ANALYTICS_PUBLICATION_VERSION_CONFLICT",
+  ]) {
+    const ownerFailure = executeApplicationRequest(analyticsQueryJson, {
+      ...dependencies,
+      completedAt: () => "2026-01-30T12:00:09.000Z",
+      ownerDispatch: () => {
+        throw Object.assign(new Error("must not escape"), { code });
+      },
+    });
+    assert.equal(ownerFailure.error.code, code);
+    assert.equal(JSON.stringify(ownerFailure).includes("must not escape"), false);
+  }
+
+  const invalidOwnerResult = executeApplicationRequest(queryJson, {
+    ...dependencies,
+    ownerDispatch: () => ({ orderedItems: [], version: "2", secret: "no" }),
+  });
+  assert.equal(invalidOwnerResult.error.code, "APPLICATION_REDACTION_FAILED");
 });

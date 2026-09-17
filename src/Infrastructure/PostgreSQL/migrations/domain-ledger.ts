@@ -52,7 +52,17 @@ CREATE TABLE etf.paper_orders (
   CONSTRAINT ck_paper_orders__state CHECK (state IN ('Draft','Submitted','Accepted','Partial','Filled','Rejected','Canceled','Expired')),
   CONSTRAINT ck_paper_orders__aggregate_version_nonnegative CHECK (aggregate_version >= 0),
   CONSTRAINT ck_paper_orders__side CHECK (side IN ('Buy','Sell')),
-  CONSTRAINT ck_paper_orders__quantities CHECK (requested_quantity > 0 AND filled_quantity >= 0 AND open_quantity >= 0 AND requested_quantity = filled_quantity + open_quantity),
+  CONSTRAINT ck_paper_orders__quantities CHECK (
+    requested_quantity > 0 AND filled_quantity >= 0 AND open_quantity >= 0 AND
+    CASE
+      WHEN state IN ('Draft','Submitted','Accepted') THEN filled_quantity = 0 AND open_quantity = requested_quantity
+      WHEN state = 'Partial' THEN filled_quantity > 0 AND open_quantity > 0 AND requested_quantity = filled_quantity + open_quantity
+      WHEN state = 'Filled' THEN filled_quantity = requested_quantity AND open_quantity = 0
+      WHEN state IN ('Rejected','Expired') THEN filled_quantity = 0 AND open_quantity = 0
+      WHEN state = 'Canceled' THEN filled_quantity < requested_quantity AND open_quantity = 0
+      ELSE false
+    END
+  ),
   CONSTRAINT ck_paper_orders__unit_price_positive CHECK (unit_price > 0)
 );
 
@@ -622,14 +632,31 @@ LANGUAGE plpgsql VOLATILE PARALLEL UNSAFE SECURITY DEFINER
 SET search_path = pg_catalog, etf
 AS $function$
 DECLARE
-  canonical jsonb; replay etf.order_command_replays%ROWTYPE; current_order etf.paper_orders%ROWTYPE; transition_name text; source_name text; target_name text; trigger_name text; next_version bigint; fill_quantity numeric(28,10); result_value jsonb; ledger_payload jsonb;
+  canonical jsonb; canonical_command text; idempotency_content jsonb; transition_content text; replay etf.order_command_replays%ROWTYPE; current_order etf.paper_orders%ROWTYPE; transition_name text; source_name text; target_name text; trigger_name text; next_version bigint; fill_quantity numeric(28,10); result_value jsonb; ledger_payload jsonb;
 BEGIN
   IF session_user <> 'app_runtime' OR payload IS NULL OR jsonb_typeof(payload)<>'object' OR NOT payload ?& ARRAY['canonicalContent','correlationId','occurredAt','operation','orderId','transitionCommandId','expectedVersion','transition','transitionPayload'] OR payload - ARRAY['canonicalContent','correlationId','occurredAt','operation','orderId','transitionCommandId','expectedVersion','transition','transitionPayload']::text[] <> '{}'::jsonb THEN RAISE EXCEPTION 'permission denied' USING ERRCODE='42501'; END IF;
-  canonical:=(payload ->> 'canonicalContent')::jsonb; IF canonical<>payload-'canonicalContent' OR payload ->> 'occurredAt' !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$' OR payload ->> 'expectedVersion' !~ '^(0|[1-9][0-9]*)$' OR jsonb_typeof(payload -> 'transitionPayload')<>'object' THEN RAISE EXCEPTION 'APPLICATION_REQUEST_INVALID' USING ERRCODE='22023'; END IF;
+  transition_name:=payload ->> 'transition';
+  IF transition_name='OT-01' THEN
+    transition_content:=format('{"instrumentId":%s,"quantity":%s,"researchEvidenceId":%s,"side":%s,"tradeDate":%s,"unitPrice":%s}',pg_catalog.to_json(payload #>> '{transitionPayload,instrumentId}')::text,pg_catalog.to_json(payload #>> '{transitionPayload,quantity}')::text,pg_catalog.to_json(payload #>> '{transitionPayload,researchEvidenceId}')::text,pg_catalog.to_json(payload #>> '{transitionPayload,side}')::text,pg_catalog.to_json(payload #>> '{transitionPayload,tradeDate}')::text,pg_catalog.to_json(payload #>> '{transitionPayload,unitPrice}')::text);
+  ELSIF transition_name='OT-02' THEN
+    transition_content:=format('{"confirmation":{"actorId":%s,"confirmationText":%s,"confirmedAt":%s}}',pg_catalog.to_json(payload #>> '{transitionPayload,confirmation,actorId}')::text,pg_catalog.to_json(payload #>> '{transitionPayload,confirmation,confirmationText}')::text,pg_catalog.to_json(payload #>> '{transitionPayload,confirmation,confirmedAt}')::text);
+  ELSIF transition_name='OT-03' THEN
+    transition_content:=format('{"expectedPortfolioVersion":%s,"portfolioId":%s,"validationSnapshotId":%s}',payload #>> '{transitionPayload,expectedPortfolioVersion}',pg_catalog.to_json(payload #>> '{transitionPayload,portfolioId}')::text,pg_catalog.to_json(payload #>> '{transitionPayload,validationSnapshotId}')::text);
+  ELSIF transition_name='OT-04' THEN
+    transition_content:=format('{"rejectionCode":%s}',pg_catalog.to_json(payload #>> '{transitionPayload,rejectionCode}')::text);
+  ELSIF transition_name IN ('OT-05','OT-06','OT-09') THEN
+    transition_content:=format('{"expectedPortfolioVersion":%s,"fee":%s,"fillId":%s,"portfolioId":%s,"quantity":%s,"transactionId":%s,"unitPrice":%s}',payload #>> '{transitionPayload,expectedPortfolioVersion}',pg_catalog.to_json(payload #>> '{transitionPayload,fee}')::text,pg_catalog.to_json(payload #>> '{transitionPayload,fillId}')::text,pg_catalog.to_json(payload #>> '{transitionPayload,portfolioId}')::text,pg_catalog.to_json(payload #>> '{transitionPayload,quantity}')::text,pg_catalog.to_json(payload #>> '{transitionPayload,transactionId}')::text,pg_catalog.to_json(payload #>> '{transitionPayload,unitPrice}')::text);
+  ELSIF transition_name IN ('OT-07','OT-10') THEN
+    transition_content:=format('{"reasonCode":%s}',pg_catalog.to_json(payload #>> '{transitionPayload,reasonCode}')::text);
+  ELSIF transition_name='OT-08' THEN
+    transition_content:=format('{"expiresAt":%s}',pg_catalog.to_json(payload #>> '{transitionPayload,expiresAt}')::text);
+  END IF;
+  canonical_command:=format('{"correlationId":%s,"expectedVersion":%s,"occurredAt":%s,"operation":%s,"orderId":%s,"transition":%s,"transitionCommandId":%s,"transitionPayload":%s}',pg_catalog.to_json(payload ->> 'correlationId')::text,payload ->> 'expectedVersion',pg_catalog.to_json(payload ->> 'occurredAt')::text,pg_catalog.to_json(payload ->> 'operation')::text,pg_catalog.to_json(payload ->> 'orderId')::text,pg_catalog.to_json(transition_name)::text,pg_catalog.to_json(payload ->> 'transitionCommandId')::text,transition_content);
+  canonical:=(payload ->> 'canonicalContent')::jsonb; IF canonical_command IS DISTINCT FROM payload ->> 'canonicalContent' OR canonical<>payload-'canonicalContent' OR payload ->> 'occurredAt' !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$' OR payload ->> 'expectedVersion' !~ '^(0|[1-9][0-9]*)$' OR jsonb_typeof(payload -> 'transitionPayload')<>'object' THEN RAISE EXCEPTION 'APPLICATION_REQUEST_INVALID' USING ERRCODE='22023'; END IF;
+  idempotency_content:=canonical-'correlationId';
   PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('etf:paper-order:' || (payload ->> 'orderId'),0));
   SELECT * INTO replay FROM etf.order_command_replays WHERE order_id=(payload ->> 'orderId')::uuid AND transition_command_id=(payload ->> 'transitionCommandId')::uuid FOR UPDATE;
-  IF FOUND THEN IF replay.canonical_content<>canonical THEN RAISE EXCEPTION 'ORDER_IDEMPOTENCY_CONFLICT' USING ERRCODE='P0001'; END IF; RETURN replay.result; END IF;
-  transition_name:=payload ->> 'transition';
+  IF FOUND THEN IF replay.canonical_content<>idempotency_content THEN RAISE EXCEPTION 'ORDER_IDEMPOTENCY_CONFLICT' USING ERRCODE='P0001'; END IF; RETURN replay.result; END IF;
   IF payload ->> 'operation'='DraftCreate' THEN
     IF transition_name<>'OT-01' OR (payload ->> 'expectedVersion')::bigint<>0 OR (payload -> 'transitionPayload') - ARRAY['instrumentId','researchEvidenceId','side','quantity','unitPrice','tradeDate']::text[]<>'{}'::jsonb OR NOT ((payload -> 'transitionPayload') ?& ARRAY['instrumentId','researchEvidenceId','side','quantity','unitPrice','tradeDate']) THEN RAISE EXCEPTION 'ORDER_INVALID_TRANSITION' USING ERRCODE='P0001'; END IF;
     INSERT INTO etf.paper_orders VALUES ((payload ->> 'orderId')::uuid,payload #>> '{transitionPayload,instrumentId}','Draft',1,(payload #>> '{transitionPayload,researchEvidenceId}')::uuid,payload #>> '{transitionPayload,side}',(payload #>> '{transitionPayload,quantity}')::numeric,0,(payload #>> '{transitionPayload,quantity}')::numeric,(payload #>> '{transitionPayload,unitPrice}')::numeric,(payload #>> '{transitionPayload,tradeDate}')::date,NULL) RETURNING * INTO current_order;
@@ -644,7 +671,7 @@ BEGIN
       IF (payload -> 'transitionPayload') - ARRAY['portfolioId','transactionId','fillId','expectedPortfolioVersion','quantity','unitPrice','fee']::text[]<>'{}'::jsonb OR NOT ((payload -> 'transitionPayload') ?& ARRAY['portfolioId','transactionId','fillId','expectedPortfolioVersion','quantity','unitPrice','fee']) THEN RAISE EXCEPTION 'ORDER_GUARD_FAILED' USING ERRCODE='P0001'; END IF;
       fill_quantity:=(payload #>> '{transitionPayload,quantity}')::numeric; IF fill_quantity<=0 OR (transition_name='OT-05' AND fill_quantity>=current_order.open_quantity) OR (transition_name IN ('OT-06','OT-09') AND fill_quantity<>current_order.open_quantity) THEN RAISE EXCEPTION 'ORDER_GUARD_FAILED' USING ERRCODE='P0001'; END IF;
     END IF;
-    UPDATE etf.paper_orders SET state=target_name,aggregate_version=next_version,filled_quantity=filled_quantity+COALESCE(fill_quantity,0),open_quantity=open_quantity-COALESCE(fill_quantity,0),confirmation=CASE WHEN transition_name='OT-02' THEN payload #> '{transitionPayload,confirmation}' ELSE confirmation END WHERE order_id=current_order.order_id RETURNING * INTO current_order;
+    UPDATE etf.paper_orders SET state=target_name,aggregate_version=next_version,filled_quantity=filled_quantity+COALESCE(fill_quantity,0),open_quantity=CASE WHEN transition_name IN ('OT-04','OT-07','OT-08','OT-10') THEN 0 ELSE open_quantity-COALESCE(fill_quantity,0) END,confirmation=CASE WHEN transition_name='OT-02' THEN payload #> '{transitionPayload,confirmation}' ELSE confirmation END WHERE order_id=current_order.order_id RETURNING * INTO current_order;
   END IF;
   INSERT INTO etf.order_transitions VALUES (current_order.order_id,(payload ->> 'transitionCommandId')::uuid,transition_name,source_name,target_name,trigger_name,payload -> 'transitionPayload',(payload ->> 'occurredAt')::timestamp with time zone,'local-user',(payload ->> 'correlationId')::uuid,next_version-1,next_version,'v1.0.0');
   IF transition_name IN ('OT-05','OT-06','OT-09') THEN
@@ -652,7 +679,7 @@ BEGIN
     ledger_payload:=ledger_payload||jsonb_build_object('canonicalContent',format('{"correlationId":%s,"effectiveAt":%s,"expectedOrderVersion":%s,"expectedPortfolioVersion":%s,"fee":%s,"fillId":%s,"instrumentId":%s,"keyIdentifier":"primary","orderId":%s,"orderSide":%s,"portfolioId":%s,"quantity":%s,"simulatedAt":%s,"transactionId":%s,"transitionCommandId":%s,"type":%s,"unitPrice":%s}',pg_catalog.to_json(ledger_payload ->> 'correlationId')::text,pg_catalog.to_json(ledger_payload ->> 'effectiveAt')::text,ledger_payload ->> 'expectedOrderVersion',ledger_payload ->> 'expectedPortfolioVersion',pg_catalog.to_json(ledger_payload ->> 'fee')::text,pg_catalog.to_json(ledger_payload ->> 'fillId')::text,pg_catalog.to_json(ledger_payload ->> 'instrumentId')::text,pg_catalog.to_json(ledger_payload ->> 'orderId')::text,pg_catalog.to_json(ledger_payload ->> 'orderSide')::text,pg_catalog.to_json(ledger_payload ->> 'portfolioId')::text,pg_catalog.to_json(ledger_payload ->> 'quantity')::text,pg_catalog.to_json(ledger_payload ->> 'simulatedAt')::text,pg_catalog.to_json(ledger_payload ->> 'transactionId')::text,pg_catalog.to_json(ledger_payload ->> 'transitionCommandId')::text,pg_catalog.to_json(ledger_payload ->> 'type')::text,pg_catalog.to_json(ledger_payload ->> 'unitPrice')::text)); PERFORM etf.ledger_append(ledger_payload);
   END IF;
   result_value:=jsonb_build_object('orderId',current_order.order_id,'instrumentId',current_order.instrument_id,'state',current_order.state,'aggregateVersion',current_order.aggregate_version,'researchEvidenceId',current_order.research_evidence_id,'side',current_order.side,'requestedQuantity',to_char(current_order.requested_quantity,'FM99999999999999990.0000000000'),'filledQuantity',to_char(current_order.filled_quantity,'FM99999999999999990.0000000000'),'openQuantity',to_char(current_order.open_quantity,'FM99999999999999990.0000000000'),'unitPrice',to_char(current_order.unit_price,'FM99999999999999990.0000000000'),'tradeDate',to_char(current_order.trade_date,'YYYY-MM-DD'),'confirmation',current_order.confirmation);
-  INSERT INTO etf.order_command_replays VALUES (current_order.order_id,(payload ->> 'transitionCommandId')::uuid,canonical,result_value,date_trunc('milliseconds',clock_timestamp()));
+  INSERT INTO etf.order_command_replays VALUES (current_order.order_id,(payload ->> 'transitionCommandId')::uuid,idempotency_content,result_value,date_trunc('milliseconds',clock_timestamp()));
   PERFORM etf.audit_append(jsonb_build_object('action','PaperOrderTransition','attemptIntentId',payload ->> 'transitionCommandId','correlationId',payload ->> 'correlationId','domain','Order','keyIdentifier','primary','outcome','Committed','subject',jsonb_build_object('auditId',gen_random_uuid(),'orderId',current_order.order_id,'transitionCommandId',payload ->> 'transitionCommandId','errorCode',NULL,'oldOrderVersion',next_version-1,'newOrderVersion',next_version)));
   RETURN result_value;
 EXCEPTION WHEN invalid_text_representation OR numeric_value_out_of_range OR datetime_field_overflow THEN RAISE EXCEPTION 'APPLICATION_REQUEST_INVALID' USING ERRCODE='22023';

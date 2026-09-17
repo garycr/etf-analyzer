@@ -776,7 +776,9 @@ function isUuid(value: unknown): value is string {
 }
 
 function isUInt(value: unknown): value is string {
-  return typeof value === "string" && /^(?:0|[1-9][0-9]*)$/u.test(value);
+  return typeof value === "string" &&
+    /^(?:0|[1-9][0-9]*)$/u.test(value) &&
+    (value.length < 16 || (value.length === 16 && value <= "9007199254740991"));
 }
 
 function isCanonicalDate(value: unknown): value is string {

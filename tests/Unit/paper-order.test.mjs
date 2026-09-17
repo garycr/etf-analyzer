@@ -5,6 +5,10 @@ import {
   canonicalizePaperOrderCommand,
   selectPaperOrderTransition,
 } from "../../dist/Domain/Orders/paper-order.js";
+import {
+  presentCanonicalValue,
+  submitConfirmedPaperOrder,
+} from "../../dist/Application/application-boundary.js";
 
 const draftCommand = {
   correlationId: "55000000-0000-4000-8000-000000000101",
@@ -40,6 +44,26 @@ test("OT-01 creates only a Draft from explicit research evidence", () => {
     canonicalContent: expectedCanonicalContent,
     ...draftCommand,
   });
+});
+
+test("CT-ORD-002 unconfirmed drafts remain Draft without mutation", () => {
+  let dispatchCount = 0;
+  const result = submitConfirmedPaperOrder(
+    {
+      correlationId: draftCommand.correlationId,
+      expectedVersion: 1,
+      orderId: draftCommand.orderId,
+      sourceState: "Draft",
+      transitionCommandId: draftCommand.transitionCommandId,
+    },
+    { status: "Incomplete" },
+    () => {
+      dispatchCount += 1;
+    },
+  );
+
+  assert.deepEqual(result, { outcome: "NotDispatched", state: "Draft" });
+  assert.equal(dispatchCount, 0);
 });
 
 const transitionCases = [
@@ -242,6 +266,14 @@ test("CT-ORD-008 terminal states reject every transition atomically", () => {
       (error) => error.code === "ORDER_TERMINAL_STATE",
     );
   }
+});
+
+test("CT-ORD-010 Partial serializes with the Partially Filled label", () => {
+  assert.deepEqual(presentCanonicalValue("OrderStatus", "Partial"), {
+    wireValue: "Partial",
+    visibleText: "Partially Filled",
+    accessibleText: "Partially Filled",
+  });
 });
 
 test("OT-02 accepts bounded confirmation text from the application contract", () => {

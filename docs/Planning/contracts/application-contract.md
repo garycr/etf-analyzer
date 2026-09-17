@@ -58,7 +58,7 @@ Each operation resolves to exactly one definition above. An OpenAPI operation ma
 
 ### Closed Operation Schemas
 
-Schema notation is normative: `T?` is the only nullable form, `T[]` is an ordered list, `{}` is the closed empty record, and fields appear below in canonical serialization order. `UUID`, `Date`, `UTCInstant`, `Sha256`, and fixed-point values use the grammars already owned by their source contracts; `UInt` is a canonical non-negative integer string. Every named record is closed. A missing required field, duplicate member, unknown member, invalid scalar, or null outside `?` fails with `APPLICATION_REQUEST_INVALID` before owner dispatch.
+Schema notation is normative: `T?` is the only nullable form, `T[]` is an ordered list, `{}` is the closed empty record, and fields appear below in canonical serialization order. `UUID`, `Date`, `UTCInstant`, `Sha256`, and fixed-point values use the grammars already owned by their source contracts; `UInt` is a canonical non-negative integer string whose value does not exceed `9007199254740991` (`Number.MAX_SAFE_INTEGER`). Every named record is closed. A missing required field, duplicate member, unknown member, invalid scalar, out-of-range UInt, or null outside `?` fails with `APPLICATION_REQUEST_INVALID` before owner dispatch.
 
 | Operation | Exact payload | Exact success `data` |
 | --- | --- | --- |

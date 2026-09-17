@@ -39,10 +39,26 @@
 | DEC-041 | 2026-09-17 | Package closure | Close WP-5 and make WP-6 eligible as the next sequential package without starting it | Workspace Owner | Solo Orchestrator | Approved |
 | DEC-042 | 2026-09-17 | Architecture | Assign WP-6 closed order semantics to Domain, trusted dispatch to Application, and atomic ledger ownership to PostgreSQL | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-043 | 2026-09-17 | Replay integrity | Bind WP-6 application replay and PostgreSQL order effects in one transaction | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
+| DEC-044 | 2026-09-17 | Order and ledger integrity | Close CT-ORD-001..012 and begin exact ledger vectors with state-aware terminal quantities and byte-canonical replay | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 
 ---
 
 ## Decision Records
+
+### DEC-044: Close the Order Matrix and Begin Exact Ledger Vectors
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-044 |
+| **Date** | 2026-09-17 |
+| **Category** | Order and ledger integrity |
+| **Decision** | Treat open quantity as fillable remainder, require byte-canonical paper-order commands, exclude only correlation identity from replay equivalence, cap Application UInt values at the exact JavaScript safe-integer boundary, close CT-ORD-001..012, and accept CT-LED-001/002 as the first exact ledger vectors |
+| **Policy** | DEC-014; DEC-034; DEC-042; DEC-043; Domain, Application, ledger, and PostgreSQL contracts; test-first development; independent code and security review |
+| **Authority** | Agent under Fully Agentic mode with Workspace Owner authorization to continue WP-6 |
+| **Accountability** | Solo Orchestrator preserves PostgreSQL mutation authority, continues CT-LED-003..019, and keeps WP-6 and issue #79 open |
+| **Status** | Reviewed; REV-109 Code PASS and REV-110 Security PASS |
+
+---
 
 ### DEC-043: Bind Application Replay to Order Effects
 

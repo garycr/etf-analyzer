@@ -571,7 +571,7 @@ components:
     DiagnosticExportSuccess: { description: Succeeded, content: { application/json: { schema: { $ref: '#/components/schemas/DiagnosticExportResult' } } } }
   schemas:
     UUID: { type: string, format: uuid }
-    UInt: { type: string, pattern: '^(0|[1-9][0-9]*)$' }
+    UInt: { type: string, pattern: '^(0|[1-9][0-9]*)$', description: Canonical non-negative integer not greater than 9007199254740991 }
     Date: { type: string, format: date, pattern: '^\d{4}-\d{2}-\d{2}$' }
     UTCInstant: { type: string, format: date-time, pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$' }
     Sha256: { type: string, pattern: '^[0-9a-f]{64}$' }

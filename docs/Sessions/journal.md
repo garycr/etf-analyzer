@@ -8,6 +8,19 @@
 
 ## 2026-09-17 | WP-6 transactional composition checkpoint validated | Ring-2 | @solo-orchestrator
 
+## 2026-09-17 | WP-6 order matrix and initial ledger vectors validated | Ring-2 | @solo-orchestrator
+
+**Type:** IMPLEMENTATION-CHECKPOINT
+**Decision:** DEC-044 closes the exact CT-ORD-001..012 executable matrix and accepts CT-LED-001/002 with state-aware terminal quantities, byte-canonical order admission, correlation-independent replay equivalence, and an explicit safe-integer UInt boundary
+**Policy:** DEC-014; DEC-034; DEC-042; DEC-043; Domain, Application, ledger, and PostgreSQL contracts; test-first development; independent code and security review
+**Authority:** Agent under Fully Agentic mode with Workspace Owner approval to continue WP-6; REV-109 Code PASS and REV-110 Security PASS
+**Accountability:** Solo Orchestrator continues CT-LED-003..019 and keeps WP-6 and issue #79 open
+**Result:** PostgreSQL 16.15 C/UTF8/UTC complete suite 408/408 passed with zero skips or failures; exact CT-ORD matrix 12/12; migration identities 4/4; dependency audit reports zero vulnerabilities; diagnostics and diff checks are clean
+**Artifact:** order/Application/PostgreSQL implementation and tests | DEC-044 | REV-109 | REV-110 | GitHub issue #79
+**authorization-boundary:** Checkpoint only; no WP-6 closure, WP-7, brokerage, live provider, public ingress, durable event, queue, scheduler, worker, baseline, release, deployment, or production action
+
+---
+
 **Type:** IMPLEMENTATION-CHECKPOINT
 **Decision:** DEC-043 binds complete Application replay envelopes and paper-order owner effects in one PostgreSQL transaction using lookup-first advisory locking, savepoint rollback, and an exclusive client
 **Policy:** DEC-034; DEC-042; DEC-043; application and PostgreSQL contracts; test-first development; independent code and security review

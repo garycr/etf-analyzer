@@ -47,14 +47,16 @@ The final WP-1 PostgreSQL 16.15 identities are:
 | ---: | --- | --- |
 | 1 | `a604802a67bed66c6ce79d2f2f856b48e184ae5b4f76803ab8ead3a135c85291` | `3ba3b63c429cf051378ce3eb4adafe0db697dec487d070669a6bc47dba2f8f7c` |
 | 2 | `ad458453834e72413f644e81e38829ae491a26a44f1ca03deeaf71349552c198` | `7f6929ff5e9414a99921fd74d26ef9795a10cfeb1f8939ef240d974834873abb` |
-| 3 | `d514c7f3b75c6ed83dfdbd9b54b406b14814b2bf8f40bd1e04a9d70a303346a3` | `e0b21def5e9e2822142821f0fec70bd0d06593ee4f62496b1b2b29eabce6b3ac` |
-| 4 | `9bf81885aab5fafe8bcac9b372d7bbd0bec601fc29e0cdbc234a65fc3d5489f1` | `dc95190e31e4d101a517398b669fcad70f90440d459c57f84cc362484200787a` |
-| 5 | `638fdcb40695be04a30c56807e529f753fd37c80ccfdcd6ad58f04e603287cc4` | `ff305a153b44ddd75557df53ae6ec34d476fdedf7760d9b5bc3a19835355d10b` |
-| 6 | `1bafffc644bfe57fc487e0aa9363626cd0273653c8c4278049b2a6421c6b87ed` | `0b1b4b56ad2be3b2e3abbb4d1cee4564cb26c9aa2134f0434ea0c497c1090e47` |
+| 3 | `90739054877f9ae80f2912b914d0239985512c55067de4d9060288ecacffc691` | `750935723443ed4274f76110fc6c0bbc6876bae8b7b5546f017b4f0d68f53709` |
+| 4 | `9bf81885aab5fafe8bcac9b372d7bbd0bec601fc29e0cdbc234a65fc3d5489f1` | `6544356611c029e32fef7b520e85c6e14072ab99dc7cd42d74a8c145f3ef5063` |
+| 5 | `638fdcb40695be04a30c56807e529f753fd37c80ccfdcd6ad58f04e603287cc4` | `489456398c3090ad12d8c1d374b19b58e5b6150dfb0c720605db766777926c34` |
+| 6 | `1bafffc644bfe57fc487e0aa9363626cd0273653c8c4278049b2a6421c6b87ed` | `ee267fe7912b0ba915022a1474a1a2bddfa811cab243f938fd665e624510c4d8` |
 
 **2026-09-15 PT-FIX-001F amendment.** The re-baseline corrected sequence 4 to preserve the full 20-integer-digit capacity of DEC-014 `NUMERIC(28,8)` Money values while continuing to reject excess precision and scale before PostgreSQL casts. Sequence 5 and 6 SQL bytes are unchanged; their cumulative manifest hashes changed because the canonical root includes the corrected sequence-4 definition and content hash. No released or production database is in scope.
 
 **2026-09-16 GitHub #71 amendment.** Fixture ingestion maps PostgreSQL check violations to stable `FIXTURE_MANIFEST_INVALID` failures. The prototype remains inactive and empty-database-only, so sequence 4 was re-baselined in place; sequence 5 and 6 SQL bytes remain unchanged and their cumulative manifest hashes inherit the new sequence-4 root.
+
+**2026-09-17 WP-6 lifecycle amendment.** Sequence 3 now enforces state-aware order quantities: fillable states retain arithmetic remainder while terminal rejected, canceled, and expired orders expose zero fillable remainder. The prototype remains inactive and empty-database-only, so sequence 3 was re-baselined in place; sequence 4 through 6 SQL bytes remain unchanged and their cumulative manifest hashes inherit the new sequence-3 root.
 
 **2026-09-16 PT-APP-001D amendment.** Job restart and durable JobGet retain the latest committed checkpoint across attempt increments. The prototype remains inactive and empty-database-only, so sequences 2 and 6 were re-baselined in place; sequence 3 through 5 SQL bytes remain unchanged and their cumulative manifest hashes inherit the sequence-2 root.
 
@@ -215,7 +217,7 @@ Notation: `!` means NOT NULL, `?` means nullable, `PK(...)`, `FK(...)`, and `UQ(
 
 | Table | Ordered columns and constraints |
 | --- | --- |
-| `paper_orders` | `order_id uuid! PK`, `instrument_id text!`, `state text!`, `aggregate_version bigint!`, `research_evidence_id uuid!`, `side text!`, `requested_quantity numeric(28,10)!`, `filled_quantity numeric(28,10)!`, `open_quantity numeric(28,10)!`, `unit_price numeric(28,10)!`, `trade_date date!`, `confirmation jsonb?`; state `Draft|Submitted|Accepted|Partial|Filled|Rejected|Canceled|Expired`, nonempty instrument identity, side `Buy|Sell`, non-negative values/version, requested = filled + open |
+| `paper_orders` | `order_id uuid! PK`, `instrument_id text!`, `state text!`, `aggregate_version bigint!`, `research_evidence_id uuid!`, `side text!`, `requested_quantity numeric(28,10)!`, `filled_quantity numeric(28,10)!`, `open_quantity numeric(28,10)!`, `unit_price numeric(28,10)!`, `trade_date date!`, `confirmation jsonb?`; state `Draft|Submitted|Accepted|Partial|Filled|Rejected|Canceled|Expired`, nonempty instrument identity, side `Buy|Sell`, non-negative values/version; fillable states preserve requested = filled + open, Filled preserves requested = filled with zero open, and Rejected/Canceled/Expired preserve zero open quantity |
 | `order_transitions` | `order_id uuid!`, `transition_command_id uuid!`, `transition text!`, `source_state text!`, `target_state text!`, `trigger text!`, `normalized_payload jsonb!`, `occurred_at timestamptz!`, `actor_id text!`, `correlation_id uuid!`, `prior_version bigint!`, `resulting_version bigint!`, `baseline_version text!`; `PK(order_id,transition_command_id)`, `UQ(order_id,resulting_version)`, `FK(order_id)->paper_orders`, resulting = prior + 1, immutable |
 | `order_command_replays` | `order_id uuid!`, `transition_command_id uuid!`, `canonical_content jsonb!`, `result jsonb!`, `created_at timestamptz!`; `PK(order_id,transition_command_id)`, immutable |
 | `portfolios` | `portfolio_id uuid! PK`, `portfolio_version bigint!`, `baseline_version text!`, `precision_policy_version text!`; non-negative version, exact candidate versions |

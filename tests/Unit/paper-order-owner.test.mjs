@@ -79,6 +79,123 @@ test("WP-6 maps PaperOrderDraftCreate to one canonical PostgreSQL OT-01 command"
   assert.deepEqual(result, { order });
 });
 
+test("WP-6 maps PaperOrderTransition UInt versions to canonical PostgreSQL integers", async () => {
+  const observedQueries = [];
+  const submittedOrder = { ...order, state: "Submitted", aggregateVersion: "2" };
+  const client = {
+    async query(sql, values) {
+      observedQueries.push({ sql, values });
+      return sql.includes("paper_order_transition")
+        ? { rows: [{ result: { state: "Submitted" } }] }
+        : { rows: [{ result: { order: submittedOrder } }] };
+    },
+  };
+
+  await dispatchPostgresPaperOrder(
+    client,
+    { operation: "PaperOrderTransition", kind: "command" },
+    {
+      orderId: draftPayload.orderId,
+      transitionCommandId: "77000000-0000-4000-8000-000000000006",
+      expectedVersion: "1",
+      transition: "OT-02",
+      transitionPayload: {
+        confirmation: {
+          actorId: "local-user",
+          confirmationText: "Submit paper order",
+          confirmedAt: "2026-09-17T12:01:00.000Z",
+        },
+      },
+    },
+    {
+      commandId: "77000000-0000-4000-8000-000000000007",
+      correlationId: "77000000-0000-4000-8000-000000000002",
+      requestedAt: "2026-09-17T12:01:00.000Z",
+    },
+  );
+
+  assert.equal(observedQueries[0].values[0].expectedVersion, 1);
+  assert.match(observedQueries[0].values[0].canonicalContent, /"expectedVersion":1/u);
+});
+
+test("WP-6 maps nested portfolio UInt versions to canonical PostgreSQL integers", async () => {
+  const observedQueries = [];
+  const client = {
+    async query(sql, values) {
+      observedQueries.push({ sql, values });
+      return sql.includes("paper_order_transition")
+        ? { rows: [{ result: { state: "Accepted" } }] }
+        : { rows: [{ result: { order: { ...order, state: "Accepted", aggregateVersion: "3" } } }] };
+    },
+  };
+
+  await dispatchPostgresPaperOrder(
+    client,
+    { operation: "PaperOrderTransition", kind: "command" },
+    {
+      orderId: draftPayload.orderId,
+      transitionCommandId: "77000000-0000-4000-8000-000000000008",
+      expectedVersion: "2",
+      transition: "OT-03",
+      transitionPayload: {
+        portfolioId: "77000000-0000-4000-8000-000000000009",
+        validationSnapshotId: "77000000-0000-4000-8000-000000000010",
+        expectedPortfolioVersion: "0",
+      },
+    },
+    {
+      commandId: "77000000-0000-4000-8000-000000000011",
+      correlationId: "77000000-0000-4000-8000-000000000002",
+      requestedAt: "2026-09-17T12:02:00.000Z",
+    },
+  );
+
+  assert.equal(observedQueries[0].values[0].expectedVersion, 2);
+  assert.equal(observedQueries[0].values[0].transitionPayload.expectedPortfolioVersion, 0);
+  assert.match(observedQueries[0].values[0].canonicalContent, /"expectedPortfolioVersion":0/u);
+});
+
+test("WP-6 enforces the documented safe-integer UInt boundary", async () => {
+  const observedQueries = [];
+  const client = {
+    async query(sql, values) {
+      observedQueries.push({ sql, values });
+      return sql.includes("paper_order_transition")
+        ? { rows: [{ result: { state: "Submitted" } }] }
+        : { rows: [{ result: { order: { ...order, state: "Submitted" } } }] };
+    },
+  };
+  const transition = (expectedVersion) => dispatchPostgresPaperOrder(
+    client,
+    { operation: "PaperOrderTransition", kind: "command" },
+    {
+      orderId: draftPayload.orderId,
+      transitionCommandId: "77000000-0000-4000-8000-000000000012",
+      expectedVersion,
+      transition: "OT-02",
+      transitionPayload: {
+        confirmation: {
+          actorId: "local-user",
+          confirmationText: "Submit paper order",
+          confirmedAt: "2026-09-17T12:03:00.000Z",
+        },
+      },
+    },
+    {
+      commandId: "77000000-0000-4000-8000-000000000013",
+      correlationId: "77000000-0000-4000-8000-000000000002",
+      requestedAt: "2026-09-17T12:03:00.000Z",
+    },
+  );
+
+  await transition("9007199254740991");
+  assert.equal(observedQueries[0].values[0].expectedVersion, Number.MAX_SAFE_INTEGER);
+  for (const invalid of ["9007199254740992", "01", "-1", "1.0"]) {
+    await assert.rejects(transition(invalid), (error) => error.code === "APPLICATION_REQUEST_INVALID");
+  }
+  assert.equal(observedQueries.length, 2);
+});
+
 test("WP-6 maps allowlisted PostgreSQL order errors to stable owner codes", async () => {
   const client = {
     async query() {

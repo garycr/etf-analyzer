@@ -1671,6 +1671,20 @@ test("PT-APP-001N keeps application and owning replay identities distinct", () =
   assert.equal(readinessCalls, 1);
   assert.equal(ownerCalls, 1);
 
+  assert.throws(
+    () => dispatch({
+      ...originalRequest,
+      requestId: "71000000-0000-4000-8000-000000000012",
+      payload: {
+        ...originalRequest.payload,
+        expectedVersion: "9007199254740992",
+      },
+    }),
+    (error) => error.code === "APPLICATION_REQUEST_INVALID",
+  );
+  assert.equal(readinessCalls, 1);
+  assert.equal(ownerCalls, 1);
+
   const ownerConflict = Object.assign(new Error("Owner conflict"), {
     code: "ORDER_IDEMPOTENCY_CONFLICT",
   });

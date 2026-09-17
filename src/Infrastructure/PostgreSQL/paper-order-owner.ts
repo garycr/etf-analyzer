@@ -18,6 +18,38 @@ function invalidOwnerRequest(): never {
   });
 }
 
+function applicationUIntToNumber(value: unknown): number {
+  if (typeof value !== "string" || !/^(?:0|[1-9][0-9]*)$/u.test(value)) {
+    return invalidOwnerRequest();
+  }
+  const converted = Number(value);
+  if (!Number.isSafeInteger(converted)) return invalidOwnerRequest();
+  return converted;
+}
+
+function normalizeTransitionPayload(
+  transition: unknown,
+  payload: unknown,
+): unknown {
+  if (
+    transition !== "OT-03" &&
+    transition !== "OT-05" &&
+    transition !== "OT-06" &&
+    transition !== "OT-09"
+  ) {
+    return payload;
+  }
+  if (payload === null || typeof payload !== "object" || Array.isArray(payload)) {
+    return invalidOwnerRequest();
+  }
+  return {
+    ...payload,
+    expectedPortfolioVersion: applicationUIntToNumber(
+      Object.getOwnPropertyDescriptor(payload, "expectedPortfolioVersion")?.value,
+    ),
+  };
+}
+
 const postgresOrderErrors: Readonly<Record<string, ReadonlySet<string>>> = Object.freeze({
   "40001": new Set(["ORDER_VERSION_CONFLICT", "LEDGER_VERSION_CONFLICT"]),
   "42501": new Set(["permission denied"]),
@@ -80,13 +112,16 @@ export async function dispatchPostgresPaperOrder(
   } else if (definition.operation === "PaperOrderTransition") {
     command = {
       correlationId: context.correlationId,
-      expectedVersion: payload.expectedVersion,
+      expectedVersion: applicationUIntToNumber(payload.expectedVersion),
       occurredAt: context.requestedAt,
       operation: "Transition",
       orderId: payload.orderId,
       transition: payload.transition,
       transitionCommandId: payload.transitionCommandId,
-      transitionPayload: payload.transitionPayload,
+      transitionPayload: normalizeTransitionPayload(
+        payload.transition,
+        payload.transitionPayload,
+      ),
     };
   } else {
     return invalidOwnerRequest();

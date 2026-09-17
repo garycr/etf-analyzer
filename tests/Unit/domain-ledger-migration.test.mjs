@@ -80,6 +80,17 @@ test("0003 domain ledger hardens every controlled function", () => {
   assert.doesNotMatch(sql, /\b(?:outbox|queue|scheduler|event)\b/iu);
 });
 
+test("0003 paper order quantities distinguish fillable and terminal states", () => {
+  const { sql } = domainLedgerMigration;
+
+  assert.match(sql, /WHEN state IN \('Draft','Submitted','Accepted'\) THEN filled_quantity = 0 AND open_quantity = requested_quantity/u);
+  assert.match(sql, /WHEN state = 'Partial' THEN filled_quantity > 0 AND open_quantity > 0 AND requested_quantity = filled_quantity \+ open_quantity/u);
+  assert.match(sql, /WHEN state = 'Filled' THEN filled_quantity = requested_quantity AND open_quantity = 0/u);
+  assert.match(sql, /WHEN state IN \('Rejected','Expired'\) THEN filled_quantity = 0 AND open_quantity = 0/u);
+  assert.match(sql, /WHEN state = 'Canceled' THEN filled_quantity < requested_quantity AND open_quantity = 0/u);
+  assert.match(sql, /transition_name IN \('OT-04','OT-07','OT-08','OT-10'\) THEN 0/u);
+});
+
 test("0003 domain ledger grants only the nested owner call graph and authoritative order read", () => {
   const { sql } = domainLedgerMigration;
 

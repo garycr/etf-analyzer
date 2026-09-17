@@ -4,15 +4,21 @@ import test from "node:test";
 
 import pg from "pg";
 
+import { executeApplicationRequestAsync } from "../../dist/Application/application-boundary.js";
 import { canonicalizeJson } from "../../dist/Infrastructure/CanonicalJson/canonical-json.js";
+import { createPostgresApplicationReplayStore } from "../../dist/Infrastructure/PostgreSQL/application-replay-store.js";
 import { applyMigration } from "../../dist/Infrastructure/PostgreSQL/migration-runner.js";
 import { applicationMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/application.js";
+import { analyticsEvidenceMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/analytics-evidence.js";
+import { controlledAccessMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/controlled-access.js";
 import {
   domainLedgerFunctionNames,
   domainLedgerMigration,
   domainLedgerTableNames,
 } from "../../dist/Infrastructure/PostgreSQL/migrations/domain-ledger.js";
 import { foundationMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/foundation.js";
+import { fixtureMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/fixtures.js";
+import { dispatchPostgresPaperOrder } from "../../dist/Infrastructure/PostgreSQL/paper-order-owner.js";
 import { projectPostgresSchemaManifest } from "../../dist/Infrastructure/PostgreSQL/postgres-schema-manifest.js";
 import {
   createRoleBootstrapSql,
@@ -85,6 +91,35 @@ async function prepareLedgerBoundary(client) {
     );
   } finally {
     await client.query("RESET SESSION AUTHORIZATION");
+  }
+}
+
+async function applyCompleteMigrationSet(client) {
+  await applyPrerequisites(client);
+  await applyMigration(
+    client,
+    domainLedgerMigration,
+    "2026-09-14T00:02:00.000Z",
+    projectPostgresSchemaManifest,
+  );
+  await client.query("GRANT USAGE ON SCHEMA etf TO key_injector");
+  await client.query(
+    "GRANT EXECUTE ON FUNCTION etf.anchor_key_inject(text,bytea,timestamp with time zone) TO key_injector",
+  );
+  await client.query("SET SESSION AUTHORIZATION key_injector");
+  try {
+    await client.query(
+      "SELECT etf.anchor_key_inject('primary', decode('00112233445566778899aabbccddeeff', 'hex'), '2026-09-14T00:00:00.000Z')",
+    );
+  } finally {
+    await client.query("RESET SESSION AUTHORIZATION");
+  }
+  for (const [migration, appliedAt] of [
+    [fixtureMigration, "2026-09-14T00:03:00.000Z"],
+    [analyticsEvidenceMigration, "2026-09-14T00:04:00.000Z"],
+    [controlledAccessMigration, "2026-09-14T00:05:00.000Z"],
+  ]) {
+    await applyMigration(client, migration, appliedAt, projectPostgresSchemaManifest);
   }
 }
 
@@ -189,7 +224,7 @@ async function snapshotLedger(client, portfolioId) {
   return snapshot.rows[0];
 }
 
-function cashDeposit({ portfolioId, transactionId, correlationId, version, effectiveAt }) {
+function cashDeposit({ portfolioId, transactionId, correlationId, version, effectiveAt, amount = "100.00000000" }) {
   return {
     correlationId,
     effectiveAt,
@@ -198,7 +233,7 @@ function cashDeposit({ portfolioId, transactionId, correlationId, version, effec
     portfolioId,
     transactionId,
     type: "CashDeposit",
-    amount: "100.00000000",
+    amount,
   };
 }
 
@@ -234,13 +269,14 @@ function fillCommand({
   side,
   quantity,
   unitPrice,
+  fee = "0.00000000",
 }) {
   return {
     correlationId,
     effectiveAt,
     expectedOrderVersion: 1,
     expectedPortfolioVersion: version,
-    fee: "0.00000000",
+    fee,
     fillId,
     instrumentId,
     keyIdentifier: "primary",
@@ -346,11 +382,11 @@ test(
       const manifest = JSON.parse(manifestJson);
       assert.equal(
         applied.contentHash,
-        "d514c7f3b75c6ed83dfdbd9b54b406b14814b2bf8f40bd1e04a9d70a303346a3",
+        "90739054877f9ae80f2912b914d0239985512c55067de4d9060288ecacffc691",
       );
       assert.equal(
         applied.schemaManifestHash,
-        "e0b21def5e9e2822142821f0fec70bd0d06593ee4f62496b1b2b29eabce6b3ac",
+        "750935723443ed4274f76110fc6c0bbc6876bae8b7b5546f017b4f0d68f53709",
       );
       assert.equal(Buffer.byteLength(manifestJson, "utf8"), 14194);
       assert.equal(manifest.migrationSequence.length, 3);
@@ -765,6 +801,928 @@ test(
 );
 
 test(
+  "0003 rejects noncanonical and duplicate-key paper order content before mutation",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    const group = "54400000";
+    const command = {
+      correlationId: deterministicUuid(group, 1),
+      expectedVersion: 0,
+      occurredAt: "2026-09-17T12:00:00.000Z",
+      operation: "DraftCreate",
+      orderId: deterministicUuid(group, 2),
+      transition: "OT-01",
+      transitionCommandId: deterministicUuid(group, 3),
+      transitionPayload: {
+        instrumentId: "CANONICAL-ETF",
+        quantity: "2.0000000000",
+        researchEvidenceId: deterministicUuid(group, 4),
+        side: "Buy",
+        tradeDate: "2026-09-17",
+        unitPrice: "10.0000000000",
+      },
+    };
+    const duplicateKeyContent = canonicalizeJson(command).replace(
+      '"expectedVersion":0',
+      '"expectedVersion":0,"expectedVersion":0',
+    );
+
+    await client.connect();
+    await client.query(fixtureLockSql);
+    try {
+      await cleanBootstrap(client);
+      await applyPrerequisites(client);
+      await prepareLedgerBoundary(client);
+      await client.query("GRANT EXECUTE ON FUNCTION etf.paper_order_transition(jsonb) TO app_runtime");
+      for (const canonicalContent of [
+        JSON.stringify(command, null, 2),
+        `{"operation":"DraftCreate",${canonicalizeJson(command).slice(1).replace(',"operation":"DraftCreate"', "")}`,
+        duplicateKeyContent,
+      ]) {
+        await client.query("SET SESSION AUTHORIZATION app_runtime");
+        try {
+          await assert.rejects(
+            () => client.query(
+              "SELECT etf.paper_order_transition($1::jsonb)",
+              [{ canonicalContent, ...command }],
+            ),
+            /APPLICATION_REQUEST_INVALID/,
+          );
+        } finally {
+          await client.query("RESET SESSION AUTHORIZATION");
+        }
+        const counts = await client.query(
+          `SELECT (SELECT count(*)::integer FROM etf.paper_orders) AS orders,
+                  (SELECT count(*)::integer FROM etf.order_transitions) AS transitions,
+                  (SELECT count(*)::integer FROM etf.order_command_replays) AS replays,
+                  (SELECT count(*)::integer FROM etf.order_audit) AS audits`,
+        );
+        assert.deepEqual(counts.rows, [{ orders: 0, transitions: 0, replays: 0, audits: 0 }]);
+      }
+    } finally {
+      try {
+        await cleanBootstrap(client);
+      } finally {
+        await client.query(fixtureUnlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
+  "CT-ORD-003 confirmed drafts become Submitted with evidence only",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    const group = "54500000";
+    const orderId = deterministicUuid(group, 1);
+    const confirmation = {
+      actorId: "local-user",
+      confirmedAt: "2026-09-17T13:01:00.000Z",
+      confirmationText: "Submit hypothetical paper order",
+    };
+    const envelope = (operation, commandId, requestedAt, payload) => JSON.stringify({
+      operation,
+      requestId: deterministicUuid(group, Number(commandId.slice(-3)) + 100),
+      correlationId: deterministicUuid(group, 2),
+      actorId: "local-user",
+      prototypeCandidate: "v1.0.0-prototype.1",
+      contractVersion: "1.0.0-candidate.2",
+      requestedAt,
+      commandId,
+      payload,
+    });
+
+    await client.connect();
+    await client.query(fixtureLockSql);
+    try {
+      await cleanBootstrap(client);
+      await applyCompleteMigrationSet(client);
+      await client.query("SET SESSION AUTHORIZATION app_runtime");
+      let draft;
+      let submitted;
+      try {
+        const dependencies = {
+          replayStore: createPostgresApplicationReplayStore(client),
+          completedAt: () => "2026-09-17T13:02:00.000Z",
+          checkReadiness: () => undefined,
+          ownerDispatch: (definition, payload, context) =>
+            dispatchPostgresPaperOrder(client, definition, payload, context),
+        };
+        draft = await executeApplicationRequestAsync(
+          envelope(
+            "PaperOrderDraftCreate",
+            deterministicUuid(group, 3),
+            "2026-09-17T13:00:00.000Z",
+            {
+              orderId,
+              instrumentId: "CONFIRM-ETF",
+              researchEvidenceId: deterministicUuid(group, 4),
+              side: "Buy",
+              quantity: "2.0000000000",
+              unitPrice: "10.0000000000",
+              tradeDate: "2026-09-17",
+            },
+          ),
+          dependencies,
+        );
+        submitted = await executeApplicationRequestAsync(
+          envelope(
+            "PaperOrderTransition",
+            deterministicUuid(group, 5),
+            confirmation.confirmedAt,
+            {
+              orderId,
+              transitionCommandId: deterministicUuid(group, 6),
+              expectedVersion: "1",
+              transition: "OT-02",
+              transitionPayload: { confirmation },
+            },
+          ),
+          dependencies,
+        );
+      } finally {
+        await client.query("RESET SESSION AUTHORIZATION");
+      }
+
+      assert.equal(draft.outcome, "Succeeded", JSON.stringify(draft));
+      assert.equal(submitted.outcome, "Succeeded", JSON.stringify(submitted));
+      assert.equal(submitted.data.order.state, "Submitted");
+      assert.equal(submitted.data.order.aggregateVersion, "2");
+      assert.deepEqual(submitted.data.order.confirmation, confirmation);
+      assert.deepEqual(
+        submitted.data.order.transitionHistory.map((transition) => ({
+          transition: transition.transition,
+          sourceState: transition.sourceState,
+          targetState: transition.targetState,
+          trigger: transition.trigger,
+          priorVersion: transition.priorVersion,
+          resultingVersion: transition.resultingVersion,
+        })),
+        [
+          { transition: "OT-01", sourceState: "Initial", targetState: "Draft", trigger: "UserCreatedFromResearch", priorVersion: "0", resultingVersion: "1" },
+          { transition: "OT-02", sourceState: "Draft", targetState: "Submitted", trigger: "UserConfirmedPaperAction", priorVersion: "1", resultingVersion: "2" },
+        ],
+      );
+
+      const evidence = await client.query(
+        `SELECT (SELECT count(*)::integer FROM etf.paper_orders) AS orders,
+                (SELECT count(*)::integer FROM etf.order_transitions) AS transitions,
+                (SELECT count(*)::integer FROM etf.order_command_replays) AS order_replays,
+                (SELECT count(*)::integer FROM etf.order_audit) AS order_audits,
+                (SELECT count(*)::integer FROM etf.application_replays) AS application_replays,
+                (SELECT count(*)::integer FROM etf.fills) AS fills,
+                (SELECT count(*)::integer FROM etf.portfolios) AS portfolios,
+                (SELECT count(*)::integer FROM etf.ledger_transactions) AS ledger_transactions,
+                (SELECT count(*)::integer FROM etf.ledger_effects) AS ledger_effects,
+                (SELECT count(*)::integer FROM etf.ledger_allocations) AS ledger_allocations`,
+      );
+      assert.deepEqual(evidence.rows, [{
+        orders: 1,
+        transitions: 2,
+        order_replays: 2,
+        order_audits: 2,
+        application_replays: 2,
+        fills: 0,
+        portfolios: 0,
+        ledger_transactions: 0,
+        ledger_effects: 0,
+        ledger_allocations: 0,
+      }]);
+    } finally {
+      try {
+        await cleanBootstrap(client);
+      } finally {
+        await client.query(fixtureUnlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
+  "CT-ORD-004 Submitted validation chooses exactly OT-03 or OT-04",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    const group = "54600000";
+    const scenarios = [
+      {
+        offset: 0,
+        transition: "OT-03",
+        targetState: "Accepted",
+        transitionPayload: {
+          portfolioId: deterministicUuid(group, 301),
+          validationSnapshotId: deterministicUuid(group, 302),
+          expectedPortfolioVersion: "0",
+        },
+      },
+      {
+        offset: 10,
+        transition: "OT-04",
+        targetState: "Rejected",
+        transitionPayload: { rejectionCode: "PORTFOLIO_VALIDATION_FAILED" },
+      },
+    ];
+    const envelope = (operation, commandIndex, requestedAt, payload) => JSON.stringify({
+      operation,
+      requestId: deterministicUuid(group, commandIndex + 500),
+      correlationId: deterministicUuid(group, commandIndex + 600),
+      actorId: "local-user",
+      prototypeCandidate: "v1.0.0-prototype.1",
+      contractVersion: "1.0.0-candidate.2",
+      requestedAt,
+      commandId: deterministicUuid(group, commandIndex),
+      payload,
+    });
+
+    await client.connect();
+    await client.query(fixtureLockSql);
+    try {
+      await cleanBootstrap(client);
+      await applyCompleteMigrationSet(client);
+      await client.query("SET SESSION AUTHORIZATION app_runtime");
+      try {
+        const dependencies = {
+          replayStore: createPostgresApplicationReplayStore(client),
+          completedAt: () => "2026-09-17T14:03:00.000Z",
+          checkReadiness: () => undefined,
+          ownerDispatch: (definition, payload, context) =>
+            dispatchPostgresPaperOrder(client, definition, payload, context),
+        };
+        for (const scenario of scenarios) {
+          const orderId = deterministicUuid(group, scenario.offset + 1);
+          const confirmation = {
+            actorId: "local-user",
+            confirmedAt: "2026-09-17T14:01:00.000Z",
+            confirmationText: "Submit hypothetical paper order",
+          };
+          const commands = [
+            envelope(
+              "PaperOrderDraftCreate",
+              scenario.offset + 101,
+              "2026-09-17T14:00:00.000Z",
+              {
+                orderId,
+                instrumentId: `VALIDATE-${scenario.transition}`,
+                researchEvidenceId: deterministicUuid(group, scenario.offset + 2),
+                side: "Buy",
+                quantity: "2.0000000000",
+                unitPrice: "10.0000000000",
+                tradeDate: "2026-09-17",
+              },
+            ),
+            envelope(
+              "PaperOrderTransition",
+              scenario.offset + 102,
+              confirmation.confirmedAt,
+              {
+                orderId,
+                transitionCommandId: deterministicUuid(group, scenario.offset + 202),
+                expectedVersion: "1",
+                transition: "OT-02",
+                transitionPayload: { confirmation },
+              },
+            ),
+            envelope(
+              "PaperOrderTransition",
+              scenario.offset + 103,
+              "2026-09-17T14:02:00.000Z",
+              {
+                orderId,
+                transitionCommandId: deterministicUuid(group, scenario.offset + 203),
+                expectedVersion: "2",
+                transition: scenario.transition,
+                transitionPayload: scenario.transitionPayload,
+              },
+            ),
+          ];
+          let result;
+          for (const command of commands) {
+            result = await executeApplicationRequestAsync(command, dependencies);
+            assert.equal(result.outcome, "Succeeded", JSON.stringify(result));
+          }
+          assert.equal(result.data.order.state, scenario.targetState);
+          assert.equal(result.data.order.aggregateVersion, "3");
+          assert.equal(result.data.order.filledQuantity, "0.0000000000");
+          assert.equal(
+            result.data.order.openQuantity,
+            scenario.targetState === "Rejected" ? "0.0000000000" : "2.0000000000",
+          );
+          assert.deepEqual(
+            result.data.order.transitionHistory.map(({ transition }) => transition),
+            ["OT-01", "OT-02", scenario.transition],
+          );
+        }
+      } finally {
+        await client.query("RESET SESSION AUTHORIZATION");
+      }
+
+      const evidence = await client.query(
+        `SELECT (SELECT count(*)::integer FROM etf.paper_orders) AS orders,
+                (SELECT count(*)::integer FROM etf.order_transitions WHERE transition = 'OT-03') AS accepted,
+                (SELECT count(*)::integer FROM etf.order_transitions WHERE transition = 'OT-04') AS rejected,
+                (SELECT jsonb_agg(normalized_payload ORDER BY transition)
+                   FROM etf.order_transitions
+                  WHERE transition IN ('OT-03', 'OT-04')) AS validation_payloads,
+                (SELECT count(*)::integer FROM etf.fills) AS fills,
+                (SELECT count(*)::integer FROM etf.ledger_transactions) AS ledger_transactions,
+                (SELECT count(*)::integer FROM etf.ledger_effects) AS ledger_effects,
+                (SELECT count(*)::integer FROM etf.ledger_allocations) AS ledger_allocations`,
+      );
+      assert.deepEqual(evidence.rows, [{
+        orders: 2,
+        accepted: 1,
+        rejected: 1,
+        validation_payloads: scenarios.map(({ transitionPayload }) => ({
+          ...transitionPayload,
+          ...(transitionPayload.expectedPortfolioVersion === undefined
+            ? {}
+            : { expectedPortfolioVersion: 0 }),
+        })),
+        fills: 0,
+        ledger_transactions: 0,
+        ledger_effects: 0,
+        ledger_allocations: 0,
+      }]);
+    } finally {
+      try {
+        await cleanBootstrap(client);
+      } finally {
+        await client.query(fixtureUnlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
+  "CT-ORD-005 Accepted supports exactly OT-05 through OT-08",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    const group = "54700000";
+    const scenarios = [
+      { offset: 0, transition: "OT-05", targetState: "Partial", filled: "1.0000000000", open: "1.0000000000" },
+      { offset: 10, transition: "OT-06", targetState: "Filled", filled: "2.0000000000", open: "0.0000000000" },
+      { offset: 20, transition: "OT-07", targetState: "Canceled", filled: "0.0000000000", open: "0.0000000000" },
+      { offset: 30, transition: "OT-08", targetState: "Expired", filled: "0.0000000000", open: "0.0000000000" },
+    ];
+    const envelope = (operation, commandIndex, requestedAt, payload) => JSON.stringify({
+      operation,
+      requestId: deterministicUuid(group, commandIndex + 500),
+      correlationId: deterministicUuid(group, commandIndex + 600),
+      actorId: "local-user",
+      prototypeCandidate: "v1.0.0-prototype.1",
+      contractVersion: "1.0.0-candidate.2",
+      requestedAt,
+      commandId: deterministicUuid(group, commandIndex),
+      payload,
+    });
+
+    await client.connect();
+    await client.query(fixtureLockSql);
+    try {
+      await cleanBootstrap(client);
+      await applyCompleteMigrationSet(client);
+      await client.query("GRANT EXECUTE ON FUNCTION etf.ledger_append(jsonb) TO app_runtime");
+      for (const scenario of scenarios.slice(0, 2)) {
+        await appendLedger(client, cashDeposit({
+          portfolioId: deterministicUuid(group, scenario.offset + 301),
+          transactionId: deterministicUuid(group, scenario.offset + 401),
+          correlationId: deterministicUuid(group, scenario.offset + 501),
+          version: 0,
+          effectiveAt: "2026-09-17T15:00:00.000Z",
+        }));
+      }
+      await client.query("REVOKE EXECUTE ON FUNCTION etf.ledger_append(jsonb) FROM app_runtime");
+
+      await client.query("SET SESSION AUTHORIZATION app_runtime");
+      try {
+        const dependencies = {
+          replayStore: createPostgresApplicationReplayStore(client),
+          completedAt: () => "2026-09-17T15:05:00.000Z",
+          checkReadiness: () => undefined,
+          ownerDispatch: (definition, payload, context) =>
+            dispatchPostgresPaperOrder(client, definition, payload, context),
+        };
+        for (const scenario of scenarios) {
+          const orderId = deterministicUuid(group, scenario.offset + 1);
+          const portfolioId = deterministicUuid(group, scenario.offset + 301);
+          const confirmation = {
+            actorId: "local-user",
+            confirmedAt: "2026-09-17T15:01:00.000Z",
+            confirmationText: "Submit hypothetical paper order",
+          };
+          const transitionPayload = scenario.transition === "OT-05" || scenario.transition === "OT-06"
+            ? {
+                portfolioId,
+                transactionId: deterministicUuid(group, scenario.offset + 4010),
+                fillId: deterministicUuid(group, scenario.offset + 4020),
+                expectedPortfolioVersion: "1",
+                quantity: scenario.transition === "OT-05" ? "1.0000000000" : "2.0000000000",
+                unitPrice: "10.0000000000",
+                fee: "0.00000000",
+              }
+            : scenario.transition === "OT-07"
+            ? { reasonCode: "USER_CANCELED" }
+            : { expiresAt: "2026-09-17T15:03:00.000Z" };
+          const commands = [
+            envelope("PaperOrderDraftCreate", scenario.offset + 101, "2026-09-17T15:00:00.000Z", {
+              orderId,
+              instrumentId: `ACCEPTED-${scenario.transition}`,
+              researchEvidenceId: deterministicUuid(group, scenario.offset + 2),
+              side: "Buy",
+              quantity: "2.0000000000",
+              unitPrice: "10.0000000000",
+              tradeDate: "2026-09-17",
+            }),
+            envelope("PaperOrderTransition", scenario.offset + 102, confirmation.confirmedAt, {
+              orderId,
+              transitionCommandId: deterministicUuid(group, scenario.offset + 202),
+              expectedVersion: "1",
+              transition: "OT-02",
+              transitionPayload: { confirmation },
+            }),
+            envelope("PaperOrderTransition", scenario.offset + 103, "2026-09-17T15:02:00.000Z", {
+              orderId,
+              transitionCommandId: deterministicUuid(group, scenario.offset + 203),
+              expectedVersion: "2",
+              transition: "OT-03",
+              transitionPayload: {
+                portfolioId,
+                validationSnapshotId: deterministicUuid(group, scenario.offset + 303),
+                expectedPortfolioVersion: scenario.offset < 20 ? "1" : "0",
+              },
+            }),
+            envelope("PaperOrderTransition", scenario.offset + 104, "2026-09-17T15:04:00.000Z", {
+              orderId,
+              transitionCommandId: deterministicUuid(group, scenario.offset + 204),
+              expectedVersion: "3",
+              transition: scenario.transition,
+              transitionPayload,
+            }),
+          ];
+          let result;
+          for (const command of commands) {
+            result = await executeApplicationRequestAsync(command, dependencies);
+            assert.equal(result.outcome, "Succeeded", `${scenario.transition}: ${JSON.stringify(result)}`);
+          }
+          assert.equal(result.data.order.state, scenario.targetState, scenario.transition);
+          assert.equal(result.data.order.aggregateVersion, "4", scenario.transition);
+          assert.equal(result.data.order.filledQuantity, scenario.filled, scenario.transition);
+          assert.equal(result.data.order.openQuantity, scenario.open, scenario.transition);
+        }
+      } finally {
+        await client.query("RESET SESSION AUTHORIZATION");
+      }
+
+      const evidence = await client.query(
+        `SELECT (SELECT count(*)::integer FROM etf.fills) AS fills,
+                (SELECT count(*)::integer FROM etf.ledger_transactions) AS ledger_transactions,
+                (SELECT count(*)::integer FROM etf.ledger_effects) AS ledger_effects,
+                (SELECT count(*)::integer FROM etf.ledger_lots) AS ledger_lots,
+                (SELECT count(*)::integer FROM etf.ledger_allocations) AS ledger_allocations,
+                (SELECT count(*)::integer FROM etf.order_transitions WHERE transition IN ('OT-05','OT-06','OT-07','OT-08')) AS completion_transitions`,
+      );
+      assert.deepEqual(evidence.rows, [{
+        fills: 2,
+        ledger_transactions: 4,
+        ledger_effects: 8,
+        ledger_lots: 2,
+        ledger_allocations: 0,
+        completion_transitions: 4,
+      }]);
+    } finally {
+      try {
+        await cleanBootstrap(client);
+      } finally {
+        await client.query(fixtureUnlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
+  "CT-ORD-006 Partial preserves prior fills through OT-09 or OT-10",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    const group = "54800000";
+    const scenarios = [
+      { offset: 0, transition: "OT-09", targetState: "Filled", fillCount: 2 },
+      { offset: 10, transition: "OT-10", targetState: "Canceled", fillCount: 1 },
+    ];
+    const envelope = (operation, commandIndex, requestedAt, payload) => JSON.stringify({
+      operation,
+      requestId: deterministicUuid(group, commandIndex + 500),
+      correlationId: deterministicUuid(group, commandIndex + 600),
+      actorId: "local-user",
+      prototypeCandidate: "v1.0.0-prototype.1",
+      contractVersion: "1.0.0-candidate.2",
+      requestedAt,
+      commandId: deterministicUuid(group, commandIndex),
+      payload,
+    });
+
+    await client.connect();
+    await client.query(fixtureLockSql);
+    try {
+      await cleanBootstrap(client);
+      await applyCompleteMigrationSet(client);
+      await client.query("GRANT EXECUTE ON FUNCTION etf.ledger_append(jsonb) TO app_runtime");
+      for (const scenario of scenarios) {
+        await appendLedger(client, cashDeposit({
+          portfolioId: deterministicUuid(group, scenario.offset + 301),
+          transactionId: deterministicUuid(group, scenario.offset + 401),
+          correlationId: deterministicUuid(group, scenario.offset + 501),
+          version: 0,
+          effectiveAt: "2026-09-17T16:00:00.000Z",
+        }));
+      }
+      await client.query("REVOKE EXECUTE ON FUNCTION etf.ledger_append(jsonb) FROM app_runtime");
+
+      await client.query("SET SESSION AUTHORIZATION app_runtime");
+      try {
+        const dependencies = {
+          replayStore: createPostgresApplicationReplayStore(client),
+          completedAt: () => "2026-09-17T16:06:00.000Z",
+          checkReadiness: () => undefined,
+          ownerDispatch: (definition, payload, context) =>
+            dispatchPostgresPaperOrder(client, definition, payload, context),
+        };
+        for (const scenario of scenarios) {
+          const orderId = deterministicUuid(group, scenario.offset + 1);
+          const portfolioId = deterministicUuid(group, scenario.offset + 301);
+          const partialFillId = deterministicUuid(group, scenario.offset + 4010);
+          const confirmation = {
+            actorId: "local-user",
+            confirmedAt: "2026-09-17T16:01:00.000Z",
+            confirmationText: "Submit hypothetical paper order",
+          };
+          const commands = [
+            envelope("PaperOrderDraftCreate", scenario.offset + 101, "2026-09-17T16:00:00.000Z", {
+              orderId,
+              instrumentId: `PARTIAL-${scenario.transition}`,
+              researchEvidenceId: deterministicUuid(group, scenario.offset + 2),
+              side: "Buy",
+              quantity: "2.0000000000",
+              unitPrice: "10.0000000000",
+              tradeDate: "2026-09-17",
+            }),
+            envelope("PaperOrderTransition", scenario.offset + 102, confirmation.confirmedAt, {
+              orderId,
+              transitionCommandId: deterministicUuid(group, scenario.offset + 202),
+              expectedVersion: "1",
+              transition: "OT-02",
+              transitionPayload: { confirmation },
+            }),
+            envelope("PaperOrderTransition", scenario.offset + 103, "2026-09-17T16:02:00.000Z", {
+              orderId,
+              transitionCommandId: deterministicUuid(group, scenario.offset + 203),
+              expectedVersion: "2",
+              transition: "OT-03",
+              transitionPayload: {
+                portfolioId,
+                validationSnapshotId: deterministicUuid(group, scenario.offset + 303),
+                expectedPortfolioVersion: "1",
+              },
+            }),
+            envelope("PaperOrderTransition", scenario.offset + 104, "2026-09-17T16:03:00.000Z", {
+              orderId,
+              transitionCommandId: deterministicUuid(group, scenario.offset + 204),
+              expectedVersion: "3",
+              transition: "OT-05",
+              transitionPayload: {
+                portfolioId,
+                transactionId: deterministicUuid(group, scenario.offset + 4040),
+                fillId: partialFillId,
+                expectedPortfolioVersion: "1",
+                quantity: "1.0000000000",
+                unitPrice: "10.0000000000",
+                fee: "0.00000000",
+              },
+            }),
+            envelope("PaperOrderTransition", scenario.offset + 105, "2026-09-17T16:04:00.000Z", {
+              orderId,
+              transitionCommandId: deterministicUuid(group, scenario.offset + 205),
+              expectedVersion: "4",
+              transition: scenario.transition,
+              transitionPayload: scenario.transition === "OT-09"
+                ? {
+                    portfolioId,
+                    transactionId: deterministicUuid(group, scenario.offset + 4050),
+                    fillId: deterministicUuid(group, scenario.offset + 4020),
+                    expectedPortfolioVersion: "2",
+                    quantity: "1.0000000000",
+                    unitPrice: "10.0000000000",
+                    fee: "0.00000000",
+                  }
+                : { reasonCode: "USER_CANCELED_REMAINDER" },
+            }),
+          ];
+          let result;
+          for (const command of commands) {
+            result = await executeApplicationRequestAsync(command, dependencies);
+            assert.equal(result.outcome, "Succeeded", `${scenario.transition}: ${JSON.stringify(result)}`);
+          }
+          assert.equal(result.data.order.state, scenario.targetState, scenario.transition);
+          assert.equal(result.data.order.aggregateVersion, "5", scenario.transition);
+          assert.equal(result.data.order.filledQuantity, scenario.transition === "OT-09" ? "2.0000000000" : "1.0000000000");
+          assert.equal(result.data.order.openQuantity, "0.0000000000", scenario.transition);
+        }
+      } finally {
+        await client.query("RESET SESSION AUTHORIZATION");
+      }
+
+      for (const scenario of scenarios) {
+        const fills = await client.query(
+          `SELECT fill_id::text, quantity::text
+             FROM etf.fills
+            WHERE order_id = $1::uuid
+            ORDER BY simulated_at, fill_id`,
+          [deterministicUuid(group, scenario.offset + 1)],
+        );
+        assert.equal(fills.rows.length, scenario.fillCount, scenario.transition);
+        assert.deepEqual(fills.rows[0], {
+          fill_id: deterministicUuid(group, scenario.offset + 4010),
+          quantity: "1.0000000000",
+        });
+      }
+
+      const evidence = await client.query(
+        `SELECT (SELECT count(*)::integer FROM etf.fills) AS fills,
+                (SELECT count(*)::integer FROM etf.ledger_transactions) AS ledger_transactions,
+                (SELECT count(*)::integer FROM etf.ledger_effects) AS ledger_effects,
+                (SELECT count(*)::integer FROM etf.ledger_lots) AS ledger_lots,
+                (SELECT count(*)::integer FROM etf.order_transitions WHERE transition IN ('OT-09','OT-10')) AS closing_transitions`,
+      );
+      assert.deepEqual(evidence.rows, [{
+        fills: 3,
+        ledger_transactions: 5,
+        ledger_effects: 11,
+        ledger_lots: 3,
+        closing_transitions: 2,
+      }]);
+    } finally {
+      try {
+        await cleanBootstrap(client);
+      } finally {
+        await client.query(fixtureUnlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
+  "CT-ORD-009 equivalent replay is stable and conflicting replay fails",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    const group = "54900000";
+    const orderId = deterministicUuid(group, 1);
+    const transitionCommandId = deterministicUuid(group, 2);
+    const confirmation = {
+      actorId: "local-user",
+      confirmedAt: "2026-09-17T17:01:00.000Z",
+      confirmationText: "Submit hypothetical paper order",
+    };
+    const envelope = (commandId, correlationId, payload) => JSON.stringify({
+      operation: "PaperOrderTransition",
+      requestId: deterministicUuid(group, Number(commandId.slice(-3)) + 100),
+      correlationId,
+      actorId: "local-user",
+      prototypeCandidate: "v1.0.0-prototype.1",
+      contractVersion: "1.0.0-candidate.2",
+      requestedAt: confirmation.confirmedAt,
+      commandId,
+      payload,
+    });
+
+    await client.connect();
+    await client.query(fixtureLockSql);
+    try {
+      await cleanBootstrap(client);
+      await applyCompleteMigrationSet(client);
+      await client.query("SET SESSION AUTHORIZATION app_runtime");
+      try {
+        const dependencies = {
+          replayStore: createPostgresApplicationReplayStore(client),
+          completedAt: () => "2026-09-17T17:02:00.000Z",
+          checkReadiness: () => undefined,
+          ownerDispatch: (definition, payload, context) =>
+            dispatchPostgresPaperOrder(client, definition, payload, context),
+        };
+        const draft = JSON.stringify({
+          operation: "PaperOrderDraftCreate",
+          requestId: deterministicUuid(group, 110),
+          correlationId: deterministicUuid(group, 10),
+          actorId: "local-user",
+          prototypeCandidate: "v1.0.0-prototype.1",
+          contractVersion: "1.0.0-candidate.2",
+          requestedAt: "2026-09-17T17:00:00.000Z",
+          commandId: deterministicUuid(group, 10),
+          payload: {
+            orderId,
+            instrumentId: "REPLAY-ETF",
+            researchEvidenceId: deterministicUuid(group, 3),
+            side: "Buy",
+            quantity: "2.0000000000",
+            unitPrice: "10.0000000000",
+            tradeDate: "2026-09-17",
+          },
+        });
+        const payload = {
+          orderId,
+          transitionCommandId,
+          expectedVersion: "1",
+          transition: "OT-02",
+          transitionPayload: { confirmation },
+        };
+        assert.equal((await executeApplicationRequestAsync(draft, dependencies)).outcome, "Succeeded");
+        const original = await executeApplicationRequestAsync(
+          envelope(deterministicUuid(group, 11), deterministicUuid(group, 21), payload),
+          dependencies,
+        );
+        const equivalent = await executeApplicationRequestAsync(
+          envelope(deterministicUuid(group, 12), deterministicUuid(group, 22), payload),
+          dependencies,
+        );
+        assert.equal(original.outcome, "Succeeded", JSON.stringify(original));
+        assert.equal(equivalent.outcome, "Succeeded", JSON.stringify(equivalent));
+        assert.deepEqual(equivalent.data, original.data);
+
+        const conflict = await executeApplicationRequestAsync(
+          envelope(deterministicUuid(group, 13), deterministicUuid(group, 23), {
+            ...payload,
+            transitionPayload: {
+              confirmation: {
+                ...confirmation,
+                confirmationText: "Changed confirmation",
+              },
+            },
+          }),
+          dependencies,
+        );
+        assert.equal(conflict.outcome, "Failed", JSON.stringify(conflict));
+        assert.equal(conflict.error.code, "ORDER_IDEMPOTENCY_CONFLICT");
+        assert.equal(JSON.stringify(conflict).includes("Changed confirmation"), false);
+      } finally {
+        await client.query("RESET SESSION AUTHORIZATION");
+      }
+
+      const evidence = await client.query(
+        `SELECT (SELECT count(*)::integer FROM etf.paper_orders) AS orders,
+                (SELECT count(*)::integer FROM etf.order_transitions WHERE transition = 'OT-02') AS transitions,
+                (SELECT count(*)::integer FROM etf.order_command_replays WHERE order_id = $1::uuid AND transition_command_id = $2::uuid) AS order_replays,
+                (SELECT count(*)::integer FROM etf.order_audit WHERE order_id = $1::uuid AND transition_command_id = $2::uuid) AS order_audits,
+                (SELECT count(*)::integer FROM etf.application_replays) AS application_replays,
+                (SELECT count(*)::integer FROM etf.fills) AS fills,
+                (SELECT count(*)::integer FROM etf.ledger_transactions) AS ledger_transactions`,
+        [orderId, transitionCommandId],
+      );
+      assert.deepEqual(evidence.rows, [{
+        orders: 1,
+        transitions: 1,
+        order_replays: 1,
+        order_audits: 1,
+        application_replays: 4,
+        fills: 0,
+        ledger_transactions: 0,
+      }]);
+    } finally {
+      try {
+        await cleanBootstrap(client);
+      } finally {
+        await client.query(fixtureUnlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
+  "CT-ORD-012 stale order versions roll back every mutation surface",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    const group = "55100000";
+    const orderId = deterministicUuid(group, 1);
+    const envelope = (operation, commandId, requestedAt, payload) => JSON.stringify({
+      operation,
+      requestId: deterministicUuid(group, Number(commandId.slice(-3)) + 100),
+      correlationId: deterministicUuid(group, 2),
+      actorId: "local-user",
+      prototypeCandidate: "v1.0.0-prototype.1",
+      contractVersion: "1.0.0-candidate.2",
+      requestedAt,
+      commandId,
+      payload,
+    });
+
+    await client.connect();
+    await client.query(fixtureLockSql);
+    try {
+      await cleanBootstrap(client);
+      await applyCompleteMigrationSet(client);
+      await client.query("SET SESSION AUTHORIZATION app_runtime");
+      let stale;
+      try {
+        const dependencies = {
+          replayStore: createPostgresApplicationReplayStore(client),
+          completedAt: () => "2026-09-17T18:02:00.000Z",
+          checkReadiness: () => undefined,
+          ownerDispatch: (definition, payload, context) =>
+            dispatchPostgresPaperOrder(client, definition, payload, context),
+        };
+        const draft = await executeApplicationRequestAsync(
+          envelope("PaperOrderDraftCreate", deterministicUuid(group, 10), "2026-09-17T18:00:00.000Z", {
+            orderId,
+            instrumentId: "STALE-ETF",
+            researchEvidenceId: deterministicUuid(group, 3),
+            side: "Buy",
+            quantity: "2.0000000000",
+            unitPrice: "10.0000000000",
+            tradeDate: "2026-09-17",
+          }),
+          dependencies,
+        );
+        assert.equal(draft.outcome, "Succeeded", JSON.stringify(draft));
+        stale = await executeApplicationRequestAsync(
+          envelope("PaperOrderTransition", deterministicUuid(group, 11), "2026-09-17T18:01:00.000Z", {
+            orderId,
+            transitionCommandId: deterministicUuid(group, 12),
+            expectedVersion: "0",
+            transition: "OT-02",
+            transitionPayload: {
+              confirmation: {
+                actorId: "local-user",
+                confirmedAt: "2026-09-17T18:01:00.000Z",
+                confirmationText: "Submit hypothetical paper order",
+              },
+            },
+          }),
+          dependencies,
+        );
+      } finally {
+        await client.query("RESET SESSION AUTHORIZATION");
+      }
+
+      assert.equal(stale.outcome, "Failed", JSON.stringify(stale));
+      assert.equal(stale.error.code, "ORDER_VERSION_CONFLICT");
+      assert.equal(JSON.stringify(stale).includes("confirmationText"), false);
+
+      const evidence = await client.query(
+        `SELECT order_record.state,
+                order_record.aggregate_version::integer AS aggregate_version,
+                order_record.filled_quantity::text AS filled_quantity,
+                order_record.open_quantity::text AS open_quantity,
+                (SELECT count(*)::integer FROM etf.order_transitions) AS transitions,
+                (SELECT count(*)::integer FROM etf.order_command_replays) AS order_replays,
+                (SELECT count(*)::integer FROM etf.order_audit) AS order_audits,
+                (SELECT count(*)::integer FROM etf.application_replays) AS application_replays,
+                (SELECT count(*)::integer FROM etf.fills) AS fills,
+                (SELECT count(*)::integer FROM etf.portfolios) AS portfolios,
+                (SELECT count(*)::integer FROM etf.ledger_transactions) AS ledger_transactions,
+                (SELECT count(*)::integer FROM etf.ledger_effects) AS ledger_effects,
+                (SELECT count(*)::integer FROM etf.ledger_lots) AS ledger_lots,
+                (SELECT count(*)::integer FROM etf.ledger_allocations) AS ledger_allocations
+           FROM etf.paper_orders AS order_record
+          WHERE order_record.order_id = $1::uuid`,
+        [orderId],
+      );
+      assert.deepEqual(evidence.rows, [{
+        state: "Draft",
+        aggregate_version: 1,
+        filled_quantity: "0.0000000000",
+        open_quantity: "2.0000000000",
+        transitions: 1,
+        order_replays: 1,
+        order_audits: 1,
+        application_replays: 2,
+        fills: 0,
+        portfolios: 0,
+        ledger_transactions: 0,
+        ledger_effects: 0,
+        ledger_lots: 0,
+        ledger_allocations: 0,
+      }]);
+    } finally {
+      try {
+        await cleanBootstrap(client);
+      } finally {
+        await client.query(fixtureUnlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
   "0003 executes a canonical paper fill through the complete nested owner path",
   { skip: !connectionString },
   async () => {
@@ -963,6 +1921,315 @@ test(
         ledger_outcome: "Committed",
         transaction_id: fillTransactionId,
       }]);
+    } finally {
+      try {
+        await cleanBootstrap(client);
+      } finally {
+        await client.query(fixtureUnlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
+  "CT-LED-001 rebuilds buy partial sell and valuation exactly",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    const group = "50100000";
+    const portfolioId = deterministicUuid(group, 1);
+    const instrumentId = "REBUILD-ETF";
+    const buy = fillFixture({
+      group,
+      index: 1,
+      side: "Buy",
+      quantity: "10.0000000000",
+      unitPrice: "100.0000000000",
+      effectiveAt: "2026-09-17T19:01:00.000Z",
+    });
+    const sell = fillFixture({
+      group,
+      index: 2,
+      side: "Sell",
+      quantity: "4.0000000000",
+      unitPrice: "120.0000000000",
+      effectiveAt: "2026-09-17T19:02:00.000Z",
+    });
+
+    await client.connect();
+    await client.query(fixtureLockSql);
+    try {
+      await cleanBootstrap(client);
+      await applyCompleteMigrationSet(client);
+      await seedFillOrder(client, { ...buy, instrumentId });
+      await seedFillOrder(client, { ...sell, instrumentId });
+      await client.query("GRANT EXECUTE ON FUNCTION etf.ledger_append(jsonb) TO app_runtime");
+      await appendLedger(client, cashDeposit({
+        portfolioId,
+        transactionId: deterministicUuid(group, 1),
+        correlationId: deterministicUuid(group, 2),
+        version: 0,
+        effectiveAt: "2026-09-17T19:00:00.000Z",
+        amount: "10000.00000000",
+      }));
+      await appendLedger(client, fillCommand({
+        ...buy,
+        portfolioId,
+        instrumentId,
+        version: 1,
+        fee: "1.00000000",
+      }));
+      await appendLedger(client, fillCommand({
+        ...sell,
+        portfolioId,
+        instrumentId,
+        version: 2,
+        fee: "1.00000000",
+      }));
+      await client.query("REVOKE EXECUTE ON FUNCTION etf.ledger_append(jsonb) FROM app_runtime");
+
+      const rebuilt = await client.query(
+        `WITH lot_rebuild AS (
+           SELECT lot.lot_id,
+                  sum(effect.quantity)::numeric(28,10) AS quantity,
+                (sum(effect.money) FILTER (WHERE right(effect.effect_type, 5) = 'Basis'))::numeric(28,8) AS basis
+             FROM etf.ledger_lots AS lot
+             JOIN etf.ledger_effects AS effect
+               ON effect.portfolio_id = lot.portfolio_id
+              AND effect.lot_id = lot.lot_id
+            WHERE lot.portfolio_id = $1::uuid
+            GROUP BY lot.lot_id
+         ), totals AS (
+           SELECT sum(money) FILTER (WHERE right(effect_type, 4) = 'Cash')::numeric(28,8) AS cash,
+                  sum(quantity) FILTER (WHERE right(effect_type, 8) = 'Position')::numeric(28,10) AS position_quantity,
+                  sum(money) FILTER (WHERE right(effect_type, 5) = 'Basis')::numeric(28,8) AS position_basis,
+                  sum(money) FILTER (WHERE right(effect_type, 11) = 'RealizedPnL')::numeric(28,8) AS realized_pnl
+             FROM etf.ledger_effects
+            WHERE portfolio_id = $1::uuid
+         )
+         SELECT totals.cash::text,
+                totals.position_quantity::text,
+                totals.position_basis::text,
+                totals.realized_pnl::text,
+                lot_rebuild.lot_id::text,
+                lot_rebuild.quantity::text AS lot_quantity,
+                lot_rebuild.basis::text AS lot_basis,
+                round(totals.position_quantity * 110.0000000000, 8)::text AS valuation,
+                round(totals.cash + totals.position_quantity * 110.0000000000, 8)::text AS total_equity
+           FROM totals CROSS JOIN lot_rebuild`,
+        [portfolioId],
+      );
+      assert.deepEqual(rebuilt.rows, [{
+        cash: "9478.00000000",
+        position_quantity: "6.0000000000",
+        position_basis: "600.60000000",
+        realized_pnl: "78.60000000",
+        lot_id: buy.fillId,
+        lot_quantity: "6.0000000000",
+        lot_basis: "600.60000000",
+        valuation: "660.00000000",
+        total_equity: "10138.00000000",
+      }]);
+
+      const allocation = await client.query(
+        `SELECT sell_transaction_id::text, effect_ordinal::integer, lot_id::text,
+                consumed_quantity::text, allocated_basis::text
+           FROM etf.ledger_allocations
+          WHERE portfolio_id = $1::uuid`,
+        [portfolioId],
+      );
+      assert.deepEqual(allocation.rows, [{
+        sell_transaction_id: sell.transactionId,
+        effect_ordinal: 1,
+        lot_id: buy.fillId,
+        consumed_quantity: "4.0000000000",
+        allocated_basis: "400.40000000",
+      }]);
+
+      const commitment = await client.query(
+        `SELECT commitment_hash
+           FROM etf.ledger_commitments
+          WHERE portfolio_id = $1::uuid
+          ORDER BY ledger_sequence DESC
+          LIMIT 1`,
+        [portfolioId],
+      );
+      const valuationSnapshotId = deterministicUuid(group, 900);
+      const projectionPayload = {
+        asOf: "2026-09-17T19:03:00.000Z",
+        cash: rebuilt.rows[0].cash,
+        keyIdentifier: "primary",
+        lots: [{
+          lotId: buy.fillId,
+          instrumentId,
+          quantity: rebuilt.rows[0].lot_quantity,
+          basis: rebuilt.rows[0].lot_basis,
+        }],
+        portfolioId,
+        portfolioVersion: 3,
+        positions: [{
+          instrumentId,
+          quantity: rebuilt.rows[0].position_quantity,
+          basis: rebuilt.rows[0].position_basis,
+          unitValue: "110.0000000000",
+          valuation: rebuilt.rows[0].valuation,
+          unrealizedPnL: "59.40000000",
+        }],
+        realizedPnL: rebuilt.rows[0].realized_pnl,
+        reconciliationState: "Reconciled",
+        sourceCommitmentHash: commitment.rows[0].commitment_hash,
+        totalEquity: rebuilt.rows[0].total_equity,
+        valuationSnapshotId,
+      };
+      await client.query("GRANT EXECUTE ON FUNCTION etf.projection_publish(jsonb) TO projection_runtime");
+      await client.query("SET SESSION AUTHORIZATION projection_runtime");
+      try {
+        const published = await client.query(
+          "SELECT etf.projection_publish($1::jsonb) AS result",
+          [projectionPayload],
+        );
+        assert.equal(published.rows[0].result.published, true);
+      } finally {
+        await client.query("RESET SESSION AUTHORIZATION");
+      }
+
+      const projection = await client.query(
+        `SELECT portfolio_version::integer, cash::text, lots, positions,
+                realized_pnl::text, total_equity::text, reconciliation_state,
+                source_commitment_hash
+           FROM etf.portfolio_projections
+          WHERE portfolio_id = $1::uuid AND valuation_snapshot_id = $2::uuid`,
+        [portfolioId, valuationSnapshotId],
+      );
+      assert.deepEqual(projection.rows, [{
+        portfolio_version: 3,
+        cash: "9478.00000000",
+        lots: projectionPayload.lots,
+        positions: projectionPayload.positions,
+        realized_pnl: "78.60000000",
+        total_equity: "10138.00000000",
+        reconciliation_state: "Reconciled",
+        source_commitment_hash: commitment.rows[0].commitment_hash,
+      }]);
+    } finally {
+      try {
+        await cleanBootstrap(client);
+      } finally {
+        await client.query(fixtureUnlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
+  "CT-LED-002 reverses an unconsumed buy immutably",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    const group = "50200000";
+    const portfolioId = deterministicUuid(group, 1);
+    const instrumentId = "REVERSE-BUY-ETF";
+    const buy = fillFixture({
+      group,
+      index: 1,
+      side: "Buy",
+      quantity: "2.0000000000",
+      unitPrice: "25.0000000000",
+      effectiveAt: "2026-09-17T20:01:00.000Z",
+    });
+    const reversalId = deterministicUuid(group, 700);
+
+    await client.connect();
+    await client.query(fixtureLockSql);
+    try {
+      await cleanBootstrap(client);
+      await applyPrerequisites(client);
+      await prepareLedgerBoundary(client);
+      await seedFillOrder(client, { ...buy, instrumentId });
+      await appendLedger(client, cashDeposit({
+        portfolioId,
+        transactionId: deterministicUuid(group, 1),
+        correlationId: deterministicUuid(group, 2),
+        version: 0,
+        effectiveAt: "2026-09-17T20:00:00.000Z",
+      }));
+      await appendLedger(client, fillCommand({
+        ...buy,
+        portfolioId,
+        instrumentId,
+        version: 1,
+        fee: "1.00000000",
+      }));
+
+      const beforeReversal = await client.query(
+        `SELECT sum(money) FILTER (WHERE right(effect_type, 4) = 'Cash')::numeric(28,8)::text AS cash,
+                sum(quantity) FILTER (WHERE right(effect_type, 8) = 'Position')::numeric(28,10)::text AS quantity,
+                sum(money) FILTER (WHERE right(effect_type, 5) = 'Basis')::numeric(28,8)::text AS basis
+           FROM etf.ledger_effects
+          WHERE portfolio_id = $1::uuid`,
+        [portfolioId],
+      );
+      assert.deepEqual(beforeReversal.rows, [{
+        cash: "49.00000000",
+        quantity: "2.0000000000",
+        basis: "51.00000000",
+      }]);
+
+      await appendLedger(client, reversal({
+        portfolioId,
+        transactionId: reversalId,
+        correlationId: deterministicUuid(group, 800),
+        version: 2,
+        effectiveAt: "2026-09-17T20:02:00.000Z",
+        reversesTransactionId: buy.transactionId,
+      }));
+
+      const rebuilt = await client.query(
+        `SELECT sum(money) FILTER (WHERE right(effect_type, 4) = 'Cash')::numeric(28,8)::text AS cash,
+                sum(quantity) FILTER (WHERE right(effect_type, 8) = 'Position')::numeric(28,10)::text AS quantity,
+                sum(money) FILTER (WHERE right(effect_type, 5) = 'Basis')::numeric(28,8)::text AS basis,
+                COALESCE(sum(money) FILTER (WHERE right(effect_type, 11) = 'RealizedPnL'), 0)::numeric(28,8)::text AS realized_pnl
+           FROM etf.ledger_effects
+          WHERE portfolio_id = $1::uuid`,
+        [portfolioId],
+      );
+      assert.deepEqual(rebuilt.rows, [{
+        cash: "100.00000000",
+        quantity: "0.0000000000",
+        basis: "0.00000000",
+        realized_pnl: "0.00000000",
+      }]);
+
+      const lineage = await client.query(
+        `SELECT transaction_record.transaction_id::text,
+                transaction_record.type,
+                transaction_record.reverses_transaction_id::text,
+                link.target_transaction_id::text
+           FROM etf.ledger_transactions AS transaction_record
+           LEFT JOIN etf.ledger_reversal_links AS link
+             ON link.portfolio_id = transaction_record.portfolio_id
+            AND link.reversal_transaction_id = transaction_record.transaction_id
+          WHERE transaction_record.portfolio_id = $1::uuid
+            AND transaction_record.transaction_id = ANY($2::uuid[])
+          ORDER BY transaction_record.ledger_sequence`,
+        [portfolioId, [buy.transactionId, reversalId]],
+      );
+      assert.deepEqual(lineage.rows, [
+        {
+          transaction_id: buy.transactionId,
+          type: "BuyFill",
+          reverses_transaction_id: null,
+          target_transaction_id: null,
+        },
+        {
+          transaction_id: reversalId,
+          type: "Reversal",
+          reverses_transaction_id: buy.transactionId,
+          target_transaction_id: buy.transactionId,
+        },
+      ]);
     } finally {
       try {
         await cleanBootstrap(client);

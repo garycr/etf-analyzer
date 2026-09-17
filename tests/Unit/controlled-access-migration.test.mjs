@@ -13,7 +13,9 @@ test("0006 controlled access has the exact identity and closed object set", () =
   assert.equal(controlledAccessMigration.migrationId, "0006-controlled-access");
   assert.deepEqual(controlledAccessFunctionNames, [
     "reject_immutable_change",
+    "application_replay_get",
     "job_get",
+    "paper_order_command_get",
     "paper_order_get",
     "portfolio_get",
   ]);
@@ -83,17 +85,23 @@ test("0006 closes the read and authority surface without new storage", () => {
   assert.doesNotMatch(sql, /CREATE TABLE|CREATE EXTENSION|EXECUTE\s+format|EXECUTE\s+query/iu);
   assert.equal((sql.match(/CREATE VIEW etf\./gu) ?? []).length, 5);
   assert.equal((sql.match(/WITH \(security_barrier = true\)/gu) ?? []).length, 5);
+  assert.match(sql, /CREATE FUNCTION etf\.application_replay_get\(\s+requested_operation text,\s+requested_command_id uuid,\s+requested_canonical_content text\s+\) RETURNS jsonb/u);
+  assert.match(sql, /pg_advisory_xact_lock\(pg_catalog\.hashtextextended\(/u);
   assert.match(sql, /CREATE FUNCTION etf\.job_get\(requested_job_id uuid\) RETURNS jsonb/u);
   assert.match(sql, /CREATE FUNCTION etf\.paper_order_get\(requested_order_id uuid\) RETURNS jsonb/u);
+  assert.match(sql, /CREATE FUNCTION etf\.paper_order_command_get\(requested_order_id uuid, requested_transition_command_id uuid\) RETURNS jsonb/u);
   assert.match(sql, /CREATE FUNCTION etf\.portfolio_get\(requested_portfolio_id uuid, requested_as_of timestamp with time zone\) RETURNS jsonb/u);
   assert.match(sql, /GRANT SELECT \(portfolio_id, portfolio_version, baseline_version, precision_policy_version\) ON etf\.portfolios TO projection_owner/u);
   assert.match(sql, /JOIN etf\.ledger_commitments AS commitment/u);
   assert.match(sql, /JOIN etf\.ledger_anchors AS anchor_record/u);
-  assert.equal((sql.match(/LANGUAGE plpgsql STABLE PARALLEL SAFE SECURITY DEFINER/gu) ?? []).length, 3);
+  assert.equal((sql.match(/LANGUAGE plpgsql STABLE PARALLEL SAFE SECURITY DEFINER/gu) ?? []).length, 4);
   assert.match(sql, /GRANT SELECT ON etf\.current_watchlist, etf\.current_jobs, etf\.current_paper_orders, etf\.current_portfolios, etf\.current_analytics_publications TO app_runtime/u);
-  assert.match(sql, /GRANT EXECUTE ON FUNCTION etf\.job_get\(uuid\), etf\.paper_order_get\(uuid\) TO app_runtime/u);
+  assert.match(sql, /GRANT EXECUTE ON FUNCTION etf\.paper_order_transition\(jsonb\) TO app_runtime/u);
+  assert.match(sql, /GRANT EXECUTE ON FUNCTION etf\.application_replay_get\(text, uuid, text\), etf\.application_replay_get_or_put\(text, uuid, text, text\) TO app_runtime/u);
+  assert.match(sql, /GRANT EXECUTE ON FUNCTION etf\.job_get\(uuid\), etf\.paper_order_get\(uuid\), etf\.paper_order_command_get\(uuid, uuid\) TO app_runtime/u);
   assert.match(sql, /GRANT EXECUTE ON FUNCTION etf\.portfolio_get\(uuid, timestamp with time zone\) TO app_runtime/u);
   assert.match(sql, /REVOKE ALL ON FUNCTION etf\.job_get\(uuid\) FROM PUBLIC/u);
+  assert.match(sql, /REVOKE ALL ON FUNCTION etf\.application_replay_get\(text, uuid, text\) FROM PUBLIC/u);
   assert.match(sql, /REVOKE ALL ON FUNCTION etf\.paper_order_get\(uuid\) FROM PUBLIC/u);
   assert.match(sql, /REVOKE ALL ON FUNCTION etf\.portfolio_get\(uuid, timestamp with time zone\) FROM PUBLIC/u);
 });

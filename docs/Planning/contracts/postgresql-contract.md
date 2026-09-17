@@ -50,7 +50,7 @@ The final WP-1 PostgreSQL 16.15 identities are:
 | 3 | `d514c7f3b75c6ed83dfdbd9b54b406b14814b2bf8f40bd1e04a9d70a303346a3` | `e0b21def5e9e2822142821f0fec70bd0d06593ee4f62496b1b2b29eabce6b3ac` |
 | 4 | `9bf81885aab5fafe8bcac9b372d7bbd0bec601fc29e0cdbc234a65fc3d5489f1` | `dc95190e31e4d101a517398b669fcad70f90440d459c57f84cc362484200787a` |
 | 5 | `638fdcb40695be04a30c56807e529f753fd37c80ccfdcd6ad58f04e603287cc4` | `ff305a153b44ddd75557df53ae6ec34d476fdedf7760d9b5bc3a19835355d10b` |
-| 6 | `aa5d6d22b3da20eed8792a3db15f6c0b15b6cbfa30ade07678a543f1f6e16879` | `4341ce8bae3808fe78b670bedd074eb960f4844a48f2cedd68379d3d770a5210` |
+| 6 | `1bafffc644bfe57fc487e0aa9363626cd0273653c8c4278049b2a6421c6b87ed` | `0b1b4b56ad2be3b2e3abbb4d1cee4564cb26c9aa2134f0434ea0c497c1090e47` |
 
 **2026-09-15 PT-FIX-001F amendment.** The re-baseline corrected sequence 4 to preserve the full 20-integer-digit capacity of DEC-014 `NUMERIC(28,8)` Money values while continuing to reject excess precision and scale before PostgreSQL casts. Sequence 5 and 6 SQL bytes are unchanged; their cumulative manifest hashes changed because the canonical root includes the corrected sequence-4 definition and content hash. No released or production database is in scope.
 

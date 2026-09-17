@@ -3,6 +3,10 @@ import test from "node:test";
 
 import pg from "pg";
 
+import {
+  executeApplicationRequestAsync,
+} from "../../dist/Application/application-boundary.js";
+import { createPostgresApplicationReplayStore } from "../../dist/Infrastructure/PostgreSQL/application-replay-store.js";
 import { applyMigration } from "../../dist/Infrastructure/PostgreSQL/migration-runner.js";
 import { applicationMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/application.js";
 import { analyticsEvidenceMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/analytics-evidence.js";
@@ -14,6 +18,7 @@ import {
 import { domainLedgerMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/domain-ledger.js";
 import { fixtureMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/fixtures.js";
 import { foundationMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/foundation.js";
+import { dispatchPostgresPaperOrder } from "../../dist/Infrastructure/PostgreSQL/paper-order-owner.js";
 import {
   collectPostgresManifestGrants,
   projectPostgresSchemaManifest,
@@ -28,8 +33,8 @@ const lockSql =
   "SELECT pg_catalog.pg_advisory_lock(pg_catalog.hashtextextended('etf:test:role-bootstrap', 0))";
 const unlockSql =
   "SELECT pg_catalog.pg_advisory_unlock(pg_catalog.hashtextextended('etf:test:role-bootstrap', 0))";
-const controlledAccessContentHash = "aa5d6d22b3da20eed8792a3db15f6c0b15b6cbfa30ade07678a543f1f6e16879";
-const controlledAccessManifestHash = "4341ce8bae3808fe78b670bedd074eb960f4844a48f2cedd68379d3d770a5210";
+const controlledAccessContentHash = "1bafffc644bfe57fc487e0aa9363626cd0273653c8c4278049b2a6421c6b87ed";
+const controlledAccessManifestHash = "0b1b4b56ad2be3b2e3abbb4d1cee4564cb26c9aa2134f0434ea0c497c1090e47";
 
 async function cleanBootstrap(client) {
   await client.query("ROLLBACK").catch(() => undefined);
@@ -278,7 +283,7 @@ test(
           WHERE namespace.nspname = 'etf'
             AND function_record.proname = ANY($1::text[])
           ORDER BY function_record.proname`,
-        [["reject_immutable_change", "job_get", "paper_order_get", "portfolio_get"]],
+        [["application_replay_get", "reject_immutable_change", "job_get", "paper_order_command_get", "paper_order_get", "portfolio_get"]],
       );
       assert.deepEqual(
         functions.rows.map(({ name, owner, security_definer, volatility, parallel, configuration, public_execute }) => ({
@@ -291,7 +296,9 @@ test(
           public_execute,
         })),
         [
+          { name: "application_replay_get", owner: "application_writer_owner", security_definer: true, volatility: "v", parallel: "u", configuration: ["search_path=pg_catalog, etf"], public_execute: false },
           { name: "job_get", owner: "application_writer_owner", security_definer: true, volatility: "s", parallel: "s", configuration: ["search_path=pg_catalog, etf"], public_execute: false },
+          { name: "paper_order_command_get", owner: "application_writer_owner", security_definer: true, volatility: "s", parallel: "s", configuration: ["search_path=pg_catalog, etf"], public_execute: false },
           { name: "paper_order_get", owner: "application_writer_owner", security_definer: true, volatility: "s", parallel: "s", configuration: ["search_path=pg_catalog, etf"], public_execute: false },
           { name: "portfolio_get", owner: "projection_owner", security_definer: true, volatility: "s", parallel: "s", configuration: ["search_path=pg_catalog, etf"], public_execute: false },
           { name: "reject_immutable_change", owner: "schema_owner", security_definer: true, volatility: "v", parallel: "u", configuration: ["search_path=pg_catalog, etf"], public_execute: false },
@@ -355,7 +362,7 @@ test(
       );
       assert.deepEqual(
         order.rows[0].result.order.transitionHistory.map(({ resultingVersion }) => resultingVersion),
-        [1],
+        ["1"],
       );
       const portfolio = await client.query(
         "SELECT etf.portfolio_get('30000000-0000-0000-0000-000000000001', '2026-09-14T00:05:00.000Z') AS result",
@@ -413,6 +420,188 @@ test(
       }
     } finally {
       await client.query("RESET SESSION AUTHORIZATION").catch(() => undefined);
+      await cleanBootstrap(client).catch(() => undefined);
+      await client.query(unlockSql).catch(() => undefined);
+      await client.end();
+    }
+  },
+);
+
+test(
+  "WP-6 composes PaperOrderDraftCreate through controlled PostgreSQL mutation and read",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    const orderId = "78000000-0000-4000-8000-000000000004";
+    await client.connect();
+    await client.query(lockSql);
+    try {
+      await cleanBootstrap(client);
+      await applyCompleteMigrationSet(client);
+      const request = JSON.stringify({
+        operation: "PaperOrderDraftCreate",
+        requestId: "78000000-0000-4000-8000-000000000001",
+        correlationId: "78000000-0000-4000-8000-000000000002",
+        actorId: "local-user",
+        prototypeCandidate: "v1.0.0-prototype.1",
+        contractVersion: "1.0.0-candidate.2",
+        requestedAt: "2026-09-17T12:00:00.000Z",
+        commandId: "78000000-0000-4000-8000-000000000003",
+        payload: {
+          orderId,
+          instrumentId: "GOLDEN-ETF",
+          researchEvidenceId: "78000000-0000-4000-8000-000000000005",
+          side: "Buy",
+          quantity: "2.0000000000",
+          unitPrice: "10.0000000000",
+          tradeDate: "2026-09-17",
+        },
+      });
+      await client.query("SET SESSION AUTHORIZATION app_runtime");
+      let result;
+      try {
+        result = await executeApplicationRequestAsync(request, {
+          replayStore: createPostgresApplicationReplayStore(client),
+          completedAt: () => "2026-09-17T12:00:01.000Z",
+          checkReadiness: () => undefined,
+          ownerDispatch: (definition, payload, context) =>
+            dispatchPostgresPaperOrder(client, definition, payload, context),
+        });
+      } finally {
+        await client.query("RESET SESSION AUTHORIZATION");
+      }
+
+      assert.equal(result.outcome, "Succeeded", JSON.stringify(result));
+      assert.equal(result.data.order.orderId, orderId);
+      assert.equal(result.data.order.state, "Draft");
+      assert.equal(result.data.order.aggregateVersion, "1");
+      assert.deepEqual(result.data.order.transitionHistory, [{
+        transitionCommandId: "78000000-0000-4000-8000-000000000003",
+        transition: "OT-01",
+        sourceState: "Initial",
+        targetState: "Draft",
+        trigger: "UserCreatedFromResearch",
+        occurredAt: "2026-09-17T12:00:00.000Z",
+        actorId: "local-user",
+        correlationId: "78000000-0000-4000-8000-000000000002",
+        priorVersion: "0",
+        resultingVersion: "1",
+        baselineVersion: "v1.0.0",
+      }]);
+
+      await client.query("SET SESSION AUTHORIZATION app_runtime");
+      try {
+        await client.query(
+          "SELECT etf.paper_order_transition($1::jsonb)",
+          [{
+            canonicalContent: '{"correlationId":"78000000-0000-4000-8000-000000000006","expectedVersion":1,"occurredAt":"2026-09-17T12:01:00.000Z","operation":"Transition","orderId":"78000000-0000-4000-8000-000000000004","transition":"OT-02","transitionCommandId":"78000000-0000-4000-8000-000000000007","transitionPayload":{"confirmation":{"actorId":"local-user","confirmationText":"Submit paper order","confirmedAt":"2026-09-17T12:01:00.000Z"}}}',
+            correlationId: "78000000-0000-4000-8000-000000000006",
+            expectedVersion: 1,
+            occurredAt: "2026-09-17T12:01:00.000Z",
+            operation: "Transition",
+            orderId,
+            transition: "OT-02",
+            transitionCommandId: "78000000-0000-4000-8000-000000000007",
+            transitionPayload: {
+              confirmation: {
+                actorId: "local-user",
+                confirmationText: "Submit paper order",
+                confirmedAt: "2026-09-17T12:01:00.000Z",
+              },
+            },
+          }],
+        );
+        const replay = await client.query(
+          "SELECT etf.paper_order_command_get($1::uuid, $2::uuid) AS result",
+          [orderId, "78000000-0000-4000-8000-000000000003"],
+        );
+        assert.equal(replay.rows[0].result.order.state, "Draft");
+        assert.equal(replay.rows[0].result.order.aggregateVersion, "1");
+        assert.equal(replay.rows[0].result.order.transitionHistory.length, 1);
+
+        const restartedRequest = JSON.stringify({
+          ...JSON.parse(request),
+          requestId: "78000000-0000-4000-8000-000000000008",
+          correlationId: "78000000-0000-4000-8000-000000000009",
+          requestedAt: "2026-09-17T12:02:00.000Z",
+        });
+        let replayOwnerCalls = 0;
+        const applicationReplay = await executeApplicationRequestAsync(restartedRequest, {
+          replayStore: createPostgresApplicationReplayStore(client),
+          completedAt: () => {
+            assert.fail("durable replay must retain the original completion time");
+          },
+          checkReadiness: () => assert.fail("durable replay must bypass readiness"),
+          ownerDispatch: async () => {
+            replayOwnerCalls += 1;
+            return {};
+          },
+        });
+        assert.deepEqual(applicationReplay, result);
+        assert.equal(replayOwnerCalls, 0);
+      } finally {
+        await client.query("RESET SESSION AUTHORIZATION");
+      }
+
+      const competingClient = new pg.Client({ connectionString });
+      await competingClient.connect();
+      try {
+        await client.query("SET SESSION AUTHORIZATION app_runtime");
+        await competingClient.query("SET SESSION AUTHORIZATION app_runtime");
+        let releaseOwner;
+        let signalOwnerStarted;
+        const ownerStarted = new Promise((resolve) => { signalOwnerStarted = resolve; });
+        const ownerRelease = new Promise((resolve) => { releaseOwner = resolve; });
+        const competingCommandId = "78100000-0000-4000-8000-000000000003";
+        const firstOrderId = "78100000-0000-4000-8000-000000000004";
+        const secondOrderId = "78100000-0000-4000-8000-000000000005";
+        const competingRequest = (order, quantity) => JSON.stringify({
+          ...JSON.parse(request),
+          requestId: order,
+          commandId: competingCommandId,
+          payload: { ...JSON.parse(request).payload, orderId: order, quantity },
+        });
+        const firstExecution = executeApplicationRequestAsync(
+          competingRequest(firstOrderId, "2.0000000000"),
+          {
+            replayStore: createPostgresApplicationReplayStore(client),
+            completedAt: () => "2026-09-17T12:03:00.000Z",
+            checkReadiness: () => undefined,
+            ownerDispatch: async (definition, payload, context) => {
+              signalOwnerStarted();
+              await ownerRelease;
+              return dispatchPostgresPaperOrder(client, definition, payload, context);
+            },
+          },
+        );
+        await ownerStarted;
+        const competingExecution = executeApplicationRequestAsync(
+          competingRequest(secondOrderId, "3.0000000000"),
+          {
+            replayStore: createPostgresApplicationReplayStore(competingClient),
+            completedAt: () => "2026-09-17T12:03:01.000Z",
+            checkReadiness: () => undefined,
+            ownerDispatch: (definition, payload, context) =>
+              dispatchPostgresPaperOrder(competingClient, definition, payload, context),
+          },
+        );
+        releaseOwner();
+        assert.equal((await firstExecution).outcome, "Succeeded");
+        const competingResult = await competingExecution;
+        assert.equal(competingResult.error.code, "APPLICATION_IDEMPOTENCY_CONFLICT");
+        await client.query("RESET SESSION AUTHORIZATION");
+        await competingClient.query("RESET SESSION AUTHORIZATION");
+        const committed = await client.query(
+          "SELECT order_id::text FROM etf.paper_orders WHERE order_id = ANY($1::uuid[]) ORDER BY order_id",
+          [[firstOrderId, secondOrderId]],
+        );
+        assert.deepEqual(committed.rows, [{ order_id: firstOrderId }]);
+      } finally {
+        await client.query("RESET SESSION AUTHORIZATION").catch(() => undefined);
+        await competingClient.query("RESET SESSION AUTHORIZATION").catch(() => undefined);
+        await competingClient.end();
+      }
+    } finally {
       await cleanBootstrap(client).catch(() => undefined);
       await client.query(unlockSql).catch(() => undefined);
       await client.end();

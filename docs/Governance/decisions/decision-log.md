@@ -38,10 +38,33 @@
 | DEC-040 | 2026-09-17 | Architecture | Assign WP-5 pure analytics to Domain and retain atomic evidence publication in PostgreSQL | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-041 | 2026-09-17 | Package closure | Close WP-5 and make WP-6 eligible as the next sequential package without starting it | Workspace Owner | Solo Orchestrator | Approved |
 | DEC-042 | 2026-09-17 | Architecture | Assign WP-6 closed order semantics to Domain, trusted dispatch to Application, and atomic ledger ownership to PostgreSQL | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
+| DEC-043 | 2026-09-17 | Replay integrity | Bind WP-6 application replay and PostgreSQL order effects in one transaction | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 
 ---
 
 ## Decision Records
+
+### DEC-043: Bind Application Replay to Order Effects
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-043 |
+| **Date** | 2026-09-17 |
+| **Category** | Replay integrity |
+| **Decision** | Use a PostgreSQL Application replay store on one exclusive client: acquire a transaction advisory lock and validate canonical content before owner dispatch, execute order effects under a savepoint, and persist the complete Application result envelope before committing the same transaction |
+| **Policy** | DEC-034; DEC-042; application contract candidate.2; PostgreSQL contract candidate.2; test-first development; least privilege; independent code and security review |
+| **Authority** | Agent under Fully Agentic mode with Workspace Owner approval to continue WP-6; REV-107 and REV-108 PASS |
+| **Accountable** | Solo Orchestrator preserves transaction affinity in composition, keeps the synchronous API unchanged, and retains PostgreSQL as the sole durable replay and mutation authority |
+| **Context** | An in-memory replay store correctly settles local Promises but cannot prevent two processes from accepting different canonical content for one Application command identity. Persisting only after mutation also leaves a crash window. |
+| **Alternatives** | Process-local replay only; persist after owner commit; add a second replay table; bind the existing application replay table and order owner in one PostgreSQL transaction |
+| **Consequences** | Equivalent concurrent local calls join one Promise; cross-process conflicting content is rejected before competing effects; failed effects roll back to a savepoint before their stable envelope is stored; durable replay returns the original complete envelope without readiness or owner dispatch |
+| **Reasoning** | One transaction closes the TOCTOU and interruption windows while reusing existing storage and controlled functions. An exclusive client is required so replay and owner SQL share transaction state. |
+| **Assumptions** | PostgreSQL 16; one exclusive connected client per in-flight command; app_runtime invokes only controlled functions; no pool object is passed as the transaction client |
+| **Invalidation** | Replay and owner dispatch use different sessions; a caller bypasses the lookup-first protocol; remote workers require bounded lock waits or cancellation semantics |
+| **Status** | Reviewed; REV-107 Code PASS; REV-108 Security PASS; WP-6 active |
+| **Linked Artifacts** | `src/Infrastructure/PostgreSQL/application-replay-store.ts`, `tests/Integration/controlled-access-migration.test.mjs`, REV-107, REV-108, GitHub issue #79 |
+
+---
 
 ### DEC-042: Assign WP-6 Order and Ledger Ownership
 

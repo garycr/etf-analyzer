@@ -6,6 +6,19 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-17 | WP-6 transactional composition checkpoint validated | Ring-2 | @solo-orchestrator
+
+**Type:** IMPLEMENTATION-CHECKPOINT
+**Decision:** DEC-043 binds complete Application replay envelopes and paper-order owner effects in one PostgreSQL transaction using lookup-first advisory locking, savepoint rollback, and an exclusive client
+**Policy:** DEC-034; DEC-042; DEC-043; application and PostgreSQL contracts; test-first development; independent code and security review
+**Authority:** Agent under Fully Agentic mode with Workspace Owner approval to continue WP-6; REV-107 Code PASS and REV-108 Security PASS
+**Accountability:** Solo Orchestrator retains the exclusive-client composition constraint, continues remaining WP-6 CT-ORD/CT-LED work, and keeps WP-6 and issue #79 open
+**Result:** PostgreSQL 16.15 C/UTF8/UTC complete suite 391/391 passed with zero skips or failures; dependency audit reports zero vulnerabilities; diagnostics, live catalog controls, and diff checks are clean
+**Artifact:** src/Application/application-boundary.ts | src/Infrastructure/PostgreSQL/application-replay-store.ts | src/Infrastructure/PostgreSQL/paper-order-owner.ts | migration 0006 | REV-107 | REV-108 | GitHub issue #79
+**authorization-boundary:** Checkpoint only; no WP-6 closure, WP-7, brokerage, live provider, public ingress, durable event, queue, scheduler, worker, baseline, release, deployment, or production action
+
+---
+
 ## 2026-09-17 | WP-6 first lifecycle slice validated | Ring-2 | @solo-orchestrator
 
 **Type:** IMPLEMENTATION-CHECKPOINT

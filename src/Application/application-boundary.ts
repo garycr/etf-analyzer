@@ -100,6 +100,11 @@ export interface ApplicationReplayStore {
     canonicalContent: string,
     executeNew: () => Result,
   ): Result;
+  executeAsync<Result>(
+    key: ApplicationReplayKey,
+    canonicalContent: string,
+    executeNew: () => Promise<Result>,
+  ): Promise<Result>;
 }
 
 export interface ApplicationRequestDependencies {
@@ -120,6 +125,20 @@ export interface ApplicationOwnerCommandContext {
   readonly commandId: string;
   readonly correlationId: string;
   readonly requestedAt: string;
+}
+
+export interface AsyncApplicationRequestDependencies {
+  readonly replayStore: ApplicationReplayStore;
+  readonly completedAt: () => string;
+  readonly checkReadiness: (
+    definition: ApplicationOperationDefinition,
+    payload: Readonly<Record<string, unknown>>,
+  ) => void | Promise<void>;
+  readonly ownerDispatch: (
+    definition: ApplicationOperationDefinition,
+    payload: Readonly<Record<string, unknown>>,
+    context?: Readonly<ApplicationOwnerCommandContext>,
+  ) => unknown | Promise<unknown>;
 }
 
 export interface ApplicationResultPresentation {
@@ -292,6 +311,10 @@ export const ownerFailureCodes = Object.freeze([
   "FIXTURE_IDEMPOTENCY_CONFLICT",
   "ANALYTICS_ACCESS_DENIAL_AUDIT_FAILED",
   "LEDGER_INTEGRITY_FAILED",
+  "ORDER_GUARD_FAILED",
+  "ORDER_TERMINAL_STATE",
+  "ORDER_NOT_FOUND",
+  "LEDGER_VERSION_CONFLICT",
 ] as const);
 
 export type OwnerFailureCode = (typeof ownerFailureCodes)[number];
@@ -1047,6 +1070,9 @@ const applicationCodesByPhase: Readonly<
   ]),
   Owner: new Set([
     "ORDER_INVALID_TRANSITION",
+    "ORDER_GUARD_FAILED",
+    "ORDER_TERMINAL_STATE",
+    "ORDER_NOT_FOUND",
     "ORDER_VERSION_CONFLICT",
     "ORDER_IDEMPOTENCY_CONFLICT",
     "FIXTURE_REQUIRED_QUARANTINED",
@@ -1068,6 +1094,7 @@ const applicationCodesByPhase: Readonly<
     "ANALYTICS_DETERMINISM_FAILED",
     "ANALYTICS_IDEMPOTENCY_CONFLICT",
     "ANALYTICS_PUBLICATION_VERSION_CONFLICT",
+    "LEDGER_VERSION_CONFLICT",
     "LEDGER_INTEGRITY_FAILED",
   ]),
   Persistence: new Set(["APPLICATION_PERSISTENCE_FAILED"]),
@@ -1277,6 +1304,8 @@ function normalizeApplicationReplayPayload(
 }
 
 class ApplicationReplayInProgressError extends Error {
+  readonly code = "APPLICATION_IDEMPOTENCY_CONFLICT";
+
   constructor() {
     super("Application replay execution is already in progress");
     this.name = "ApplicationReplayInProgressError";
@@ -1285,7 +1314,7 @@ class ApplicationReplayInProgressError extends Error {
 
 class InMemoryApplicationReplayStore implements ApplicationReplayStore {
   readonly #entries = new Map<string, Readonly<
-    | { canonicalContent: string; outcome: "Executing" }
+    | { canonicalContent: string; outcome: "Executing"; pending?: Promise<unknown> }
     | { canonicalContent: string; outcome: "Returned"; result: unknown }
     | { canonicalContent: string; outcome: "Threw"; error: unknown }
   >>();
@@ -1327,6 +1356,58 @@ class InMemoryApplicationReplayStore implements ApplicationReplayStore {
         outcome: "Threw",
         error,
       }));
+      throw error;
+    }
+  }
+
+  async executeAsync<Result>(
+    key: ApplicationReplayKey,
+    canonicalContent: string,
+    executeNew: () => Promise<Result>,
+  ): Promise<Result> {
+    const serializedKey = canonicalizeJson([key.operation, key.commandId]);
+    const existing = this.#entries.get(serializedKey);
+    if (existing !== undefined) {
+      if (existing.canonicalContent !== canonicalContent) {
+        throw new ApplicationIdempotencyConflictError();
+      }
+      if (existing.outcome === "Executing") {
+        if (existing.pending === undefined) throw new ApplicationReplayInProgressError();
+        return await existing.pending as Result;
+      }
+      if (existing.outcome === "Threw") {
+        throw existing.error;
+      }
+      return existing.result as Result;
+    }
+    let resolvePending!: (result: Result) => void;
+    let rejectPending!: (error: unknown) => void;
+    const pending = new Promise<Result>((resolve, reject) => {
+      resolvePending = resolve;
+      rejectPending = reject;
+    });
+    void pending.catch(() => undefined);
+    this.#entries.set(serializedKey, Object.freeze({
+      canonicalContent,
+      outcome: "Executing",
+      pending,
+    }));
+    try {
+      const result = await executeNew();
+      this.#entries.set(serializedKey, Object.freeze({
+        canonicalContent,
+        outcome: "Returned",
+        result,
+      }));
+      resolvePending(result);
+      return result;
+    } catch (error) {
+      this.#entries.set(serializedKey, Object.freeze({
+        canonicalContent,
+        outcome: "Threw",
+        error,
+      }));
+      rejectPending(error);
       throw error;
     }
   }
@@ -2119,6 +2200,9 @@ export function displayVerifiedResearch<Result>(
 const ownerFailureMessages: Readonly<Record<OwnerFailureCode, string>> =
   Object.freeze({
     ORDER_INVALID_TRANSITION: "The paper order transition is not allowed.",
+    ORDER_GUARD_FAILED: "The paper order transition guard failed.",
+    ORDER_TERMINAL_STATE: "The paper order is already in a terminal state.",
+    ORDER_NOT_FOUND: "The paper order was not found.",
     ORDER_VERSION_CONFLICT:
       "The paper order changed. Reload the current order before retrying.",
     FIXTURE_REQUIRED_QUARANTINED: "Required fixture data is quarantined.",
@@ -2154,6 +2238,8 @@ const ownerFailureMessages: Readonly<Record<OwnerFailureCode, string>> =
       "The fixture identity was reused with different content.",
     ANALYTICS_ACCESS_DENIAL_AUDIT_FAILED:
       "The analytics access denial could not be recorded.",
+    LEDGER_VERSION_CONFLICT:
+      "The ledger changed. Reload the current portfolio before retrying.",
     LEDGER_INTEGRITY_FAILED: "Ledger integrity verification failed.",
   });
 const emptyBoundedIdentifiers = Object.freeze({});
@@ -2327,6 +2413,14 @@ function applicationFailurePhase(error: unknown): ApplicationValidationPhase {
   return "Admission";
 }
 
+function ownerFailurePhase(error: unknown): "Authorization" | "Owner" {
+  if (error !== null && typeof error === "object") {
+    const code = Object.getOwnPropertyDescriptor(error, "code")?.value;
+    if (code === "APPLICATION_UNAUTHORIZED") return "Authorization";
+  }
+  return "Owner";
+}
+
 function readApplicationResultIdentity(requestJson: string): Readonly<{
   operation: ApplicationOperation | null;
   requestId: string | null;
@@ -2381,7 +2475,7 @@ export function executeApplicationRequest(
     } catch (error) {
       return completeApplicationFailure(
         query.definition.operation, query.requestId, query.correlationId,
-        error, "Owner", dependencies.completedAt,
+        error, ownerFailurePhase(error), dependencies.completedAt,
       );
     }
     let data: Readonly<Record<string, unknown>>;
@@ -2447,7 +2541,135 @@ export function executeApplicationRequest(
         } catch (error) {
           return completeApplicationFailure(
             command.definition.operation, command.requestId, command.correlationId,
-            error, "Owner", dependencies.completedAt,
+            error, ownerFailurePhase(error), dependencies.completedAt,
+          );
+        }
+        let data: Readonly<Record<string, unknown>>;
+        try {
+          data = validateApplicationSuccessData(command.definition.operation, ownerResult);
+        } catch (error) {
+          return completeApplicationFailure(
+            command.definition.operation, command.requestId, command.correlationId,
+            error, "Result", dependencies.completedAt,
+          );
+        }
+        return completeApplicationSuccess(
+          command.definition, command.requestId, command.correlationId, data,
+          dependencies.completedAt,
+        );
+      },
+    );
+  } catch (error) {
+    if (error instanceof ApplicationResultInvalidError) throw error;
+    return completeApplicationFailure(
+      command.definition.operation, command.requestId, command.correlationId,
+      error, "Replay", dependencies.completedAt,
+    );
+  }
+}
+
+export async function executeApplicationRequestAsync(
+  requestJson: string,
+  dependencies: AsyncApplicationRequestDependencies,
+): Promise<Readonly<Record<string, unknown>>> {
+  const identity = readApplicationResultIdentity(requestJson);
+  if (identity.operation !== null && applicationQueryOperations.includes(
+    identity.operation as ApplicationQueryOperation,
+  )) {
+    let query: AdmittedApplicationQuery;
+    try {
+      query = admitApplicationQueryEnvelope(requestJson);
+    } catch (error) {
+      return completeApplicationFailure(
+        identity.operation,
+        identity.requestId,
+        identity.correlationId,
+        error,
+        applicationFailurePhase(error),
+        dependencies.completedAt,
+      );
+    }
+    try {
+      await dependencies.checkReadiness(query.definition, query.payload);
+    } catch (error) {
+      return completeApplicationFailure(
+        query.definition.operation, query.requestId, query.correlationId,
+        error, "Admission", dependencies.completedAt,
+      );
+    }
+    let ownerResult: unknown;
+    try {
+      ownerResult = await dependencies.ownerDispatch(query.definition, query.payload);
+    } catch (error) {
+      return completeApplicationFailure(
+        query.definition.operation, query.requestId, query.correlationId,
+        error, ownerFailurePhase(error), dependencies.completedAt,
+      );
+    }
+    let data: Readonly<Record<string, unknown>>;
+    try {
+      data = validateApplicationSuccessData(query.definition.operation, ownerResult);
+    } catch (error) {
+      return completeApplicationFailure(
+        query.definition.operation, query.requestId, query.correlationId,
+        error, "Result", dependencies.completedAt,
+      );
+    }
+    return completeApplicationSuccess(
+      query.definition, query.requestId, query.correlationId, data,
+      dependencies.completedAt,
+    );
+  }
+
+  let command: ApplicationCommandEnvelope;
+  try {
+    command = admitApplicationCommandEnvelope(requestJson);
+  } catch (error) {
+    return completeApplicationFailure(
+      identity.operation, identity.requestId, identity.correlationId,
+      error, applicationFailurePhase(error), dependencies.completedAt,
+    );
+  }
+  let payload: Readonly<Record<string, unknown>>;
+  try {
+    payload = validateApplicationPayload(command.definition.operation, command.payload);
+  } catch (error) {
+    return completeApplicationFailure(
+      command.definition.operation, command.requestId, command.correlationId,
+      error, "Request", dependencies.completedAt,
+    );
+  }
+  try {
+    return await dependencies.replayStore.executeAsync(
+      Object.freeze({
+        operation: command.definition.operation,
+        commandId: command.commandId,
+      }),
+      command.canonicalContent,
+      async () => {
+        try {
+          await dependencies.checkReadiness(command.definition, payload);
+        } catch (error) {
+          return completeApplicationFailure(
+            command.definition.operation, command.requestId, command.correlationId,
+            error, "Admission", dependencies.completedAt,
+          );
+        }
+        let ownerResult: unknown;
+        try {
+          ownerResult = await dependencies.ownerDispatch(
+            command.definition,
+            payload,
+            Object.freeze({
+              commandId: command.commandId,
+              correlationId: command.correlationId,
+              requestedAt: command.requestedAt,
+            }),
+          );
+        } catch (error) {
+          return completeApplicationFailure(
+            command.definition.operation, command.requestId, command.correlationId,
+            error, ownerFailurePhase(error), dependencies.completedAt,
           );
         }
         let data: Readonly<Record<string, unknown>>;

@@ -21,6 +21,7 @@ import {
   displayVerifiedResearch,
   evaluateReadiness,
   executeApplicationRequest,
+  executeApplicationRequestAsync,
   exportDiagnosticMetadata,
   ownerFailureCodes,
   presentCanonicalValue,
@@ -464,6 +465,10 @@ test("PT-APP-001H preserves owning codes with fixed redacted causes", () => {
     ["FIXTURE_IDEMPOTENCY_CONFLICT", "The fixture identity was reused with different content."],
     ["ANALYTICS_ACCESS_DENIAL_AUDIT_FAILED", "The analytics access denial could not be recorded."],
     ["LEDGER_INTEGRITY_FAILED", "Ledger integrity verification failed."],
+    ["ORDER_GUARD_FAILED", "The paper order transition guard failed."],
+    ["ORDER_TERMINAL_STATE", "The paper order is already in a terminal state."],
+    ["ORDER_NOT_FOUND", "The paper order was not found."],
+    ["LEDGER_VERSION_CONFLICT", "The ledger changed. Reload the current portfolio before retrying."],
   ];
   assert.deepEqual(ownerFailureCodes, vectors.map(([code]) => code));
 
@@ -2385,4 +2390,218 @@ test("WP-6 command owner dispatch receives immutable admitted context", () => {
   });
   assert.equal(Object.isFrozen(observedContext), true);
   assert.equal(result.outcome, "Succeeded");
+});
+
+test("WP-6 async command owner dispatch is awaited and replayed once", async () => {
+  let ownerCalls = 0;
+  const request = JSON.stringify({
+    operation: "PaperOrderDraftCreate",
+    requestId: "76000000-0000-4000-8000-000000000001",
+    correlationId: "76000000-0000-4000-8000-000000000002",
+    actorId: "local-user",
+    prototypeCandidate: "v1.0.0-prototype.1",
+    contractVersion: "1.0.0-candidate.2",
+    requestedAt: "2026-09-17T12:00:00.000Z",
+    commandId: "76000000-0000-4000-8000-000000000003",
+    payload: {
+      orderId: "76000000-0000-4000-8000-000000000004",
+      instrumentId: "GOLDEN-ETF",
+      researchEvidenceId: "76000000-0000-4000-8000-000000000005",
+      side: "Buy",
+      quantity: "2.0000000000",
+      unitPrice: "10.0000000000",
+      tradeDate: "2026-09-17",
+    },
+  });
+  const dependencies = {
+    replayStore: createInMemoryApplicationReplayStore(),
+    completedAt: () => "2026-09-17T12:00:01.000Z",
+    checkReadiness: () => undefined,
+    ownerDispatch: async () => {
+      ownerCalls += 1;
+      return {
+        order: {
+          orderId: "76000000-0000-4000-8000-000000000004",
+          instrumentId: "GOLDEN-ETF",
+          state: "Draft",
+          aggregateVersion: "1",
+          researchEvidenceId: "76000000-0000-4000-8000-000000000005",
+          side: "Buy",
+          requestedQuantity: "2.0000000000",
+          filledQuantity: "0.0000000000",
+          openQuantity: "2.0000000000",
+          unitPrice: "10.0000000000",
+          tradeDate: "2026-09-17",
+          confirmation: null,
+          transitionHistory: [],
+        },
+      };
+    },
+  };
+
+  const first = await executeApplicationRequestAsync(request, dependencies);
+  const replay = await executeApplicationRequestAsync(request, dependencies);
+
+  assert.equal(first.outcome, "Succeeded");
+  assert.equal(replay, first);
+  assert.equal(ownerCalls, 1);
+});
+
+test("WP-6 async replay stays in progress until owner settlement", async () => {
+  let ownerCalls = 0;
+  let releaseOwner;
+  const ownerPending = new Promise((resolve) => { releaseOwner = resolve; });
+  const request = JSON.stringify({
+    operation: "PaperOrderDraftCreate",
+    requestId: "76100000-0000-4000-8000-000000000001",
+    correlationId: "76100000-0000-4000-8000-000000000002",
+    actorId: "local-user",
+    prototypeCandidate: "v1.0.0-prototype.1",
+    contractVersion: "1.0.0-candidate.2",
+    requestedAt: "2026-09-17T12:00:00.000Z",
+    commandId: "76100000-0000-4000-8000-000000000003",
+    payload: {
+      orderId: "76100000-0000-4000-8000-000000000004",
+      instrumentId: "GOLDEN-ETF",
+      researchEvidenceId: "76100000-0000-4000-8000-000000000005",
+      side: "Buy",
+      quantity: "2.0000000000",
+      unitPrice: "10.0000000000",
+      tradeDate: "2026-09-17",
+    },
+  });
+  const dependencies = {
+    replayStore: createInMemoryApplicationReplayStore(),
+    completedAt: () => "2026-09-17T12:00:01.000Z",
+    checkReadiness: () => undefined,
+    ownerDispatch: async () => {
+      ownerCalls += 1;
+      return ownerPending;
+    },
+  };
+
+  const first = executeApplicationRequestAsync(request, dependencies);
+  await Promise.resolve();
+  const concurrent = executeApplicationRequestAsync(request, dependencies);
+
+  releaseOwner({
+    order: {
+      orderId: "76100000-0000-4000-8000-000000000004",
+      instrumentId: "GOLDEN-ETF",
+      state: "Draft",
+      aggregateVersion: "1",
+      researchEvidenceId: "76100000-0000-4000-8000-000000000005",
+      side: "Buy",
+      requestedQuantity: "2.0000000000",
+      filledQuantity: "0.0000000000",
+      openQuantity: "2.0000000000",
+      unitPrice: "10.0000000000",
+      tradeDate: "2026-09-17",
+      confirmation: null,
+      transitionHistory: [],
+    },
+  });
+  const firstResult = await first;
+  const concurrentResult = await concurrent;
+  assert.equal(firstResult.outcome, "Succeeded");
+  assert.equal(concurrentResult, firstResult);
+  assert.equal(ownerCalls, 1);
+});
+
+test("WP-6 async failures preserve phase and replay the settled result", async () => {
+  const request = JSON.stringify({
+    operation: "PaperOrderDraftCreate",
+    requestId: "76200000-0000-4000-8000-000000000001",
+    correlationId: "76200000-0000-4000-8000-000000000002",
+    actorId: "local-user",
+    prototypeCandidate: "v1.0.0-prototype.1",
+    contractVersion: "1.0.0-candidate.2",
+    requestedAt: "2026-09-17T12:00:00.000Z",
+    commandId: "76200000-0000-4000-8000-000000000003",
+    payload: {
+      orderId: "76200000-0000-4000-8000-000000000004",
+      instrumentId: "GOLDEN-ETF",
+      researchEvidenceId: "76200000-0000-4000-8000-000000000005",
+      side: "Buy",
+      quantity: "2.0000000000",
+      unitPrice: "10.0000000000",
+      tradeDate: "2026-09-17",
+    },
+  });
+  let readinessOwnerCalls = 0;
+  const readinessFailure = await executeApplicationRequestAsync(request, {
+    replayStore: createInMemoryApplicationReplayStore(),
+    completedAt: () => "2026-09-17T12:00:01.000Z",
+    checkReadiness: async () => {
+      throw Object.assign(new Error("must not escape"), {
+        code: "APPLICATION_MIGRATIONS_INCOMPLETE",
+      });
+    },
+    ownerDispatch: async () => {
+      readinessOwnerCalls += 1;
+      return {};
+    },
+  });
+  assert.equal(readinessFailure.error.code, "APPLICATION_MIGRATIONS_INCOMPLETE");
+  assert.equal(readinessOwnerCalls, 0);
+
+  let ownerCalls = 0;
+  const dependencies = {
+    replayStore: createInMemoryApplicationReplayStore(),
+    completedAt: () => "2026-09-17T12:00:02.000Z",
+    checkReadiness: async () => undefined,
+    ownerDispatch: async () => {
+      ownerCalls += 1;
+      throw Object.assign(new Error("database role details must not escape"), {
+        code: "APPLICATION_UNAUTHORIZED",
+      });
+    },
+  };
+  const ownerFailure = await executeApplicationRequestAsync(request, dependencies);
+  const replay = await executeApplicationRequestAsync(request, dependencies);
+
+  assert.equal(ownerFailure.error.code, "APPLICATION_UNAUTHORIZED");
+  assert.equal(JSON.stringify(ownerFailure).includes("database role"), false);
+  assert.equal(replay, ownerFailure);
+  assert.equal(ownerCalls, 1);
+});
+
+test("WP-6 preserves every allowlisted PostgreSQL owner failure code", async () => {
+  const request = JSON.stringify({
+    operation: "PaperOrderDraftCreate",
+    requestId: "76300000-0000-4000-8000-000000000001",
+    correlationId: "76300000-0000-4000-8000-000000000002",
+    actorId: "local-user",
+    prototypeCandidate: "v1.0.0-prototype.1",
+    contractVersion: "1.0.0-candidate.2",
+    requestedAt: "2026-09-17T12:00:00.000Z",
+    commandId: "76300000-0000-4000-8000-000000000003",
+    payload: {
+      orderId: "76300000-0000-4000-8000-000000000004",
+      instrumentId: "GOLDEN-ETF",
+      researchEvidenceId: "76300000-0000-4000-8000-000000000005",
+      side: "Buy",
+      quantity: "2.0000000000",
+      unitPrice: "10.0000000000",
+      tradeDate: "2026-09-17",
+    },
+  });
+
+  for (const code of [
+    "ORDER_GUARD_FAILED",
+    "ORDER_TERMINAL_STATE",
+    "LEDGER_VERSION_CONFLICT",
+    "ORDER_NOT_FOUND",
+  ]) {
+    const result = await executeApplicationRequestAsync(request, {
+      replayStore: createInMemoryApplicationReplayStore(),
+      completedAt: () => "2026-09-17T12:00:01.000Z",
+      checkReadiness: async () => undefined,
+      ownerDispatch: async () => {
+        throw Object.assign(new Error("must not escape"), { code });
+      },
+    });
+    assert.equal(result.error.code, code);
+    assert.equal(JSON.stringify(result).includes("must not escape"), false);
+  }
 });

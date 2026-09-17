@@ -25,3 +25,4 @@
 | 8 | Establish Ring 2 executable foundation | 2026-09-15 | GitHub issue #66; six migrations and exact manifests; REV-044 PASS; WP-2 authorized next |
 | 9 | Implement deterministic fixture ingestion | 2026-09-15 | GitHub issue #70; `PT-FIX-001A..O`; REV-059 conditional PASS; #71 required at WP-3 entry |
 | 10 | Implement application command/query boundary | 2026-09-16 | GitHub issue #73; `PT-APP-001A..P`; REV-094/095/096/097 PASS; DEC-037; WP-4 eligible next but not started |
+| 11 | Implement loopback-only API adapter | 2026-09-17 | GitHub issues #75/#76; `CT-API-001A..L`; REV-098/099 PASS and REV-100 conditional PASS; DEC-039; WP-5 eligible next but not started |

@@ -6,7 +6,7 @@ Feature: CT-API-001 localhost OpenAPI contract conformance
   Background:
     Given prototype candidate "v1.0.0-prototype.1"
     And application contract "1.0.0-candidate.2"
-    And OpenAPI contract "1.0.0-candidate.2"
+    And OpenAPI contract "1.0.0-candidate.3"
 
   Scenario: CT-API-001A the API is versioned and loopback only
     Given the server URL is "http://127.0.0.1:{port}/api/v1"
@@ -196,6 +196,7 @@ Feature: CT-API-001 localhost OpenAPI contract conformance
       | unacceptable response type | 406 | unacceptable-response-type |
       | request too large | 413 | request-too-large |
       | unsupported media type | 415 | unsupported-media-type |
+      | contained adapter failure | 500 | internal-server-error |
     And each protocol body status equals its HTTP status and rejects every other type/status pair
     And the conformance profile fixes body limit 1048576 bytes, UTF-8 JSON decoding, Host "127.0.0.1:<configured-port>", configured local Origins, allowed methods, allowed headers, credentials false, injected actor/version values, and duplicate-member rejection
 

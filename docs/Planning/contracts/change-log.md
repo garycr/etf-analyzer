@@ -207,3 +207,22 @@ Emergency changes are revert-only to the last active baseline. Forward-breaking 
 | Co-signature | Solo Orchestrator under Fully Agentic DEC-037 with asynchronous transparency issue #74 |
 | Human approval | Not required for patch status synchronization; asynchronous review remains available through #74 |
 | Invalidation notice | Any operation/schema/error/replay/job/readiness/redaction/recovery change remains governed by the existing candidate invalidation rule |
+
+### CC-010 - OpenAPI Candidate.3 Problem500 Containment
+
+| Field | Value |
+| --- | --- |
+| Change ID | CC-010 |
+| Date | 2026-09-17 |
+| Originator | Solo Orchestrator remediating independent WP-4 Code and Architect Reviewer findings under #76 |
+| Target baseline | OpenAPI contract `1.0.0-candidate.3` for inactive `v1.0.0-prototype.1`; inventory `1.0.0-candidate.4`; application remains `1.0.0-candidate.2` |
+| Affected contracts/streams | `openapi-contract.yaml`; `OpenAPI-Contract-Conformance.feature`; API adapter and tests; inventory/registry; WP-4 WBS binding |
+| Classification | Additive pre-baseline API error-schema amendment; all sixteen existing 500 responses gain one disjoint fixed transport Problem500 alternative |
+| Classification evidence | No active API baseline exists; no path, method, operation, payload, application code, successful response, owner schema, warning, idempotency, Host/Origin, or absence boundary changes |
+| DEC-011 floor assertion | Pass expected: loopback-only fixture research, no broker/provider/event path, exact application envelopes, fail-closed non-disclosure, accessible text, and Proposed architecture status remain explicit |
+| Specialist reviews | REV-098 Architecture PASS; REV-099 Code PASS; REV-100 Security conditional PASS with no Critical/Major and two WP-8 hardening Minors |
+| Compatibility checks | `CT-API-001A..L`; focused 10/10; complete suite 328 discovered, 298 passed, 30 environment-skipped, 0 failed; audit 0 vulnerabilities |
+| Custodian disposition | Candidate.3 accepted and WP-4 conditionally closed by DEC-039; REV-100 Minors remain explicit WP-8 hardening obligations |
+| Co-signature | Solo Orchestrator originator with distinct alternate-model Architect, Code, Security, and Plan review dispositions |
+| Human approval | Agent-owned under Fully Agentic DEC-028; asynchronous review through #76; no baseline activation, release, deployment, or production authority |
+| Invalidation notice | Any widening of Problem500, free-form diagnostic text, new status/code, changed application ownership, or schema overlap requires reclassification and independent review |

@@ -2,7 +2,7 @@ openapi: 3.1.0
 jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
 info:
   title: ETF Analyzer Local API
-  version: 1.0.0-candidate.2
+  version: 1.0.0-candidate.3
   description: >-
     Inactive Ring 1 contract for the loopback-only browser-to-application boundary.
     It authorizes no implementation, deployment, public ingress, provider, broker,
@@ -13,10 +13,10 @@ servers:
       port:
         default: "4173"
         description: Configured loopback API port.
-x-etf-contract-version: 1.0.0-candidate.2
+x-etf-contract-version: 1.0.0-candidate.3
 x-etf-prototype-candidate: v1.0.0-prototype.1
 x-etf-application-contract: 1.0.0-candidate.2
-x-etf-status: rev-027-independent-pass-design-time
+x-etf-status: candidate.3-wp4-closed-conditional-pass
 x-etf-conformance-plan: CT-API-001A..L
 x-etf-implementation-status: not-started
 x-etf-loopback-only: true
@@ -80,7 +80,7 @@ paths:
         '415': { description: Unsupported media type, content: { application/json: { schema: { $ref: '#/components/schemas/Problem415' } } } }
         '409': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedWatchlistPut' }, { $ref: '#/components/schemas/Failed409' }] } } } }
         '422': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedWatchlistPut' }, { $ref: '#/components/schemas/Failed422' }] } } } }
-        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedWatchlistPut' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '500': { description: Application or contained adapter failure, content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedWatchlistPut' }, { $ref: '#/components/schemas/Failed500' }] }, { $ref: '#/components/schemas/Problem500' }] } } }
         '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedWatchlistPut' }, { $ref: '#/components/schemas/Failed503' }] } } } }
     delete:
       operationId: watchlistRemove
@@ -104,7 +104,7 @@ paths:
         '415': { description: Unsupported media type, content: { application/json: { schema: { $ref: '#/components/schemas/Problem415' } } } }
         '409': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedWatchlistRemove' }, { $ref: '#/components/schemas/Failed409' }] } } } }
         '422': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedWatchlistRemove' }, { $ref: '#/components/schemas/Failed422' }] } } } }
-        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedWatchlistRemove' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '500': { description: Application or contained adapter failure, content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedWatchlistRemove' }, { $ref: '#/components/schemas/Failed500' }] }, { $ref: '#/components/schemas/Problem500' }] } } }
         '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedWatchlistRemove' }, { $ref: '#/components/schemas/Failed503' }] } } } }
   /watchlist/order:
     put:
@@ -129,7 +129,7 @@ paths:
         '415': { description: Unsupported media type, content: { application/json: { schema: { $ref: '#/components/schemas/Problem415' } } } }
         '409': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedWatchlistReorder' }, { $ref: '#/components/schemas/Failed409' }] } } } }
         '422': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedWatchlistReorder' }, { $ref: '#/components/schemas/Failed422' }] } } } }
-        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedWatchlistReorder' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '500': { description: Application or contained adapter failure, content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedWatchlistReorder' }, { $ref: '#/components/schemas/Failed500' }] }, { $ref: '#/components/schemas/Problem500' }] } } }
         '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedWatchlistReorder' }, { $ref: '#/components/schemas/Failed503' }] } } } }
   /fixture-ingestions:
     post:
@@ -154,7 +154,7 @@ paths:
         '415': { description: Unsupported media type, content: { application/json: { schema: { $ref: '#/components/schemas/Problem415' } } } }
         '409': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedFixtureIngestionStart' }, { $ref: '#/components/schemas/Failed409' }] } } } }
         '422': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedFixtureIngestionStart' }, { $ref: '#/components/schemas/Failed422' }] } } } }
-        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedFixtureIngestionStart' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '500': { description: Application or contained adapter failure, content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedFixtureIngestionStart' }, { $ref: '#/components/schemas/Failed500' }] }, { $ref: '#/components/schemas/Problem500' }] } } }
         '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedFixtureIngestionStart' }, { $ref: '#/components/schemas/Failed503' }] } } } }
   /jobs/{jobId}/restart:
     post:
@@ -180,7 +180,7 @@ paths:
         '404': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedJobRestart' }, { $ref: '#/components/schemas/Failed404' }] } } } }
         '409': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedJobRestart' }, { $ref: '#/components/schemas/Failed409' }] } } } }
         '422': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedJobRestart' }, { $ref: '#/components/schemas/Failed422' }] } } } }
-        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedJobRestart' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '500': { description: Application or contained adapter failure, content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedJobRestart' }, { $ref: '#/components/schemas/Failed500' }] }, { $ref: '#/components/schemas/Problem500' }] } } }
         '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedJobRestart' }, { $ref: '#/components/schemas/Failed503' }] } } } }
   /analytics/runs:
     post:
@@ -205,7 +205,7 @@ paths:
         '415': { description: Unsupported media type, content: { application/json: { schema: { $ref: '#/components/schemas/Problem415' } } } }
         '409': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedAnalyticsRun' }, { $ref: '#/components/schemas/Failed409' }] } } } }
         '422': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedAnalyticsRun' }, { $ref: '#/components/schemas/Failed422' }] } } } }
-        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedAnalyticsRun' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '500': { description: Application or contained adapter failure, content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedAnalyticsRun' }, { $ref: '#/components/schemas/Failed500' }] }, { $ref: '#/components/schemas/Problem500' }] } } }
         '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedAnalyticsRun' }, { $ref: '#/components/schemas/Failed503' }] } } } }
   /paper-orders:
     post:
@@ -230,7 +230,7 @@ paths:
         '415': { description: Unsupported media type, content: { application/json: { schema: { $ref: '#/components/schemas/Problem415' } } } }
         '409': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPaperOrderDraftCreate' }, { $ref: '#/components/schemas/Failed409' }] } } } }
         '422': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPaperOrderDraftCreate' }, { $ref: '#/components/schemas/Failed422' }] } } } }
-        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPaperOrderDraftCreate' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '500': { description: Application or contained adapter failure, content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedPaperOrderDraftCreate' }, { $ref: '#/components/schemas/Failed500' }] }, { $ref: '#/components/schemas/Problem500' }] } } }
         '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPaperOrderDraftCreate' }, { $ref: '#/components/schemas/Failed503' }] } } } }
   /paper-orders/{orderId}/transitions:
     post:
@@ -257,7 +257,7 @@ paths:
         '404': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPaperOrderTransition' }, { $ref: '#/components/schemas/Failed404' }] } } } }
         '409': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPaperOrderTransition' }, { $ref: '#/components/schemas/Failed409' }] } } } }
         '422': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPaperOrderTransition' }, { $ref: '#/components/schemas/Failed422' }] } } } }
-        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPaperOrderTransition' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '500': { description: Application or contained adapter failure, content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedPaperOrderTransition' }, { $ref: '#/components/schemas/Failed500' }] }, { $ref: '#/components/schemas/Problem500' }] } } }
         '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPaperOrderTransition' }, { $ref: '#/components/schemas/Failed503' }] } } } }
   /diagnostic-exports:
     post:
@@ -282,7 +282,7 @@ paths:
         '415': { description: Unsupported media type, content: { application/json: { schema: { $ref: '#/components/schemas/Problem415' } } } }
         '409': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedDiagnosticsExportCreate' }, { $ref: '#/components/schemas/Failed409' }] } } } }
         '422': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedDiagnosticsExportCreate' }, { $ref: '#/components/schemas/Failed422' }] } } } }
-        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedDiagnosticsExportCreate' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '500': { description: Application or contained adapter failure, content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedDiagnosticsExportCreate' }, { $ref: '#/components/schemas/Failed500' }] }, { $ref: '#/components/schemas/Problem500' }] } } }
         '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedDiagnosticsExportCreate' }, { $ref: '#/components/schemas/Failed503' }] } } } }
   /watchlist:
     get:
@@ -304,7 +304,7 @@ paths:
         '406': { description: Not acceptable, content: { application/json: { schema: { $ref: '#/components/schemas/Problem406' } } } }
         '413': { description: Request too large, content: { application/json: { schema: { $ref: '#/components/schemas/Problem413' } } } }
         '415': { description: Unsupported media type, content: { application/json: { schema: { $ref: '#/components/schemas/Problem415' } } } }
-        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedWatchlistGet' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '500': { description: Application or contained adapter failure, content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedWatchlistGet' }, { $ref: '#/components/schemas/Failed500' }] }, { $ref: '#/components/schemas/Problem500' }] } } }
         '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedWatchlistGet' }, { $ref: '#/components/schemas/Failed503' }] } } } }
   /jobs/{jobId}:
     get:
@@ -328,7 +328,7 @@ paths:
         '413': { description: Request too large, content: { application/json: { schema: { $ref: '#/components/schemas/Problem413' } } } }
         '415': { description: Unsupported media type, content: { application/json: { schema: { $ref: '#/components/schemas/Problem415' } } } }
         '404': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedJobGet' }, { $ref: '#/components/schemas/Failed404' }] } } } }
-        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedJobGet' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '500': { description: Application or contained adapter failure, content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedJobGet' }, { $ref: '#/components/schemas/Failed500' }] }, { $ref: '#/components/schemas/Problem500' }] } } }
         '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedJobGet' }, { $ref: '#/components/schemas/Failed503' }] } } } }
   /readiness:
     get:
@@ -350,7 +350,7 @@ paths:
         '406': { description: Not acceptable, content: { application/json: { schema: { $ref: '#/components/schemas/Problem406' } } } }
         '413': { description: Request too large, content: { application/json: { schema: { $ref: '#/components/schemas/Problem413' } } } }
         '415': { description: Unsupported media type, content: { application/json: { schema: { $ref: '#/components/schemas/Problem415' } } } }
-        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedReadinessGet' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '500': { description: Application or contained adapter failure, content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedReadinessGet' }, { $ref: '#/components/schemas/Failed500' }] }, { $ref: '#/components/schemas/Problem500' }] } } }
         '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedReadinessGet' }, { $ref: '#/components/schemas/Failed503' }] } } } }
   /analytics/results/{publicationTargetId}:
     get:
@@ -375,7 +375,7 @@ paths:
         '415': { description: Unsupported media type, content: { application/json: { schema: { $ref: '#/components/schemas/Problem415' } } } }
         '404': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedAnalyticsResultGet' }, { $ref: '#/components/schemas/Failed404' }] } } } }
         '422': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedAnalyticsResultGet' }, { $ref: '#/components/schemas/Failed422' }] } } } }
-        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedAnalyticsResultGet' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '500': { description: Application or contained adapter failure, content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedAnalyticsResultGet' }, { $ref: '#/components/schemas/Failed500' }] }, { $ref: '#/components/schemas/Problem500' }] } } }
         '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedAnalyticsResultGet' }, { $ref: '#/components/schemas/Failed503' }] } } } }
   /evidence:
     get:
@@ -400,7 +400,7 @@ paths:
         '415': { description: Unsupported media type, content: { application/json: { schema: { $ref: '#/components/schemas/Problem415' } } } }
         '404': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedEvidenceGet' }, { $ref: '#/components/schemas/Failed404' }] } } } }
         '422': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedEvidenceGet' }, { $ref: '#/components/schemas/Failed422' }] } } } }
-        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedEvidenceGet' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '500': { description: Application or contained adapter failure, content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedEvidenceGet' }, { $ref: '#/components/schemas/Failed500' }] }, { $ref: '#/components/schemas/Problem500' }] } } }
         '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedEvidenceGet' }, { $ref: '#/components/schemas/Failed503' }] } } } }
   /paper-orders/{orderId}:
     get:
@@ -424,7 +424,7 @@ paths:
         '413': { description: Request too large, content: { application/json: { schema: { $ref: '#/components/schemas/Problem413' } } } }
         '415': { description: Unsupported media type, content: { application/json: { schema: { $ref: '#/components/schemas/Problem415' } } } }
         '404': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPaperOrderGet' }, { $ref: '#/components/schemas/Failed404' }] } } } }
-        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPaperOrderGet' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '500': { description: Application or contained adapter failure, content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedPaperOrderGet' }, { $ref: '#/components/schemas/Failed500' }] }, { $ref: '#/components/schemas/Problem500' }] } } }
         '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPaperOrderGet' }, { $ref: '#/components/schemas/Failed503' }] } } } }
   /portfolios/{portfolioId}:
     get:
@@ -450,7 +450,7 @@ paths:
         '415': { description: Unsupported media type, content: { application/json: { schema: { $ref: '#/components/schemas/Problem415' } } } }
         '404': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPortfolioGet' }, { $ref: '#/components/schemas/Failed404' }] } } } }
         '422': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPortfolioGet' }, { $ref: '#/components/schemas/Failed422' }] } } } }
-        '500': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPortfolioGet' }, { $ref: '#/components/schemas/Failed500' }] } } } }
+        '500': { description: Application or contained adapter failure, content: { application/json: { schema: { oneOf: [{ allOf: [{ $ref: '#/components/schemas/FailedPortfolioGet' }, { $ref: '#/components/schemas/Failed500' }] }, { $ref: '#/components/schemas/Problem500' }] } } }
         '503': { description: Application failure, content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/FailedPortfolioGet' }, { $ref: '#/components/schemas/Failed503' }] } } } }
 components:
   parameters:
@@ -1359,9 +1359,9 @@ components:
       additionalProperties: false
       required: [type, title, status, detail]
       properties:
-        type: { type: string, enum: [invalid-host, disallowed-origin, malformed-json, unsupported-media-type, unacceptable-response-type, request-too-large] }
+        type: { type: string, enum: [invalid-host, disallowed-origin, malformed-json, unsupported-media-type, unacceptable-response-type, request-too-large, internal-server-error] }
         title: { type: string, minLength: 1 }
-        status: { type: integer, enum: [400, 403, 406, 413, 415] }
+        status: { type: integer, enum: [400, 403, 406, 413, 415, 500] }
         detail: { type: string, minLength: 1 }
       x-etf-no-application-envelope-fabrication: true
     Problem400:
@@ -1391,3 +1391,8 @@ components:
         - $ref: '#/components/schemas/Problem'
         - type: object
           properties: { type: { const: unsupported-media-type }, status: { const: 415 } }
+    Problem500:
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          properties: { type: { const: internal-server-error }, title: { const: 'Internal Server Error' }, status: { const: 500 }, detail: { const: 'The request could not be completed.' } }

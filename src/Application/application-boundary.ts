@@ -968,7 +968,7 @@ function freezeJsonValue(value: unknown): unknown {
   return value;
 }
 
-function parseApplicationPayload(payloadJson: string): Record<string, unknown> {
+export function parseApplicationPayload(payloadJson: string): Record<string, unknown> {
   try {
     new JsonMemberScanner(payloadJson).scan();
     const parsed: unknown = JSON.parse(payloadJson);

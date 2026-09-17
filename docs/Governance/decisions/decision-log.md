@@ -33,10 +33,56 @@
 | DEC-035 | 2026-09-16 | Error precedence | Close PT-APP-001O with deterministic ranked selection on live command admission | Agent (Fully Agentic) | Solo Orchestrator | Active |
 | DEC-036 | 2026-09-16 | Job lifecycle | Close PT-APP-001P with an exact immutable Job state projection and transition policy | Agent (Fully Agentic) | Solo Orchestrator | Active |
 | DEC-037 | 2026-09-16 | Package closure | Close WP-3 and make WP-4 eligible as the next sequential package without starting it | Workspace Owner | Solo Orchestrator | Approved |
+| DEC-038 | 2026-09-17 | API reliability | Add a fixed transport Problem500 without fabricating an application-owned failure | Agent (Fully Agentic) | Solo Orchestrator | Active |
+| DEC-039 | 2026-09-17 | Package closure | Close WP-4 conditionally and make WP-5 eligible as the next sequential package | Agent (Fully Agentic) | Solo Orchestrator | Active |
 
 ---
 
 ## Decision Records
+
+### DEC-039: Close WP-4 Loopback API Adapter
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-039 |
+| **Date** | 2026-09-17 |
+| **Category** | Package closure |
+| **Decision** | Close WP-4 after REV-098 Architecture PASS, REV-099 Code PASS, REV-100 Security CONDITIONAL PASS, and closure Plan CONDITIONAL PASS; make WP-5 eligible as the next sequential package without starting it |
+| **Policy** | DEC-023; DEC-028; DEC-037; DEC-038; approved Ring 2 WBS; OpenAPI `1.0.0-candidate.3`; `CT-API-001A..L`; test-first development; code, security, architecture, and plan review |
+| **Authority** | Agent under Fully Agentic mode with asynchronous transparency through GitHub issues #75 and #76 |
+| **Accountable** | Solo Orchestrator closes #75/#76, retains the two REV-100 Minors for WP-8 hardening, starts no WP-5 work through this decision, and preserves all baseline/release/deployment/production gates |
+| **Context** | The exact 16-operation loopback adapter passes 10/10 focused tests and the complete repository passes 328 discovered, 298 passed, 30 PostgreSQL environment-skipped, and zero failed. Audit reports zero vulnerabilities. Review remediation added fixed Problem500 containment and browser-readable safe error responses. |
+| **Alternatives** | Keep WP-4 open for nonblocking loopback timeout/auditability Minors; waive the Minors without traceability; close conditionally and bind them to WP-8 integration hardening |
+| **Consequences** | Ring 2 reaches 50%. WP-5 deterministic analytics may be initialized separately. Slow-upload timeout hardening and an explicit top-level plain-record parser guard remain visible in REV-100 and WP-8 evidence obligations. |
+| **Reasoning** | No Critical or Major finding remains, and the Minors affect only local availability/audit clarity under an inactive loopback prototype. Deferring them to integrated hardening preserves sequential delivery without overstating security or production readiness. |
+| **Assumptions** | Runtime remains Node 20; no reverse proxy or non-loopback ingress exists; application candidate.2 remains authoritative; PostgreSQL-skipped tests retain their prior zero-skip evidence. |
+| **Invalidation** | Any public/non-loopback ingress, proxy, authentication requirement, changed operation/status/schema, active baseline, sensitive Problem content, or evidence that local upload handling threatens integrated readiness |
+| **Status** | Active; WP-4 conditionally closed and WP-5 eligible but not started |
+| **Linked Artifacts** | `docs/artifacts/gate-evidence/wp-4-exit.md`, REV-098, REV-099, REV-100, DEC-038, CC-010, GitHub issues #75 and #76 |
+
+---
+
+### DEC-038: Contain Unexpected API Adapter Failures
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-038 |
+| **Date** | 2026-09-17 |
+| **Category** | API reliability |
+| **Decision** | Advance only the OpenAPI contract to `1.0.0-candidate.3` and define one fixed non-sensitive `Problem500` for unexpected adapter execution or serialization failures across all sixteen operations |
+| **Policy** | DEC-013; DEC-023; DEC-028; approved WP-4 boundary; `CT-API-001E/K`; fail-closed security; status/code closure; alternate-model decision review |
+| **Authority** | Agent under Fully Agentic mode, tracked through GitHub issue #76, with alternate-model Architect Reviewer final PASS |
+| **Accountable** | Solo Orchestrator preserves application contract `1.0.0-candidate.2`, obtains final contract and code review, publishes exact hashes and executable evidence, and does not close WP-4 while review remains conditional |
+| **Context** | Independent WP-4 code review found that unexpected dispatcher and JSON serialization exceptions could terminate the listener. Initial containment preserved availability and non-disclosure but emitted a body outside OpenAPI candidate.2. Architect review then required fixed title/detail literals, conversion of malformed result fallbacks, preflight containment, and CC-010 traceability. |
+| **Alternatives** | Terminate the HTTP connection without a response; fabricate an application-owned failure code; return an unconstrained generic 500 body; define a disjoint fixed transport Problem500 |
+| **Consequences** | The adapter remains available and exposes no exception text while application failures retain their exact envelopes and ownership. All sixteen 500 responses accept either their operation-specific Failed500 envelope or the fixed Problem500. OpenAPI and inventory candidate versions advance; no application operation, payload, public application code, success status, ingress, provider, broker, or event surface changes. |
+| **Reasoning** | Connection termination weakens operability, and fabricating an application failure violates ownership. A literal closed transport problem is disjoint from application envelopes, preserves non-disclosure structurally, and is the smallest additive change while no active API baseline exists. |
+| **Assumptions** | The prototype remains loopback-only and inactive; application candidate.2 continues to return closed envelopes; no backward-compatibility claim exists before baseline activation. |
+| **Invalidation** | An active baseline; remote/public ingress; a changed application failure owner; a requirement to expose diagnostics in 500 responses; schema overlap between Failed500 and Problem500; or evidence that listener containment leaks sensitive content or loses availability |
+| **Status** | Active; alternate-model Architect Reviewer final PASS with no Critical or Major findings |
+| **Linked Artifacts** | `docs/Planning/contracts/openapi-contract.yaml`, `specs/features/OpenAPI-Contract-Conformance.feature`, `docs/Planning/contracts/change-log.md` CC-010, GitHub issues #75 and #76 |
+
+---
 
 ### DEC-037: Close WP-3 Application Boundary
 

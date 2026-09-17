@@ -2,10 +2,10 @@
 
 **Plan:** `v1.0.0-prototype.1`
 **Source strategy:** Workspace Owner-selected MAI-ST, constrained to one sequential Tier 1 delivery stream
-**Status:** Approved by Workspace Owner on 2026-09-11; WP-1 through WP-3 complete; WP-4 eligible next but not started
+**Status:** Approved by Workspace Owner on 2026-09-11; WP-1 through WP-4 complete; WP-5 eligible next but not started
 **Owner:** Solo Orchestrator
 
-This approved artifact governs one sequential Ring 2 stream. WP-1 completed on 2026-09-15 with REV-044 PASS. WP-2 completed on 2026-09-15 with REV-059 conditional PASS and issue #70 closed. WP-3 completed on 2026-09-16 with REV-094/095/096/097 PASS and #71 satisfied. WP-4 is eligible as the next sequential package but is not started by DEC-037; WP-5 through WP-8 remain blocked by their declared dependencies.
+This approved artifact governs one sequential Ring 2 stream. WP-1 completed on 2026-09-15 with REV-044 PASS. WP-2 completed on 2026-09-15 with REV-059 conditional PASS and issue #70 closed. WP-3 completed on 2026-09-16 with REV-094/095/096/097 PASS and #71 satisfied. WP-4 completed on 2026-09-17 with REV-098/099 PASS and REV-100 conditional PASS. WP-5 is eligible next but not started; WP-6 through WP-8 remain blocked by their declared dependencies.
 
 ## Delivery Rule
 
@@ -38,7 +38,7 @@ Effort labels use the cost-estimation defaults as ranges: L is 8-16 hours, XL is
 | Required planning coverage | Allocation |
 | --- | --- |
 | Exactly one sequential stream | WP-1 -> WP-2 -> WP-3 -> WP-4 -> WP-5 -> WP-6 -> WP-7 -> WP-8; no concurrent package |
-| Reviewed contract bindings | Domain/order `1.0.0-candidate.1`; ledger, analytics evidence, fixture, application, PostgreSQL, and OpenAPI `1.0.0-candidate.2`; inventory `1.0.0-candidate.3` |
+| Reviewed contract bindings | Domain/order `1.0.0-candidate.1`; ledger, analytics evidence, fixture, application, and PostgreSQL `1.0.0-candidate.2`; OpenAPI `1.0.0-candidate.3`; inventory `1.0.0-candidate.4` |
 | Present surfaces | Domain/order and ledger: WP-6; analytics evidence: WP-5; fixture input: WP-2; durable storage: WP-1; application: WP-3; API: WP-4; browser UX: WP-7; integration/operations: WP-8 |
 | Controlled provider egress | WP-1 configuration foundation, WP-2 fixture-only runtime and denial evidence |
 | Source-defined identity/idempotency | WP-2 five-part market identity and job replay; WP-3 command replay |

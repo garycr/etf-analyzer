@@ -6,6 +6,30 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-17 | WP-4 loopback API conditionally closed | Ring-2 | @solo-orchestrator
+
+**Type:** PACKAGE-CLOSURE
+**Decision:** DEC-039 closes WP-4 and makes WP-5 eligible as the next sequential package without starting it
+**Policy:** DEC-023; DEC-028; DEC-037; DEC-038; OpenAPI candidate.3; `CT-API-001A..L`; sequential Ring 2 WBS
+**Authority:** Agent under Fully Agentic mode with asynchronous transparency through GitHub issues #75/#76
+**Accountability:** Solo Orchestrator retains REV-100 timeout/auditability Minors for WP-8 hardening and preserves baseline, ingress, provider, broker, event, release, deployment, and production gates
+**review-outcome:** REV-098 Architecture PASS; REV-099 Code PASS; REV-100 Security CONDITIONAL PASS; closure Plan CONDITIONAL PASS with publication conditions completed
+**Result:** Focused API 10/10; complete suite 328 discovered, 298 passed, 30 environment-skipped, 0 failed; audit 0 vulnerabilities; Ring 2 at 50%
+**Artifact:** docs/artifacts/gate-evidence/wp-4-exit.md | DEC-038/039 | CC-010 | REV-098/099/100 | GitHub issues #75/#76
+**authorization-boundary:** WP-5 is eligible but unstarted; no active baseline, public ingress, provider, broker, event, release, deployment, or production action
+
+---
+
+## 2026-09-17 | WP-4 API implementation and review completed | Ring-2 | @solo-orchestrator
+
+**Type:** WORK
+**Task:** Implement and verify the exact loopback-only API adapter under issues #75/#76
+**Result:** Exact 16-route mapping, request reconstruction, status closure, Problem500, CORS, and real-socket evidence completed; all blocking review findings remediated
+**Tests:** Focused 10/10; full 328/298/30/0; dependency audit zero vulnerabilities
+**Artifacts:** src/Infrastructure/Http/api-adapter.ts | tests/Unit/api-adapter.test.mjs | tests/Integration/api-adapter.test.mjs | docs/Planning/contracts/openapi-contract.yaml
+
+---
+
 ## 2026-09-16 | Workspace Owner approved DEC-037 | Ring-2 | @workspace-owner
 
 **Type:** HUMAN-DECISION
@@ -2525,5 +2549,37 @@
 **review-outcome:** approved
 **remediation:** REV-049 physically appended the canonical review metadata; governance recheck confirmed the journal finding closed and PT-FIX-001I publication authorized within its documented boundary
 **reviewed-artifact:** docs/Sessions/journal.md | docs/Governance/decisions/reviews/REV-047-wp-2-fixture-provenance-review.md | docs/artifacts/gate-evidence/wp-2-fixture-provenance.md
+
+---
+
+## 2026-09-15T17:28:10 | WORK-017 | Ring-0 | @extension
+
+**Type:** WORK
+**action:** extension-activated
+**version:** 13.2.0
+**workspace:** etf-analyzer [WSL: Ubuntu]
+**duration-ms:** 7
+
+---
+
+## 2026-09-15T17:28:13 | WORK-018 | Ring-0 | @extension
+
+**Type:** WORK
+**action:** governance-sync
+**from-version:** none
+**to-version:** 13.2.0
+**files-synced:** agents, skills, prompts, guides
+**governance-missing:** false
+**status:** completed
+
+---
+
+## 2026-09-17T14:49:28 | WORK-019 | Ring-0 | @extension
+
+**Type:** WORK
+**action:** extension-activated
+**version:** 13.2.0
+**workspace:** etf-analyzer [WSL: Ubuntu]
+**duration-ms:** 11
 
 ---

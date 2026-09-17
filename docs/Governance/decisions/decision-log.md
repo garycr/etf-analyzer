@@ -34,7 +34,7 @@
 | DEC-036 | 2026-09-16 | Job lifecycle | Close PT-APP-001P with an exact immutable Job state projection and transition policy | Agent (Fully Agentic) | Solo Orchestrator | Active |
 | DEC-037 | 2026-09-16 | Package closure | Close WP-3 and make WP-4 eligible as the next sequential package without starting it | Workspace Owner | Solo Orchestrator | Approved |
 | DEC-038 | 2026-09-17 | API reliability | Add a fixed transport Problem500 without fabricating an application-owned failure | Agent (Fully Agentic) | Solo Orchestrator | Active |
-| DEC-039 | 2026-09-17 | Package closure | Close WP-4 conditionally and make WP-5 eligible as the next sequential package | Agent (Fully Agentic) | Solo Orchestrator | Active |
+| DEC-039 | 2026-09-17 | Package closure | Close WP-4 conditionally and make WP-5 eligible as the next sequential package | Workspace Owner | Solo Orchestrator | Approved |
 
 ---
 
@@ -49,7 +49,7 @@
 | **Category** | Package closure |
 | **Decision** | Close WP-4 after REV-098 Architecture PASS, REV-099 Code PASS, REV-100 Security CONDITIONAL PASS, and closure Plan CONDITIONAL PASS; make WP-5 eligible as the next sequential package without starting it |
 | **Policy** | DEC-023; DEC-028; DEC-037; DEC-038; approved Ring 2 WBS; OpenAPI `1.0.0-candidate.3`; `CT-API-001A..L`; test-first development; code, security, architecture, and plan review |
-| **Authority** | Agent under Fully Agentic mode with asynchronous transparency through GitHub issues #75 and #76 |
+| **Authority** | Workspace Owner approval on 2026-09-17 after Fully Agentic execution and publication through GitHub issues #75 and #76 |
 | **Accountable** | Solo Orchestrator closes #75/#76, retains the two REV-100 Minors for WP-8 hardening, starts no WP-5 work through this decision, and preserves all baseline/release/deployment/production gates |
 | **Context** | The exact 16-operation loopback adapter passes 10/10 focused tests and the complete repository passes 328 discovered, 298 passed, 30 PostgreSQL environment-skipped, and zero failed. Audit reports zero vulnerabilities. Review remediation added fixed Problem500 containment and browser-readable safe error responses. |
 | **Alternatives** | Keep WP-4 open for nonblocking loopback timeout/auditability Minors; waive the Minors without traceability; close conditionally and bind them to WP-8 integration hardening |
@@ -57,7 +57,7 @@
 | **Reasoning** | No Critical or Major finding remains, and the Minors affect only local availability/audit clarity under an inactive loopback prototype. Deferring them to integrated hardening preserves sequential delivery without overstating security or production readiness. |
 | **Assumptions** | Runtime remains Node 20; no reverse proxy or non-loopback ingress exists; application candidate.2 remains authoritative; PostgreSQL-skipped tests retain their prior zero-skip evidence. |
 | **Invalidation** | Any public/non-loopback ingress, proxy, authentication requirement, changed operation/status/schema, active baseline, sensitive Problem content, or evidence that local upload handling threatens integrated readiness |
-| **Status** | Active; WP-4 conditionally closed and WP-5 eligible but not started |
+| **Status** | Approved; WP-4 conditionally closed and WP-5 eligible but not started |
 | **Linked Artifacts** | `docs/artifacts/gate-evidence/wp-4-exit.md`, REV-098, REV-099, REV-100, DEC-038, CC-010, GitHub issues #75 and #76 |
 
 ---

@@ -6,6 +6,19 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-18 | CT-LED-019 restore integrity architecture accepted | Ring-2 | @solo-orchestrator
+
+**Type:** ARCHITECTURE-CHECKPOINT
+**Decision:** DEC-056 accepts ADR-002 with signed coherent backup manifests, separately committed fail-closed restore phases, a global PostgreSQL integrity gate, full retained-chain verification, and append-only dual-key rotation continuity
+**Policy:** DEC-016; REV-011; CT-LED-019; architecture review; decision review; GitHub issue #82
+**Authority:** Agent under Fully Agentic mode with Workspace Owner authorization to continue WP-6; REV-133 Architect PASS
+**Accountability:** Solo Orchestrator proceeds test-first under #82, obtains code/security review and executable PostgreSQL evidence, and keeps CT-LED-019, WP-6, and issue #79 open
+**Result:** Architecture recheck PASS with no Critical or Major findings; WAF 3.4/5 overall; PostgreSQL 16 lock, snapshot, key, transaction, projection-rebuild, global-gate, and staged issue-acceptance ambiguities resolved
+**Artifact:** ADR-002 | DEC-056 | REV-133 | GitHub issues #79/#82
+**authorization-boundary:** Architecture and test-first local implementation only; no WP-6 closure, WP-7, brokerage, live provider, public ingress, durable event, queue, scheduler, worker, baseline, release, deployment, or production action
+
+---
+
 ## 2026-09-18 | WP-6 crash-intent recovery checkpoint validated | Ring-2 | @solo-orchestrator
 
 **Type:** IMPLEMENTATION-CHECKPOINT

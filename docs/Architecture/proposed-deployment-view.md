@@ -109,9 +109,9 @@ flowchart LR
 
 ## Backup and recovery continuity
 
-- Daily and post-key-rotation backup sets include PostgreSQL data, commitment/rotation evidence, protected latest-anchor checkpoints, key identifiers, and encrypted recoverable key versions. Key material and anchors use a protection domain unavailable to application and ledger-writer identities.
+- Daily and post-key-rotation backup sets include PostgreSQL data, commitment/rotation evidence, protected latest-anchor checkpoints, key identifiers, and recoverable HMAC key bytes on encrypted storage. `anchor_keys.key_ciphertext` is the legacy physical name for usable HMAC key bytes, not application-wrapped ciphertext. Key material and anchors use a protection domain unavailable to application and ledger-writer identities.
 - Prototype targets are RPO 24 hours and RTO 4 hours. A paper action is not declared durable for recovery purposes until its protected checkpoint is included in the next successful backup; the UI exposes the latest protected backup time.
-- Restore order is keys and key metadata, protected checkpoint, PostgreSQL/PVC data, then full chain verification. Readiness and projection publication remain false until anti-rollback comparison and full retained-history verification succeed.
+- Backup export uses one PostgreSQL 16 repeatable-read snapshot: the anchor owner derives and signs the manifest while holding the shared integrity gate, exports that transaction snapshot, and keeps it open until the backup reader has imported and completed the snapshot. Restore order is keys and key metadata, signed manifest, PostgreSQL/PVC data from that same backup identity, then full chain verification. Readiness and projection publication remain false until anti-rollback comparison and full retained-history verification succeed.
 - PVC loss and workstation reconstruction restore from the same coherent set. Rotation-in-progress recovery retains both key versions and resumes from the last verified predecessor. A database older than the protected checkpoint, or a checkpoint older than the declared backup set, fails closed and requires explicit operator recovery rather than silent truncation.
 
 ## Traceability

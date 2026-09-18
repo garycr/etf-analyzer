@@ -204,6 +204,8 @@ The exhaustive column-to-record/hash-domain registry under Numeric, Time, and JS
 
 Database readiness covers PostgreSQL and Migrations. `readiness_append` persists the complete application snapshot only in order PostgreSQL, Migrations, FixturePolicy, LocalDependency, DenialAudit, LedgerIntegrity. Connectivity/drift use application database/migration codes; denial audit and protected checkpoint failure preserve analytics/ledger codes. Liveness remains orthogonal.
 
+CT-LED-019 restore integrity targets PostgreSQL 16 and requires built-in transaction advisory functions `pg_advisory_xact_lock_shared(bigint)` and `pg_advisory_xact_lock(bigint)`, `hashtextextended(text,bigint)`, exported repeatable-read snapshots through `pg_export_snapshot()`, and `pgcrypto` 1.3 SHA-256/HMAC support. Runtime ledger, projection, and anchor paths take the shared `etf:ledger-integrity` lock before existing locks; backup export also holds the shared lock for its exported snapshot; restore transitions take the exclusive variant on the identical hash key. `anchor_keys.key_ciphertext` stores usable HMAC key bytes under anchor-owner-only access and storage encryption at rest; it is not application-wrapped ciphertext.
+
 ## Closed Physical Manifest
 
 Notation: `!` means NOT NULL, `?` means nullable, `PK(...)`, `FK(...)`, and `UQ(...)` are database constraints. Every `timestamptz` token in the closure and manifest means PostgreSQL `timestamp(3) with time zone`; no product column uses unspecified timestamp precision. Every table includes only the ordered columns shown. Unknown columns, tables, functions, triggers, roles, or grants are schema drift.

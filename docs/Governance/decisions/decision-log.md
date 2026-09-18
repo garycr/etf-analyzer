@@ -48,6 +48,7 @@
 | DEC-050 | 2026-09-18 | Audit lifecycle integrity | Accept CT-LED-013 with linked immutable intents, serialized terminal cardinality, ordered recovery, and migrated collector authority | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-051 | 2026-09-18 | Dual-chain atomicity | Accept CT-LED-014 with atomic business and audit-only chains, forced anchor rollback, migrated runtime schema authority, and canonical identities | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-052 | 2026-09-18 | Controlled authorization | Accept CT-LED-015 with exact runtime entry grants, direct bypass denial, owner-role isolation, unchanged state, and canonical sequence-6 identity | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
+| DEC-056 | 2026-09-18 | Restore integrity architecture | Accept ADR-002 with signed coherent backup manifests, durable global restore gating, full retained-chain verification, and append-only rotation continuity | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-055 | 2026-09-18 | Crash-intent recovery | Accept CT-LED-018 with immutable unresolved intent, ordered anchored recovery, exact replay idempotency, and collision-safe audit identity | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-054 | 2026-09-18 | Fail-closed projection publication | Accept CT-LED-017 with durable blocked evidence, unchanged accepted projection, and atomic anchor-failure rollback | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-053 | 2026-09-18 | Projection publication atomicity | Accept CT-LED-016 with verified projection publication, linked audit anchoring, staged rollback, and unchanged current snapshot | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
@@ -55,6 +56,21 @@
 ---
 
 ## Decision Records
+
+### DEC-056: Accept Restore Integrity Architecture
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-056 |
+| **Date** | 2026-09-18 |
+| **Category** | Restore integrity architecture |
+| **Decision** | Accept ADR-002 after independent review confirmed that anchor-owner signed manifests bound to one exported backup snapshot, separately committed `NotReady` and verification phases, a global shared/exclusive integrity gate, full retained-chain verification, and immutable dual-key rotation events satisfy CT-LED-019 and DEC-016 without autonomous transactions or runtime bypass |
+| **Policy** | DEC-016; REV-011; CT-LED-019; architecture review; decision review; GitHub issue #82 |
+| **Authority** | Agent under Fully Agentic mode with Workspace Owner authorization to continue WP-6 |
+| **Accountability** | Solo Orchestrator implements #82 test-first, preserves PostgreSQL 16 lock ordering and key isolation, obtains code/security review, and keeps CT-LED-019, WP-6, and issue #79 open until executable evidence passes |
+| **Status** | Reviewed; REV-133 Architect PASS; implementation authorized but not accepted |
+
+---
 
 ### DEC-055: Accept Crash-Intent Recovery
 

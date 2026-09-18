@@ -40,10 +40,26 @@
 | DEC-042 | 2026-09-17 | Architecture | Assign WP-6 closed order semantics to Domain, trusted dispatch to Application, and atomic ledger ownership to PostgreSQL | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-043 | 2026-09-17 | Replay integrity | Bind WP-6 application replay and PostgreSQL order effects in one transaction | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-044 | 2026-09-17 | Order and ledger integrity | Close CT-ORD-001..012 and begin exact ledger vectors with state-aware terminal quantities and byte-canonical replay | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
+| DEC-045 | 2026-09-18 | Ledger numeric integrity | Accept CT-LED-003..007 with exact FIFO, half-even arithmetic, cross-runtime strings, and fail-closed numeric admission | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 
 ---
 
 ## Decision Records
+
+### DEC-045: Accept Exact FIFO and Numeric Admission
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-045 |
+| **Date** | 2026-09-18 |
+| **Category** | Ledger numeric integrity |
+| **Decision** | Accept CT-LED-003..007 after proving partial- and spanning-lot FIFO, exact final residual allocation, PostgreSQL half-even derived Money, cross-runtime canonical strings, and fail-closed decimal grammar and scalar bounds before lookup or persistence |
+| **Policy** | DEC-014; DEC-042; DEC-044; ledger and PostgreSQL contracts; test-first development; independent code and security review |
+| **Authority** | Agent under Fully Agentic mode with Workspace Owner authorization to continue WP-6 |
+| **Accountability** | Solo Orchestrator preserves PostgreSQL mutation authority, tracks pre-existing input-length hardening in GitHub issue #81, continues CT-LED-008..019, and keeps WP-6 and issue #79 open |
+| **Status** | Reviewed; REV-111 Code PASS and REV-112 Security PASS |
+
+---
 
 ### DEC-044: Close the Order Matrix and Begin Exact Ledger Vectors
 

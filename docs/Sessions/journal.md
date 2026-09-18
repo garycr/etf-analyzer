@@ -6,6 +6,19 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-18 | WP-6 exact FIFO and numeric admission checkpoint validated | Ring-2 | @solo-orchestrator
+
+**Type:** IMPLEMENTATION-CHECKPOINT
+**Decision:** DEC-045 accepts CT-LED-003..007 with exact partial- and spanning-lot FIFO, half-even derived Money and final residual allocation, cross-runtime canonical strings, and fail-closed decimal grammar and bounds before lookup or persistence
+**Policy:** DEC-014; DEC-042; DEC-044; ledger and PostgreSQL contracts; test-first development; independent code and security review
+**Authority:** Agent under Fully Agentic mode with Workspace Owner authorization to continue WP-6; REV-111 Code PASS and REV-112 Security PASS
+**Accountability:** Solo Orchestrator continues CT-LED-008..019, tracks nonblocking decimal input-length hardening in GitHub issue #81, and keeps WP-6 and issue #79 open
+**Result:** PostgreSQL 16.15 C/UTF8/UTC complete suite 413/413 passed with zero skips or failures; CT-LED-003..007 focused evidence passed; migration identities 0003..0006 passed; dependency audit reports zero vulnerabilities; diagnostics and diff checks are clean
+**Artifact:** ledger/PostgreSQL implementation and tests | DEC-045 | REV-111 | REV-112 | GitHub issues #79/#81
+**authorization-boundary:** Checkpoint only; no WP-6 closure, WP-7, brokerage, live provider, public ingress, durable event, queue, scheduler, worker, baseline, release, deployment, or production action
+
+---
+
 ## 2026-09-17 | WP-6 transactional composition checkpoint validated | Ring-2 | @solo-orchestrator
 
 ## 2026-09-17 | WP-6 order matrix and initial ledger vectors validated | Ring-2 | @solo-orchestrator

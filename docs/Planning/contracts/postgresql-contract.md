@@ -47,10 +47,10 @@ The final WP-1 PostgreSQL 16.15 identities are:
 | ---: | --- | --- |
 | 1 | `a604802a67bed66c6ce79d2f2f856b48e184ae5b4f76803ab8ead3a135c85291` | `3ba3b63c429cf051378ce3eb4adafe0db697dec487d070669a6bc47dba2f8f7c` |
 | 2 | `ad458453834e72413f644e81e38829ae491a26a44f1ca03deeaf71349552c198` | `7f6929ff5e9414a99921fd74d26ef9795a10cfeb1f8939ef240d974834873abb` |
-| 3 | `90739054877f9ae80f2912b914d0239985512c55067de4d9060288ecacffc691` | `750935723443ed4274f76110fc6c0bbc6876bae8b7b5546f017b4f0d68f53709` |
-| 4 | `9bf81885aab5fafe8bcac9b372d7bbd0bec601fc29e0cdbc234a65fc3d5489f1` | `6544356611c029e32fef7b520e85c6e14072ab99dc7cd42d74a8c145f3ef5063` |
-| 5 | `638fdcb40695be04a30c56807e529f753fd37c80ccfdcd6ad58f04e603287cc4` | `489456398c3090ad12d8c1d374b19b58e5b6150dfb0c720605db766777926c34` |
-| 6 | `1bafffc644bfe57fc487e0aa9363626cd0273653c8c4278049b2a6421c6b87ed` | `ee267fe7912b0ba915022a1474a1a2bddfa811cab243f938fd665e624510c4d8` |
+| 3 | `e2d0153d217f8ce2dec01a82a34fb77370b077664de4530fb7bb98bb03e07975` | `d02077d1cce419d1dcc1cebcd75e65412ca7a91d51285a1e2abfa50c7dfd0f28` |
+| 4 | `9bf81885aab5fafe8bcac9b372d7bbd0bec601fc29e0cdbc234a65fc3d5489f1` | `777a6a0d08bdc2670253d4fef882d1683ef7b7e321079d3a9d2421f0b779ee18` |
+| 5 | `638fdcb40695be04a30c56807e529f753fd37c80ccfdcd6ad58f04e603287cc4` | `83c794be79ca5fed3e7616b5a5937e8ccc9c5d792a8dafb92cce7c6f0f57874a` |
+| 6 | `1bafffc644bfe57fc487e0aa9363626cd0273653c8c4278049b2a6421c6b87ed` | `414dbb5d317c5651d03e3c09ba985d72c76cba1a1383ffb0e1c4b31006a55248` |
 
 **2026-09-15 PT-FIX-001F amendment.** The re-baseline corrected sequence 4 to preserve the full 20-integer-digit capacity of DEC-014 `NUMERIC(28,8)` Money values while continuing to reject excess precision and scale before PostgreSQL casts. Sequence 5 and 6 SQL bytes are unchanged; their cumulative manifest hashes changed because the canonical root includes the corrected sequence-4 definition and content hash. No released or production database is in scope.
 

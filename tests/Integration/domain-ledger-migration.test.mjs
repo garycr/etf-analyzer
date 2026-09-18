@@ -5,6 +5,7 @@ import test from "node:test";
 import pg from "pg";
 
 import { executeApplicationRequestAsync } from "../../dist/Application/application-boundary.js";
+import { quantizeAnalyticsIntermediate } from "../../dist/Domain/Analytics/analytics.js";
 import { canonicalizeJson } from "../../dist/Infrastructure/CanonicalJson/canonical-json.js";
 import { createPostgresApplicationReplayStore } from "../../dist/Infrastructure/PostgreSQL/application-replay-store.js";
 import { applyMigration } from "../../dist/Infrastructure/PostgreSQL/migration-runner.js";
@@ -382,11 +383,11 @@ test(
       const manifest = JSON.parse(manifestJson);
       assert.equal(
         applied.contentHash,
-        "90739054877f9ae80f2912b914d0239985512c55067de4d9060288ecacffc691",
+        "e2d0153d217f8ce2dec01a82a34fb77370b077664de4530fb7bb98bb03e07975",
       );
       assert.equal(
         applied.schemaManifestHash,
-        "750935723443ed4274f76110fc6c0bbc6876bae8b7b5546f017b4f0d68f53709",
+        "d02077d1cce419d1dcc1cebcd75e65412ca7a91d51285a1e2abfa50c7dfd0f28",
       );
       assert.equal(Buffer.byteLength(manifestJson, "utf8"), 14194);
       assert.equal(manifest.migrationSequence.length, 3);
@@ -860,6 +861,59 @@ test(
         );
         assert.deepEqual(counts.rows, [{ orders: 0, transitions: 0, replays: 0, audits: 0 }]);
       }
+      for (const nonFinite of ["NaN", "Infinity", "-Infinity"]) {
+        for (const field of ["quantity", "unitPrice"]) {
+          const invalidCommand = {
+            ...command,
+            transitionPayload: { ...command.transitionPayload, [field]: nonFinite },
+          };
+          await client.query("SET SESSION AUTHORIZATION app_runtime");
+          try {
+            await assert.rejects(
+              () => client.query(
+                "SELECT etf.paper_order_transition($1::jsonb)",
+                [{ canonicalContent: canonicalizeJson(invalidCommand), ...invalidCommand }],
+              ),
+              /APPLICATION_REQUEST_INVALID/,
+            );
+          } finally {
+            await client.query("RESET SESSION AUTHORIZATION");
+          }
+        }
+      }
+      const invalidFill = {
+        ...command,
+        operation: "Transition",
+        transition: "OT-05",
+        transitionPayload: {
+          expectedPortfolioVersion: 0,
+          fee: "NaN",
+          fillId: deterministicUuid(group, 5),
+          portfolioId: deterministicUuid(group, 6),
+          quantity: "1.0000000000",
+          transactionId: deterministicUuid(group, 7),
+          unitPrice: "10.0000000000",
+        },
+      };
+      await client.query("SET SESSION AUTHORIZATION app_runtime");
+      try {
+        await assert.rejects(
+          () => client.query(
+            "SELECT etf.paper_order_transition($1::jsonb)",
+            [{ canonicalContent: canonicalizeJson(invalidFill), ...invalidFill }],
+          ),
+          /APPLICATION_REQUEST_INVALID/,
+        );
+      } finally {
+        await client.query("RESET SESSION AUTHORIZATION");
+      }
+      const counts = await client.query(
+        `SELECT (SELECT count(*)::integer FROM etf.paper_orders) AS orders,
+                (SELECT count(*)::integer FROM etf.order_transitions) AS transitions,
+                (SELECT count(*)::integer FROM etf.order_command_replays) AS replays,
+                (SELECT count(*)::integer FROM etf.order_audit) AS audits`,
+      );
+      assert.deepEqual(counts.rows, [{ orders: 0, transitions: 0, replays: 0, audits: 0 }]);
     } finally {
       try {
         await cleanBootstrap(client);
@@ -2242,6 +2296,334 @@ test(
 );
 
 test(
+  "CT-LED-003 consumes a partial lot FIFO",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    const group = "50300000";
+    const portfolioId = deterministicUuid(group, 1);
+    const instrumentId = "PARTIAL-FIFO-ETF";
+    const buy = fillFixture({
+      group,
+      index: 1,
+      side: "Buy",
+      quantity: "3.0000000000",
+      unitPrice: "10.0000000000",
+      effectiveAt: "2026-09-17T21:01:00.000Z",
+    });
+    const sell = fillFixture({
+      group,
+      index: 2,
+      side: "Sell",
+      quantity: "1.0000000000",
+      unitPrice: "15.0000000000",
+      effectiveAt: "2026-09-17T21:02:00.000Z",
+    });
+
+    await client.connect();
+    await client.query(fixtureLockSql);
+    try {
+      await cleanBootstrap(client);
+      await applyPrerequisites(client);
+      await prepareLedgerBoundary(client);
+      await seedFillOrder(client, { ...buy, instrumentId });
+      await seedFillOrder(client, { ...sell, instrumentId });
+      await appendLedger(client, cashDeposit({
+        portfolioId,
+        transactionId: deterministicUuid(group, 1),
+        correlationId: deterministicUuid(group, 2),
+        version: 0,
+        effectiveAt: "2026-09-17T21:00:00.000Z",
+      }));
+      await appendLedger(client, fillCommand({ ...buy, portfolioId, instrumentId, version: 1 }));
+      await appendLedger(client, fillCommand({ ...sell, portfolioId, instrumentId, version: 2 }));
+
+      const rebuilt = await client.query(
+        `SELECT sum(effect.money) FILTER (WHERE right(effect.effect_type, 4) = 'Cash')::numeric(28,8)::text AS cash,
+                sum(effect.quantity) FILTER (WHERE right(effect.effect_type, 8) = 'Position')::numeric(28,10)::text AS quantity,
+                sum(effect.money) FILTER (WHERE right(effect.effect_type, 5) = 'Basis')::numeric(28,8)::text AS basis,
+                sum(effect.money) FILTER (WHERE right(effect.effect_type, 11) = 'RealizedPnL')::numeric(28,8)::text AS realized_pnl,
+                count(DISTINCT lot.lot_id)::integer AS consulted_lots
+           FROM etf.ledger_effects AS effect
+           LEFT JOIN etf.ledger_lots AS lot
+             ON lot.portfolio_id = effect.portfolio_id
+            AND lot.lot_id = effect.lot_id
+          WHERE effect.portfolio_id = $1::uuid`,
+        [portfolioId],
+      );
+      assert.deepEqual(rebuilt.rows, [{
+        cash: "85.00000000",
+        quantity: "2.0000000000",
+        basis: "20.00000000",
+        realized_pnl: "5.00000000",
+        consulted_lots: 1,
+      }]);
+
+      const allocations = await client.query(
+        `SELECT sell_transaction_id::text, effect_ordinal::integer, lot_id::text,
+                consumed_quantity::text, allocated_basis::text
+           FROM etf.ledger_allocations
+          WHERE portfolio_id = $1::uuid`,
+        [portfolioId],
+      );
+      assert.deepEqual(allocations.rows, [{
+        sell_transaction_id: sell.transactionId,
+        effect_ordinal: 1,
+        lot_id: buy.fillId,
+        consumed_quantity: "1.0000000000",
+        allocated_basis: "10.00000000",
+      }]);
+    } finally {
+      try {
+        await cleanBootstrap(client);
+      } finally {
+        await client.query(fixtureUnlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
+  "CT-LED-004 spans FIFO lots with exact realized PnL",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    const group = "50400000";
+    const portfolioId = deterministicUuid(group, 1);
+    const instrumentId = "SPANNING-FIFO-ETF";
+    const lotA = fillFixture({
+      group,
+      index: 1,
+      side: "Buy",
+      quantity: "3.0000000000",
+      unitPrice: "10.0000000000",
+      effectiveAt: "2026-09-17T22:01:00.000Z",
+    });
+    const lotB = fillFixture({
+      group,
+      index: 2,
+      side: "Buy",
+      quantity: "2.0000000000",
+      unitPrice: "12.0000000000",
+      effectiveAt: "2026-09-17T22:02:00.000Z",
+    });
+    const sell = fillFixture({
+      group,
+      index: 3,
+      side: "Sell",
+      quantity: "4.0000000000",
+      unitPrice: "15.0000000000",
+      effectiveAt: "2026-09-17T22:03:00.000Z",
+    });
+
+    await client.connect();
+    await client.query(fixtureLockSql);
+    try {
+      await cleanBootstrap(client);
+      await applyPrerequisites(client);
+      await prepareLedgerBoundary(client);
+      for (const fill of [lotA, lotB, sell]) {
+        await seedFillOrder(client, { ...fill, instrumentId });
+      }
+      await appendLedger(client, cashDeposit({
+        portfolioId,
+        transactionId: deterministicUuid(group, 1),
+        correlationId: deterministicUuid(group, 2),
+        version: 0,
+        effectiveAt: "2026-09-17T22:00:00.000Z",
+        amount: "20000.00000000",
+      }));
+      await appendLedger(client, fillCommand({ ...lotA, portfolioId, instrumentId, version: 1 }));
+      await appendLedger(client, fillCommand({ ...lotB, portfolioId, instrumentId, version: 2 }));
+      await appendLedger(client, fillCommand({
+        ...sell,
+        portfolioId,
+        instrumentId,
+        version: 3,
+        fee: "1.00000000",
+      }));
+
+      const allocations = await client.query(
+        `SELECT effect_ordinal::integer, lot_id::text,
+                consumed_quantity::text, allocated_basis::text
+           FROM etf.ledger_allocations
+          WHERE portfolio_id = $1::uuid
+          ORDER BY effect_ordinal, lot_id`,
+        [portfolioId],
+      );
+      assert.deepEqual(allocations.rows, [
+        {
+          effect_ordinal: 1,
+          lot_id: lotA.fillId,
+          consumed_quantity: "3.0000000000",
+          allocated_basis: "30.00000000",
+        },
+        {
+          effect_ordinal: 3,
+          lot_id: lotB.fillId,
+          consumed_quantity: "1.0000000000",
+          allocated_basis: "12.00000000",
+        },
+      ]);
+
+      const rebuilt = await client.query(
+        `SELECT sum(money) FILTER (WHERE right(effect_type, 4) = 'Cash')::numeric(28,8)::text AS cash,
+                sum(quantity) FILTER (WHERE right(effect_type, 8) = 'Position')::numeric(28,10)::text AS quantity,
+                sum(money) FILTER (WHERE right(effect_type, 5) = 'Basis')::numeric(28,8)::text AS basis,
+          sum(money) FILTER (WHERE right(effect_type, 11) = 'RealizedPnL')::numeric(28,8)::text AS realized_pnl,
+          round(sum(quantity) FILTER (WHERE right(effect_type, 8) = 'Position') * 14.0000000000, 8)::text AS valuation,
+          round(sum(money) FILTER (WHERE right(effect_type, 4) = 'Cash') + sum(quantity) FILTER (WHERE right(effect_type, 8) = 'Position') * 14.0000000000, 8)::text AS total_equity
+           FROM etf.ledger_effects
+          WHERE portfolio_id = $1::uuid`,
+        [portfolioId],
+      );
+      assert.deepEqual(rebuilt.rows, [{
+        cash: "20005.00000000",
+        quantity: "1.0000000000",
+        basis: "12.00000000",
+        realized_pnl: "17.00000000",
+        valuation: "14.00000000",
+        total_equity: "20019.00000000",
+      }]);
+    } finally {
+      try {
+        await cleanBootstrap(client);
+      } finally {
+        await client.query(fixtureUnlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
+  "CT-LED-006 produces identical TypeScript and PostgreSQL canonical strings",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    await client.connect();
+    try {
+      const vectors = [
+        { source: "1.000000005", numericClass: "Money", postgresType: "numeric(28,8)", expected: "1.00000000" },
+        { source: "1.000000015", numericClass: "Money", postgresType: "numeric(28,8)", expected: "1.00000002" },
+        { source: "-1.000000005", numericClass: "Money", postgresType: "numeric(28,8)", expected: "-1.00000000" },
+        { source: "-1.000000015", numericClass: "Money", postgresType: "numeric(28,8)", expected: "-1.00000002" },
+        { source: "1.00000000005", numericClass: "Quantity", postgresType: "numeric(28,10)", expected: "1.0000000000" },
+        { source: "0.0000000000005", numericClass: "Rate", postgresType: "numeric(28,12)", expected: "0.000000000000" },
+      ];
+
+      for (const vector of vectors) {
+        const typescriptValue = quantizeAnalyticsIntermediate(vector.source, vector.numericClass);
+        assert.equal(typescriptValue, vector.expected);
+        const postgres = await client.query(
+          `SELECT $1::${vector.postgresType}::text AS canonical_value`,
+          [typescriptValue],
+        );
+        assert.equal(postgres.rows[0].canonical_value, typescriptValue);
+      }
+    } finally {
+      await client.end();
+    }
+  },
+);
+
+test(
+  "CT-LED-007 rejects invalid scale grammar and bounds before persistence",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    await client.connect();
+    await client.query(fixtureLockSql);
+    try {
+      await cleanBootstrap(client);
+      await applyPrerequisites(client);
+      await prepareLedgerBoundary(client);
+
+      const vectors = [
+        { amount: "1.000000001", error: /LEDGER_EXCESS_SCALE/ },
+        { amount: "1e0", error: /LEDGER_INVALID_DECIMAL/ },
+        { amount: "+1.00000000", error: /LEDGER_INVALID_DECIMAL/ },
+        { amount: " 1.00000000", error: /LEDGER_INVALID_DECIMAL/ },
+        { amount: "NaN", error: /LEDGER_INVALID_DECIMAL/ },
+        { amount: "Infinity", error: /LEDGER_INVALID_DECIMAL/ },
+        { amount: "-Infinity", error: /LEDGER_INVALID_DECIMAL/ },
+        { amount: 1.5, error: /LEDGER_INVALID_DECIMAL/ },
+        { amount: "9000000000000000.00000001", error: /LEDGER_BOUND_EXCEEDED/ },
+      ];
+
+      for (const [index, vector] of vectors.entries()) {
+        await assert.rejects(
+          () => appendLedger(client, cashDeposit({
+            portfolioId: deterministicUuid("55700000", index + 1),
+            transactionId: deterministicUuid("55700000", index + 101),
+            correlationId: deterministicUuid("55700000", index + 201),
+            version: 0,
+            effectiveAt: "2026-09-21T10:00:00.000Z",
+            amount: vector.amount,
+          })),
+          vector.error,
+        );
+      }
+
+      const fill = fillFixture({
+        group: "55700000",
+        index: 50,
+        side: "Buy",
+        quantity: "1.0000000000",
+        unitPrice: "1.0000000000",
+        effectiveAt: "2026-09-21T10:01:00.000Z",
+      });
+      const fillVectors = [
+        { field: "quantity", value: "1.00000000001", error: /LEDGER_EXCESS_SCALE/ },
+        { field: "unitPrice", value: "1.00000000001", error: /LEDGER_EXCESS_SCALE/ },
+        { field: "fee", value: "1.000000001", error: /LEDGER_EXCESS_SCALE/ },
+        { field: "quantity", value: "1e0", error: /LEDGER_INVALID_DECIMAL/ },
+        { field: "unitPrice", value: 1.5, error: /LEDGER_INVALID_DECIMAL/ },
+        { field: "fee", value: "+1.00000000", error: /LEDGER_INVALID_DECIMAL/ },
+        { field: "quantity", value: "NaN", error: /LEDGER_INVALID_DECIMAL/ },
+        { field: "unitPrice", value: "Infinity", error: /LEDGER_INVALID_DECIMAL/ },
+        { field: "fee", value: "-Infinity", error: /LEDGER_INVALID_DECIMAL/ },
+        { field: "quantity", value: "1000000000.0000000001", error: /LEDGER_BOUND_EXCEEDED/ },
+        { field: "unitPrice", value: "1000000.0000000001", error: /LEDGER_BOUND_EXCEEDED/ },
+        { field: "fee", value: "1000000000.00000001", error: /LEDGER_BOUND_EXCEEDED/ },
+      ];
+      for (const [index, vector] of fillVectors.entries()) {
+        const command = fillCommand({
+          ...fill,
+          portfolioId: deterministicUuid("55700000", index + 301),
+          instrumentId: "ETF-LED-007",
+          version: 0,
+          fee: "0.00000000",
+        });
+        command[vector.field] = vector.value;
+        await assert.rejects(() => appendLedger(client, command), vector.error);
+      }
+
+      const persisted = await client.query(
+        `SELECT (SELECT count(*)::integer FROM etf.portfolios) AS portfolios,
+                (SELECT count(*)::integer FROM etf.ledger_transactions) AS transactions,
+                (SELECT count(*)::integer FROM etf.ledger_effects) AS effects,
+                (SELECT count(*)::integer FROM etf.ledger_command_replays) AS replays`,
+      );
+      assert.deepEqual(persisted.rows, [{
+        portfolios: 0,
+        transactions: 0,
+        effects: 0,
+        replays: 0,
+      }]);
+    } finally {
+      try {
+        await cleanBootstrap(client);
+      } finally {
+        await client.query(fixtureUnlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
   "CT-LED-005 assigns the final proportional sale the exact residual lot basis",
   { skip: !connectionString },
   async () => {
@@ -2255,7 +2637,7 @@ test(
         index: 1,
         side: "Buy",
         quantity: "3.0000000000",
-        unitPrice: "3.3333333333",
+        unitPrice: "3.3333333350",
         effectiveAt: "2026-09-14T01:01:00.000Z",
       }),
       ...[2, 3, 4].map((index) => fillFixture({

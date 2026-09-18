@@ -431,11 +431,11 @@ test(
       const manifest = JSON.parse(manifestJson);
       assert.equal(
         applied.contentHash,
-        "b152f8625921ca79514234c56558025e5579dcc0449dec96ec5d8cf25ad15134",
+        "c5da21109969595e17dfb7b31e5c45296324b6d20caf1f1debdb1a70ea84a496",
       );
       assert.equal(
         applied.schemaManifestHash,
-        "ad12ccbc94da550d546c05b24b538056a7178c03e2333514dfb319ca5116092f",
+        "6b45b57e06bc6e5e4097a35156f4e2544cec3cd0bc567319ac42292a41e5f782",
       );
       assert.equal(Buffer.byteLength(manifestJson, "utf8"), 15771);
       assert.equal(manifest.migrationSequence.length, 3);
@@ -3511,6 +3511,191 @@ test(
       } finally {
         await client.query(fixtureUnlockSql);
         await client.end();
+      }
+    }
+  },
+);
+
+test(
+  "CT-LED-018 appends timeout and recovery outcomes for unresolved intent",
+  { skip: !connectionString },
+  async () => {
+    const admin = new pg.Client({ connectionString });
+    const group = "56300000";
+    const portfolioId = deterministicUuid(group, 1);
+    const attemptIntentId = deterministicUuid(group, 2);
+    const correlationId = deterministicUuid(group, 3);
+    const intent = {
+      action: "LedgerAppend",
+      attemptIntentId,
+      correlationId,
+      domain: "Ledger",
+      keyIdentifier: "primary",
+      outcome: "IntentRecorded",
+      subject: {
+        auditId: deterministicUuid(group, 4),
+        oldPortfolioVersion: 1,
+        portfolioId,
+        replayClassification: "New",
+      },
+    };
+    const timeout = {
+      ...intent,
+      outcome: "TimeoutRecovery",
+      subject: {
+        ...intent.subject,
+        auditId: deterministicUuid(group, 5),
+        errorCode: "AUDIT_ATTEMPT_TIMEOUT",
+        transitionCommandId: null,
+      },
+    };
+    const recovery = {
+      ...intent,
+      outcome: "RecoveryCompleted",
+      subject: {
+        ...intent.subject,
+        auditId: deterministicUuid(group, 6),
+        transitionCommandId: null,
+      },
+    };
+    const collect = async (payload) => {
+      const collector = new pg.Client({ connectionString });
+      await collector.connect();
+      try {
+        return await appendAudit(collector, payload);
+      } finally {
+        await collector.end();
+      }
+    };
+    const snapshot = async () => (await admin.query(
+      `SELECT
+         (SELECT jsonb_agg(to_jsonb(audit) ORDER BY audit.recorded_at, audit.audit_id)
+            FROM etf.ledger_audit AS audit
+           WHERE audit.attempt_intent_id = $1::uuid) AS audits,
+         (SELECT jsonb_agg(to_jsonb(commitment) ORDER BY commitment.audit_sequence)
+            FROM etf.audit_commitments AS commitment) AS commitments,
+         (SELECT jsonb_agg(to_jsonb(checkpoint) ORDER BY checkpoint.audit_sequence)
+            FROM etf.audit_anchor_checkpoints AS checkpoint) AS checkpoints`,
+      [attemptIntentId],
+    )).rows;
+    await admin.connect();
+    await admin.query(fixtureLockSql);
+    try {
+      await cleanBootstrap(admin);
+      await applyCompleteMigrationSet(admin);
+      await appendLedger(admin, cashDeposit({
+        portfolioId,
+        transactionId: deterministicUuid(group, 7),
+        correlationId: deterministicUuid(group, 8),
+        version: 0,
+        effectiveAt: "2026-09-21T16:00:00.000Z",
+        amount: "100.00000000",
+      }));
+
+      const intentResult = await collect(intent);
+      const immutableIntent = await admin.query(
+        "SELECT to_jsonb(audit) AS audit FROM etf.ledger_audit AS audit WHERE audit_id = $1::uuid",
+        [intent.subject.auditId],
+      );
+      const timeoutResult = await collect(timeout);
+      const afterTimeout = await snapshot();
+      assert.deepEqual(await collect(timeout), timeoutResult);
+      assert.deepEqual(await snapshot(), afterTimeout);
+      await assert.rejects(
+        () => collect({ ...timeout, correlationId: deterministicUuid(group, 9) }),
+        (error) => error.code === "22023" && error.message === "AUDIT_REQUEST_INVALID",
+      );
+      assert.deepEqual(await snapshot(), afterTimeout);
+
+      const recoveryResult = await collect(recovery);
+      const afterRecovery = await snapshot();
+      assert.deepEqual(await collect(recovery), recoveryResult);
+      assert.deepEqual(await snapshot(), afterRecovery);
+      assert.deepEqual(
+        (await admin.query(
+          "SELECT to_jsonb(audit) AS audit FROM etf.ledger_audit AS audit WHERE audit_id = $1::uuid",
+          [intent.subject.auditId],
+        )).rows,
+        immutableIntent.rows,
+      );
+      assert.equal(intentResult.auditId, intent.subject.auditId);
+
+      const lifecycle = await admin.query(
+        `SELECT audit.outcome,
+                audit.attempt_intent_id::text AS attempt_intent_id,
+                audit.correlation_id::text AS correlation_id,
+                audit.workload_identity,
+                commitment.audit_sequence::integer,
+                checkpoint.audit_commitment = commitment.audit_commitment AS checkpoint_matches
+           FROM etf.ledger_audit AS audit
+           JOIN etf.audit_commitments AS commitment
+             ON commitment.audit_segment_hash = audit.audit_evidence_hash
+           JOIN etf.audit_anchor_checkpoints AS checkpoint
+             ON checkpoint.audit_sequence = commitment.audit_sequence
+          WHERE audit.attempt_intent_id = $1::uuid
+          ORDER BY commitment.audit_sequence`,
+        [attemptIntentId],
+      );
+      assert.deepEqual(
+        lifecycle.rows.map(({ outcome }) => outcome),
+        ["IntentRecorded", "TimeoutRecovery", "RecoveryCompleted"],
+      );
+      for (const row of lifecycle.rows) {
+        assert.equal(row.attempt_intent_id, attemptIntentId);
+        assert.equal(row.correlation_id, correlationId);
+        assert.equal(row.workload_identity, "audit_runtime");
+        assert.equal(row.checkpoint_matches, true);
+      }
+
+      const competingIntent = {
+        ...intent,
+        attemptIntentId: deterministicUuid(group, 10),
+        correlationId: deterministicUuid(group, 11),
+        subject: { ...intent.subject, auditId: deterministicUuid(group, 12) },
+      };
+      await collect(competingIntent);
+      const sharedAuditId = deterministicUuid(group, 13);
+      const collidingTimeouts = [
+        { ...timeout, subject: { ...timeout.subject, auditId: sharedAuditId } },
+        {
+          ...timeout,
+          attemptIntentId: competingIntent.attemptIntentId,
+          correlationId: competingIntent.correlationId,
+          subject: { ...competingIntent.subject, auditId: sharedAuditId, errorCode: "AUDIT_ATTEMPT_TIMEOUT" },
+        },
+      ];
+      const collisionResults = await Promise.all(collidingTimeouts.map(async (payload) => {
+        try {
+          return { result: await collect(payload) };
+        } catch (error) {
+          return { error };
+        }
+      }));
+      assert.equal(collisionResults.filter(({ result }) => result !== undefined).length, 1);
+      const collisionError = collisionResults.find(({ error }) => error !== undefined).error;
+      assert.equal(collisionError.code, "22023");
+      assert.equal(collisionError.message, "AUDIT_REQUEST_INVALID");
+      assert.deepEqual(
+        (await admin.query(
+          `SELECT count(*)::integer AS audits,
+                  count(commitment.audit_sequence)::integer AS commitments,
+                  count(checkpoint.audit_sequence)::integer AS checkpoints
+             FROM etf.ledger_audit AS audit
+             LEFT JOIN etf.audit_commitments AS commitment
+               ON commitment.audit_segment_hash = audit.audit_evidence_hash
+             LEFT JOIN etf.audit_anchor_checkpoints AS checkpoint
+               ON checkpoint.audit_sequence = commitment.audit_sequence
+            WHERE audit.audit_id = $1::uuid`,
+          [sharedAuditId],
+        )).rows,
+        [{ audits: 1, commitments: 1, checkpoints: 1 }],
+      );
+    } finally {
+      try {
+        await cleanBootstrap(admin);
+      } finally {
+        await admin.query(fixtureUnlockSql);
+        await admin.end();
       }
     }
   },

@@ -6,6 +6,20 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-18 | WP-6 crash-intent recovery checkpoint validated | Ring-2 | @solo-orchestrator
+
+**Type:** IMPLEMENTATION-CHECKPOINT
+**Decision:** DEC-055 accepts CT-LED-018 with immutable unresolved intent, ordered anchored timeout and completion, exact collector replay, and collision-safe global audit identity
+**Policy:** DEC-015; DEC-042; DEC-050; DEC-051; ledger and PostgreSQL contracts; test-first development; independent code and security review
+**Authority:** Agent under Fully Agentic mode with Workspace Owner authorization to continue WP-6; REV-131 Code PASS and REV-132 Security PASS
+**Accountability:** Solo Orchestrator preserves attempt-to-audit-to-commitment lock ordering, continues CT-LED-019, retains nonblocking hardening in GitHub issue #81, and keeps WP-6 and issue #79 open
+**Result:** PostgreSQL CT-LED-018 focused evidence 1/1, lifecycle compatibility 2/2, migration identity and behavior 17/17, and complete suite 423/423 passed with zero skips or failures; dependency audit reports zero vulnerabilities; diagnostics and diff checks are clean
+**Remediation:** Review exposed asymmetric JSON-null replay matching and a cross-attempt audit-identity race; symmetric normalization plus ordered audit-identity locking now prove exact retry and stable concurrent loser behavior without orphaned chain state
+**Artifact:** PostgreSQL audit recovery implementation, contracts, and tests | DEC-055 | REV-131 | REV-132 | GitHub issues #79/#81
+**authorization-boundary:** Checkpoint only; no WP-6 closure, WP-7, brokerage, live provider, public ingress, durable event, queue, scheduler, worker, baseline, release, deployment, or production action
+
+---
+
 ## 2026-09-18 | WP-6 fail-closed projection checkpoint validated | Ring-2 | @solo-orchestrator
 
 **Type:** IMPLEMENTATION-CHECKPOINT

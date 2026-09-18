@@ -451,12 +451,29 @@ LANGUAGE plpgsql VOLATILE PARALLEL UNSAFE SECURITY DEFINER
 SET search_path = pg_catalog, etf
 AS $function$
 DECLARE
-  domain_name text; outcome_name text; subject jsonb; recorded timestamp(3) with time zone; workload text; actor text; auth_hash text; audit_content text; evidence text; anchor_result jsonb;
+  domain_name text; outcome_name text; subject jsonb; recorded timestamp(3) with time zone; workload text; actor text; auth_hash text; audit_content text; evidence text; anchor_result jsonb; replay_evidence text; replay_sequence bigint;
 BEGIN
   IF payload IS NULL OR jsonb_typeof(payload) <> 'object' OR NOT payload ?& ARRAY['action','attemptIntentId','correlationId','domain','keyIdentifier','outcome','subject'] OR payload - ARRAY['action','attemptIntentId','correlationId','domain','keyIdentifier','outcome','subject']::text[] <> '{}'::jsonb OR jsonb_typeof(payload -> 'subject') <> 'object' THEN RAISE EXCEPTION 'AUDIT_REQUEST_INVALID' USING ERRCODE = '22023'; END IF;
   domain_name := payload ->> 'domain'; outcome_name := payload ->> 'outcome'; subject := payload -> 'subject'; workload := session_user; actor := CASE WHEN session_user = 'app_runtime' THEN 'local-user' ELSE NULL END;
   IF NOT ((session_user = 'app_runtime' AND ((domain_name = 'Order' AND outcome_name = 'Committed') OR (domain_name = 'Ledger' AND outcome_name = 'Committed'))) OR (session_user = 'projection_runtime' AND domain_name = 'Ledger' AND outcome_name IN ('BlockedPublication','PublicationCompleted')) OR (session_user = 'audit_runtime' AND ((domain_name = 'Order' AND outcome_name IN ('IntentRecorded','Rejected')) OR (domain_name = 'Ledger' AND outcome_name IN ('IntentRecorded','Rejected','IntegrityFailed','TimeoutRecovery','RecoveryCompleted')) OR (domain_name = 'Denial' AND outcome_name = 'PermissionDenied')))) THEN RAISE EXCEPTION 'permission denied' USING ERRCODE = '42501'; END IF;
   PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('etf:audit-attempt:' || (payload ->> 'attemptIntentId'),0));
+  PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('etf:audit-id:' || (subject ->> 'auditId'),0));
+  IF session_user = 'audit_runtime' AND domain_name = 'Ledger' AND outcome_name IN ('TimeoutRecovery','RecoveryCompleted') THEN
+    SELECT audit.audit_evidence_hash, commitment.audit_sequence
+      INTO replay_evidence, replay_sequence
+      FROM etf.ledger_audit AS audit
+      JOIN etf.audit_commitments AS commitment ON commitment.audit_segment_hash = audit.audit_evidence_hash
+     WHERE audit.audit_id = (subject ->> 'auditId')::uuid
+       AND audit.attempt_intent_id = (payload ->> 'attemptIntentId')::uuid
+       AND audit.action = payload ->> 'action'
+       AND audit.outcome = outcome_name
+       AND audit.correlation_id = (payload ->> 'correlationId')::uuid
+       AND audit.workload_identity = session_user
+       AND commitment.key_identifier = payload ->> 'keyIdentifier'
+      AND jsonb_strip_nulls(jsonb_build_object('auditId',audit.audit_id::text,'portfolioId',audit.portfolio_id::text,'transactionId',audit.transaction_id::text,'ledgerSequence',audit.ledger_sequence,'errorCode',audit.error_code,'replayClassification',audit.replay_classification,'transitionCommandId',audit.transition_command_id::text,'oldOrderVersion',audit.old_order_version,'newOrderVersion',audit.new_order_version,'oldPortfolioVersion',audit.old_portfolio_version,'newPortfolioVersion',audit.new_portfolio_version,'reversesTransactionId',audit.reverses_transaction_id::text,'reversedByTransactionId',audit.reversed_by_transaction_id::text,'transactionEvidenceHash',audit.transaction_evidence_hash,'allocationEvidenceHash',audit.allocation_evidence_hash)) = jsonb_strip_nulls(subject);
+    IF FOUND THEN RETURN jsonb_build_object('auditId', subject ->> 'auditId', 'evidenceHash', replay_evidence, 'auditSequence', replay_sequence); END IF;
+    IF EXISTS (SELECT 1 FROM etf.ledger_audit WHERE audit_id = (subject ->> 'auditId')::uuid) THEN RAISE EXCEPTION 'AUDIT_REQUEST_INVALID' USING ERRCODE = '22023'; END IF;
+  END IF;
   recorded := date_trunc('milliseconds', clock_timestamp());
   auth_hash := encode(public.digest(convert_to(format('{"actorSubject":%s,"correlationId":"%s","sessionUser":"%s","workloadIdentity":"%s"}', CASE WHEN actor IS NULL THEN 'null' ELSE '"' || actor || '"' END, payload ->> 'correlationId', session_user, workload), 'UTF8'), 'sha256'), 'hex');
   IF domain_name = 'Order' THEN

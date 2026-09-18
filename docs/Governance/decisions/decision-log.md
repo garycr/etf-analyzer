@@ -41,10 +41,26 @@
 | DEC-043 | 2026-09-17 | Replay integrity | Bind WP-6 application replay and PostgreSQL order effects in one transaction | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-044 | 2026-09-17 | Order and ledger integrity | Close CT-ORD-001..012 and begin exact ledger vectors with state-aware terminal quantities and byte-canonical replay | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-045 | 2026-09-18 | Ledger numeric integrity | Accept CT-LED-003..007 with exact FIFO, half-even arithmetic, cross-runtime strings, and fail-closed numeric admission | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
+| DEC-046 | 2026-09-18 | Projection integrity | Accept CT-LED-008 with exact keyed cache reconciliation and no repair | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 
 ---
 
 ## Decision Records
+
+### DEC-046: Accept Exact Keyed Projection Reconciliation
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-046 |
+| **Date** | 2026-09-18 |
+| **Category** | Projection integrity |
+| **Decision** | Accept CT-LED-008 after proving that projection publication independently rebuilds and exactly compares cash, realized P&L, keyed lots, keyed positions, valuation, unrealized P&L, total equity, keyed allocations, portfolio and policy versions, baseline, and established snapshot identity, rejecting every tested corruption without repair or mutation |
+| **Policy** | DEC-014; DEC-042; DEC-045; ledger-function and PostgreSQL contracts; test-first development; least privilege; independent code and security review |
+| **Authority** | Agent under Fully Agentic mode with Workspace Owner authorization to continue WP-6 |
+| **Accountability** | Solo Orchestrator preserves PostgreSQL mutation authority, assigns live two-client serialization proof to CT-LED-011, retains decimal input-length hardening in GitHub issue #81, continues CT-LED-009..019, and keeps WP-6 and issue #79 open |
+| **Status** | Reviewed; REV-113 Code PASS and REV-114 Security PASS |
+
+---
 
 ### DEC-045: Accept Exact FIFO and Numeric Admission
 

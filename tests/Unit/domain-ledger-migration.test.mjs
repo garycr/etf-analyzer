@@ -110,6 +110,10 @@ test("0003 domain ledger grants only the nested owner call graph and authoritati
     sql,
     /GRANT EXECUTE ON FUNCTION etf\.anchor_append\(jsonb\) TO ledger_writer_owner, audit_writer_owner, projection_owner;/,
   );
+  assert.match(sql, /GRANT SELECT \(portfolio_id, effect_type, instrument_id, lot_id, quantity, money\) ON etf\.ledger_effects TO projection_owner;/);
+  assert.match(sql, /GRANT SELECT \(portfolio_id, lot_id, instrument_id\) ON etf\.ledger_lots TO projection_owner;/);
+  assert.match(sql, /GRANT SELECT \(portfolio_id, sell_transaction_id, effect_ordinal, lot_id, consumed_quantity, allocated_basis\) ON etf\.ledger_allocations TO projection_owner;/);
+  assert.match(sql, /GRANT SELECT \(portfolio_id, portfolio_version, precision_policy_version, baseline_version\) ON etf\.portfolios TO projection_owner;/);
   assert.doesNotMatch(sql, /GRANT SELECT ON etf\.paper_orders/);
   assert.doesNotMatch(
     sql,
@@ -117,6 +121,10 @@ test("0003 domain ledger grants only the nested owner call graph and authoritati
   );
   assert.equal(
     (sql.match(/pg_advisory_xact_lock\(pg_catalog\.hashtextextended\('etf:paper-order:'/gu) ?? []).length,
+    2,
+  );
+  assert.equal(
+    (sql.match(/pg_advisory_xact_lock\(pg_catalog\.hashtextextended\('etf:portfolio:'/gu) ?? []).length,
     2,
   );
   assert.doesNotMatch(sql, /GRANT SELECT ON etf\.ledger_commitments/);

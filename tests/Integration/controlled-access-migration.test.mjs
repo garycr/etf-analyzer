@@ -34,7 +34,7 @@ const lockSql =
 const unlockSql =
   "SELECT pg_catalog.pg_advisory_unlock(pg_catalog.hashtextextended('etf:test:role-bootstrap', 0))";
 const controlledAccessContentHash = "1bafffc644bfe57fc487e0aa9363626cd0273653c8c4278049b2a6421c6b87ed";
-const controlledAccessManifestHash = "414dbb5d317c5651d03e3c09ba985d72c76cba1a1383ffb0e1c4b31006a55248";
+const controlledAccessManifestHash = "6a94abd6a6793548af0fe5386ac3f0945b48c69c4b06d1731676188da8004075";
 
 async function cleanBootstrap(client) {
   await client.query("ROLLBACK").catch(() => undefined);
@@ -204,7 +204,7 @@ test(
         app_schema_usage: false,
         application_schema_create: false,
         schema_owner_job_read: false,
-        projection_portfolio_read: false,
+        projection_portfolio_read: true,
       });
       assert.deepEqual(await collectPostgresManifestGrants(client), grantsBeforeFailure);
     } finally {
@@ -239,8 +239,11 @@ test(
         { object: "analytics_publications", columns: ["publication_target_id", "publication_version", "evidence_id", "published_at", "bundle_hash"], grantee: "schema_owner", privilege: "SELECT" },
         { object: "audit_commitments", columns: ["audit_sequence", "audit_commitment"], grantee: "anchor_owner", privilege: "SELECT" },
         { object: "jobs", columns: ["job_id", "job_type", "status", "restartability", "attempt", "created_at", "started_at", "completed_at", "accepted_count", "rejected_count"], grantee: "schema_owner", privilege: "SELECT" },
+        { object: "ledger_allocations", columns: ["portfolio_id", "sell_transaction_id", "effect_ordinal", "lot_id", "consumed_quantity", "allocated_basis"], grantee: "projection_owner", privilege: "SELECT" },
         { object: "ledger_anchors", columns: ["portfolio_id", "ledger_sequence", "commitment_hash"], grantee: "projection_owner", privilege: "SELECT" },
         { object: "ledger_commitments", columns: ["portfolio_id", "ledger_sequence", "commitment_hash"], grantee: "projection_owner", privilege: "SELECT" },
+        { object: "ledger_effects", columns: ["portfolio_id", "effect_type", "instrument_id", "lot_id", "quantity", "money"], grantee: "projection_owner", privilege: "SELECT" },
+        { object: "ledger_lots", columns: ["portfolio_id", "lot_id", "instrument_id"], grantee: "projection_owner", privilege: "SELECT" },
         { object: "paper_orders", columns: ["order_id", "instrument_id", "aggregate_version", "side"], grantee: "ledger_writer_owner", privilege: "SELECT" },
         { object: "paper_orders", columns: ["order_id", "instrument_id", "state", "aggregate_version", "research_evidence_id", "side", "requested_quantity", "filled_quantity", "open_quantity", "unit_price", "trade_date"], grantee: "schema_owner", privilege: "SELECT" },
         { object: "portfolios", columns: ["portfolio_id", "portfolio_version", "baseline_version", "precision_policy_version"], grantee: "projection_owner", privilege: "SELECT" },

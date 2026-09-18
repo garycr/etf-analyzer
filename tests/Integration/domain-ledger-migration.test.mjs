@@ -383,13 +383,13 @@ test(
       const manifest = JSON.parse(manifestJson);
       assert.equal(
         applied.contentHash,
-        "e2d0153d217f8ce2dec01a82a34fb77370b077664de4530fb7bb98bb03e07975",
+        "745f2ba8bbfcdb00a4f0f3d235ae29cf4ed19ab8d1056799fdea2356f0ddbf80",
       );
       assert.equal(
         applied.schemaManifestHash,
-        "d02077d1cce419d1dcc1cebcd75e65412ca7a91d51285a1e2abfa50c7dfd0f28",
+        "70fa686b79e5e8f0dfb923d2f9497c778e2560c7526e0dccb892c98abcfca5f6",
       );
-      assert.equal(Buffer.byteLength(manifestJson, "utf8"), 14194);
+      assert.equal(Buffer.byteLength(manifestJson, "utf8"), 15070);
       assert.equal(manifest.migrationSequence.length, 3);
       assert.equal(manifest.objects.filter(({ kind }) => kind === "table").length, 28);
       assert.equal(manifest.objects.filter(({ kind }) => kind === "function").length, 11);
@@ -2111,7 +2111,15 @@ test(
       );
       const valuationSnapshotId = deterministicUuid(group, 900);
       const projectionPayload = {
+        allocations: [{
+          sellTransactionId: sell.transactionId,
+          effectOrdinal: 1,
+          lotId: buy.fillId,
+          consumedQuantity: "4.0000000000",
+          allocatedBasis: "400.40000000",
+        }],
         asOf: "2026-09-17T19:03:00.000Z",
+        baselineVersion: "v1.0.0",
         cash: rebuilt.rows[0].cash,
         keyIdentifier: "primary",
         lots: [{
@@ -2122,6 +2130,7 @@ test(
         }],
         portfolioId,
         portfolioVersion: 3,
+        precisionPolicyVersion: "DEC-014",
         positions: [{
           instrumentId,
           quantity: rebuilt.rows[0].position_quantity,
@@ -2612,6 +2621,284 @@ test(
         effects: 0,
         replays: 0,
       }]);
+    } finally {
+      try {
+        await cleanBootstrap(client);
+      } finally {
+        await client.query(fixtureUnlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
+  "CT-LED-008 detects every keyed cache corruption without repair",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    const group = "55800000";
+    const portfolioId = deterministicUuid(group, 1);
+    const instrumentId = "CORRUPT-CACHE-ETF";
+    const buy = fillFixture({
+      group,
+      index: 1,
+      side: "Buy",
+      quantity: "10.0000000000",
+      unitPrice: "100.0000000000",
+      effectiveAt: "2026-09-21T11:01:00.000Z",
+    });
+    const sell = fillFixture({
+      group,
+      index: 2,
+      side: "Sell",
+      quantity: "4.0000000000",
+      unitPrice: "120.0000000000",
+      effectiveAt: "2026-09-21T11:02:00.000Z",
+    });
+    const valuationSnapshotId = deterministicUuid(group, 900);
+    await client.connect();
+    await client.query(fixtureLockSql);
+    try {
+      await cleanBootstrap(client);
+      await applyCompleteMigrationSet(client);
+      await seedFillOrder(client, { ...buy, instrumentId });
+      await seedFillOrder(client, { ...sell, instrumentId });
+      await client.query("GRANT EXECUTE ON FUNCTION etf.ledger_append(jsonb) TO app_runtime");
+      await appendLedger(client, cashDeposit({
+        portfolioId,
+        transactionId: deterministicUuid(group, 1),
+        correlationId: deterministicUuid(group, 2),
+        version: 0,
+        effectiveAt: "2026-09-21T11:00:00.000Z",
+        amount: "10000.00000000",
+      }));
+      await appendLedger(client, fillCommand({
+        ...buy,
+        portfolioId,
+        instrumentId,
+        version: 1,
+        fee: "1.00000000",
+      }));
+      await appendLedger(client, fillCommand({
+        ...sell,
+        portfolioId,
+        instrumentId,
+        version: 2,
+        fee: "1.00000000",
+      }));
+      await client.query("REVOKE EXECUTE ON FUNCTION etf.ledger_append(jsonb) FROM app_runtime");
+      const commitment = await client.query(
+        `SELECT commitment_hash
+           FROM etf.ledger_commitments
+          WHERE portfolio_id = $1::uuid
+          ORDER BY ledger_sequence DESC
+          LIMIT 1`,
+        [portfolioId],
+      );
+      const validProjection = {
+        allocations: [{
+          sellTransactionId: sell.transactionId,
+          effectOrdinal: 1,
+          lotId: buy.fillId,
+          consumedQuantity: "4.0000000000",
+          allocatedBasis: "400.40000000",
+        }],
+        asOf: "2026-09-21T11:03:00.000Z",
+        baselineVersion: "v1.0.0",
+        cash: "9478.00000000",
+        keyIdentifier: "primary",
+        lots: [{
+          lotId: buy.fillId,
+          instrumentId,
+          quantity: "6.0000000000",
+          basis: "600.60000000",
+        }],
+        portfolioId,
+        portfolioVersion: 3,
+        precisionPolicyVersion: "DEC-014",
+        positions: [{
+          instrumentId,
+          quantity: "6.0000000000",
+          basis: "600.60000000",
+          unitValue: "110.0000000000",
+          valuation: "660.00000000",
+          unrealizedPnL: "59.40000000",
+        }],
+        realizedPnL: "78.60000000",
+        reconciliationState: "Reconciled",
+        sourceCommitmentHash: commitment.rows[0].commitment_hash,
+        totalEquity: "10138.00000000",
+        valuationSnapshotId,
+      };
+      const corruptions = [
+        ["cash", { ...validProjection, cash: "9478.01000000" }],
+        ["realized P&L", { ...validProjection, realizedPnL: "78.61000000" }],
+        ["open-lot quantity", {
+          ...validProjection,
+          lots: [{ ...validProjection.lots[0], quantity: "6.0000000001" }],
+        }],
+        ["open-lot basis", {
+          ...validProjection,
+          lots: [{ ...validProjection.lots[0], basis: "600.61000000" }],
+        }],
+        ["open-lot identity", {
+          ...validProjection,
+          lots: [{ ...validProjection.lots[0], lotId: deterministicUuid(group, 999) }],
+        }],
+        ["missing open lot", { ...validProjection, lots: [] }],
+        ["extra open lot", {
+          ...validProjection,
+          lots: [...validProjection.lots, {
+            ...validProjection.lots[0],
+            lotId: deterministicUuid(group, 999),
+          }],
+        }],
+        ["duplicate open-lot key", {
+          ...validProjection,
+          lots: [...validProjection.lots, validProjection.lots[0]],
+        }],
+        ["position quantity", {
+          ...validProjection,
+          positions: [{ ...validProjection.positions[0], quantity: "6.0000000001" }],
+        }],
+        ["position basis", {
+          ...validProjection,
+          positions: [{ ...validProjection.positions[0], basis: "600.61000000" }],
+        }],
+        ["position identity", {
+          ...validProjection,
+          positions: [{ ...validProjection.positions[0], instrumentId: "OTHER-ETF" }],
+        }],
+        ["missing position", { ...validProjection, positions: [] }],
+        ["extra position", {
+          ...validProjection,
+          positions: [...validProjection.positions, {
+            ...validProjection.positions[0],
+            instrumentId: "OTHER-ETF",
+          }],
+        }],
+        ["duplicate position key", {
+          ...validProjection,
+          positions: [...validProjection.positions, validProjection.positions[0]],
+        }],
+        ["valuation", {
+          ...validProjection,
+          positions: [{ ...validProjection.positions[0], valuation: "660.01000000" }],
+        }],
+        ["unit-value consistency", {
+          ...validProjection,
+          positions: [{ ...validProjection.positions[0], unitValue: "110.0100000000" }],
+        }],
+        ["unrealized P&L", {
+          ...validProjection,
+          positions: [{ ...validProjection.positions[0], unrealizedPnL: "59.41000000" }],
+        }],
+        ["total equity", { ...validProjection, totalEquity: "10138.01000000" }],
+        ["allocation sell identity", {
+          ...validProjection,
+          allocations: [{
+            ...validProjection.allocations[0],
+            sellTransactionId: deterministicUuid(group, 998),
+          }],
+        }],
+        ["allocation lot identity", {
+          ...validProjection,
+          allocations: [{
+            ...validProjection.allocations[0],
+            lotId: deterministicUuid(group, 999),
+          }],
+        }],
+        ["allocation ordinal identity", {
+          ...validProjection,
+          allocations: [{ ...validProjection.allocations[0], effectOrdinal: 2 }],
+        }],
+        ["missing allocation", { ...validProjection, allocations: [] }],
+        ["extra allocation", {
+          ...validProjection,
+          allocations: [...validProjection.allocations, {
+            ...validProjection.allocations[0],
+            effectOrdinal: 2,
+          }],
+        }],
+        ["duplicate allocation key", {
+          ...validProjection,
+          allocations: [...validProjection.allocations, validProjection.allocations[0]],
+        }],
+        ["stale portfolio version", { ...validProjection, portfolioVersion: 2 }],
+        ["stale precision policy", { ...validProjection, precisionPolicyVersion: "DEC-013" }],
+        ["stale baseline", { ...validProjection, baselineVersion: "v0.9.0" }],
+        ["stale valuation snapshot", {
+          ...validProjection,
+          valuationSnapshotId: deterministicUuid(group, 901),
+        }],
+        ["equal-and-opposite cross-surface values", {
+          ...validProjection,
+          cash: "9478.01000000",
+          positions: [{ ...validProjection.positions[0], valuation: "659.99000000" }],
+        }],
+      ];
+
+      await client.query("GRANT USAGE ON SCHEMA etf TO projection_runtime");
+      await client.query("GRANT EXECUTE ON FUNCTION etf.projection_publish(jsonb) TO projection_runtime");
+      await client.query("SET SESSION AUTHORIZATION projection_runtime");
+      try {
+        const published = await client.query(
+          "SELECT etf.projection_publish($1::jsonb) AS result",
+          [validProjection],
+        );
+        assert.equal(published.rows[0].result.published, true);
+      } finally {
+        await client.query("RESET SESSION AUTHORIZATION");
+      }
+      const before = await snapshotLedger(client, portfolioId);
+      const cachedBefore = await client.query(
+        "SELECT to_jsonb(projection) AS projection FROM etf.portfolio_projections projection WHERE portfolio_id = $1::uuid",
+        [portfolioId],
+      );
+
+      for (const [surface, corruptedProjection] of corruptions) {
+        await client.query("SET SESSION AUTHORIZATION projection_runtime");
+        try {
+          await assert.rejects(
+            () => client.query(
+              "SELECT etf.projection_publish($1::jsonb)",
+              [corruptedProjection],
+            ),
+            /LEDGER_RECONCILIATION_FAILED/,
+            surface,
+          );
+        } finally {
+          await client.query("RESET SESSION AUTHORIZATION");
+        }
+
+        assert.deepEqual(await snapshotLedger(client, portfolioId), before, surface);
+        const cachedAfter = await client.query(
+          "SELECT to_jsonb(projection) AS projection FROM etf.portfolio_projections projection WHERE portfolio_id = $1::uuid",
+          [portfolioId],
+        );
+        assert.deepEqual(cachedAfter.rows, cachedBefore.rows, surface);
+      }
+
+      await client.query("SET SESSION AUTHORIZATION projection_runtime");
+      try {
+        await assert.rejects(
+          () => client.query(
+            "SELECT etf.projection_publish($1::jsonb)",
+            [{ ...validProjection, lots: "not-an-array" }],
+          ),
+          /APPLICATION_REQUEST_INVALID/,
+          "malformed projection array",
+        );
+      } finally {
+        await client.query("RESET SESSION AUTHORIZATION");
+      }
+      assert.deepEqual(await snapshotLedger(client, portfolioId), before);
+      const cachedAfterMalformed = await client.query(
+        "SELECT to_jsonb(projection) AS projection FROM etf.portfolio_projections projection WHERE portfolio_id = $1::uuid",
+        [portfolioId],
+      );
+      assert.deepEqual(cachedAfterMalformed.rows, cachedBefore.rows);
     } finally {
       try {
         await cleanBootstrap(client);

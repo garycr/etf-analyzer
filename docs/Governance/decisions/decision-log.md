@@ -48,11 +48,27 @@
 | DEC-050 | 2026-09-18 | Audit lifecycle integrity | Accept CT-LED-013 with linked immutable intents, serialized terminal cardinality, ordered recovery, and migrated collector authority | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-051 | 2026-09-18 | Dual-chain atomicity | Accept CT-LED-014 with atomic business and audit-only chains, forced anchor rollback, migrated runtime schema authority, and canonical identities | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-052 | 2026-09-18 | Controlled authorization | Accept CT-LED-015 with exact runtime entry grants, direct bypass denial, owner-role isolation, unchanged state, and canonical sequence-6 identity | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
+| DEC-054 | 2026-09-18 | Fail-closed projection publication | Accept CT-LED-017 with durable blocked evidence, unchanged accepted projection, and atomic anchor-failure rollback | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-053 | 2026-09-18 | Projection publication atomicity | Accept CT-LED-016 with verified projection publication, linked audit anchoring, staged rollback, and unchanged current snapshot | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 
 ---
 
 ## Decision Records
+
+### DEC-054: Accept Fail-Closed Projection Publication
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-054 |
+| **Date** | 2026-09-18 |
+| **Category** | Fail-closed projection publication |
+| **Decision** | Accept CT-LED-017 after proving protected commitment verification failure returns `published:false`, preserves the accepted projection as current, and durably appends one linked `BlockedPublication` with its audit commitment and checkpoint; missing key material during blocked-audit anchoring rolls back audit, commitment, checkpoint, and projection state |
+| **Policy** | DEC-015; DEC-042; DEC-051; DEC-052; DEC-053; ledger and PostgreSQL contracts; test-first development; independent code and security review |
+| **Authority** | Agent under Fully Agentic mode with Workspace Owner authorization to continue WP-6 |
+| **Accountability** | Solo Orchestrator keeps CT-LED-008 exact-rebuild rejection distinct, continues CT-LED-018..019, retains nonblocking hardening in GitHub issue #81, and keeps WP-6 and issue #79 open |
+| **Status** | Reviewed; REV-129 Code PASS and REV-130 Security PASS |
+
+---
 
 ### DEC-053: Accept Atomic Projection Publication
 

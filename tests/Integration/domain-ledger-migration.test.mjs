@@ -3364,6 +3364,159 @@ test(
 );
 
 test(
+  "CT-LED-017 blocks publication on integrity failure without replacing cache",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    const group = "56200000";
+    const portfolioId = deterministicUuid(group, 1);
+    const acceptedSnapshotId = deterministicUuid(group, 2);
+    const publish = async (payload) => {
+      await client.query("SET SESSION AUTHORIZATION projection_runtime");
+      try {
+        return await client.query(
+          "SELECT etf.projection_publish($1::jsonb) AS result",
+          [payload],
+        );
+      } finally {
+        await client.query("RESET SESSION AUTHORIZATION");
+      }
+    };
+    const snapshot = async () => (await client.query(
+      `SELECT
+         (SELECT jsonb_agg(to_jsonb(projection) ORDER BY projection.as_of, projection.valuation_snapshot_id)
+            FROM etf.portfolio_projections AS projection
+           WHERE projection.portfolio_id = $1::uuid) AS projections,
+         (SELECT jsonb_agg(to_jsonb(audit) ORDER BY audit.recorded_at, audit.audit_id)
+            FROM etf.ledger_audit AS audit
+           WHERE audit.portfolio_id = $1::uuid) AS audits,
+         (SELECT jsonb_agg(to_jsonb(commitment) ORDER BY commitment.audit_sequence)
+            FROM etf.audit_commitments AS commitment) AS commitments,
+         (SELECT jsonb_agg(to_jsonb(checkpoint) ORDER BY checkpoint.audit_sequence)
+            FROM etf.audit_anchor_checkpoints AS checkpoint) AS checkpoints`,
+      [portfolioId],
+    )).rows;
+    await client.connect();
+    await client.query(fixtureLockSql);
+    try {
+      await cleanBootstrap(client);
+      await applyCompleteMigrationSet(client);
+      await appendLedger(client, cashDeposit({
+        portfolioId,
+        transactionId: deterministicUuid(group, 3),
+        correlationId: deterministicUuid(group, 4),
+        version: 0,
+        effectiveAt: "2026-09-21T15:00:00.000Z",
+        amount: "100.00000000",
+      }));
+      const commitment = (await client.query(
+        `SELECT commitment_hash
+           FROM etf.ledger_commitments
+          WHERE portfolio_id = $1::uuid AND ledger_sequence = 1`,
+        [portfolioId],
+      )).rows[0].commitment_hash;
+      const projection = {
+        allocations: [],
+        asOf: "2026-09-21T15:01:00.000Z",
+        baselineVersion: "v1.0.0",
+        cash: "100.00000000",
+        keyIdentifier: "primary",
+        lots: [],
+        portfolioId,
+        portfolioVersion: 1,
+        precisionPolicyVersion: "DEC-014",
+        positions: [],
+        realizedPnL: "0.00000000",
+        reconciliationState: "Reconciled",
+        sourceCommitmentHash: commitment,
+        totalEquity: "100.00000000",
+        valuationSnapshotId: acceptedSnapshotId,
+      };
+      assert.equal((await publish(projection)).rows[0].result.published, true);
+      const projectionBefore = await client.query(
+        `SELECT to_jsonb(projection) AS projection
+           FROM etf.portfolio_projections AS projection
+          WHERE projection.portfolio_id = $1::uuid
+          ORDER BY projection.as_of, projection.valuation_snapshot_id`,
+        [portfolioId],
+      );
+
+      const blockedSnapshotId = deterministicUuid(group, 5);
+      const blocked = await publish({
+        ...projection,
+        asOf: "2026-09-21T15:02:00.000Z",
+        sourceCommitmentHash: "f".repeat(64),
+        valuationSnapshotId: blockedSnapshotId,
+      });
+      assert.deepEqual(blocked.rows[0].result, {
+        auditId: blocked.rows[0].result.auditId,
+        published: false,
+      });
+      const blockedEvidence = await client.query(
+        `SELECT audit.outcome,
+                audit.error_code,
+                audit.old_portfolio_version::integer,
+                audit.workload_identity,
+                commitment.key_identifier,
+                checkpoint.audit_commitment = commitment.audit_commitment AS checkpoint_matches
+           FROM etf.ledger_audit AS audit
+           JOIN etf.audit_commitments AS commitment
+             ON commitment.audit_segment_hash = audit.audit_evidence_hash
+           JOIN etf.audit_anchor_checkpoints AS checkpoint
+             ON checkpoint.audit_sequence = commitment.audit_sequence
+          WHERE audit.attempt_intent_id = $1::uuid`,
+        [blockedSnapshotId],
+      );
+      assert.deepEqual(blockedEvidence.rows, [{
+        outcome: "BlockedPublication",
+        error_code: "LEDGER_INTEGRITY_FAILED",
+        old_portfolio_version: 1,
+        workload_identity: "projection_runtime",
+        key_identifier: "primary",
+        checkpoint_matches: true,
+      }]);
+      const projectionAfter = await client.query(
+        `SELECT to_jsonb(projection) AS projection
+           FROM etf.portfolio_projections AS projection
+          WHERE projection.portfolio_id = $1::uuid
+          ORDER BY projection.as_of, projection.valuation_snapshot_id`,
+        [portfolioId],
+      );
+      assert.deepEqual(projectionAfter.rows, projectionBefore.rows);
+      const current = await client.query(
+        `SELECT valuation_snapshot_id::text
+           FROM etf.portfolio_projections
+          WHERE portfolio_id = $1::uuid
+          ORDER BY as_of DESC, valuation_snapshot_id DESC
+          LIMIT 1`,
+        [portfolioId],
+      );
+      assert.equal(current.rows[0].valuation_snapshot_id, acceptedSnapshotId);
+
+      const beforeAnchorFailure = await snapshot();
+      await assert.rejects(
+        () => publish({
+          ...projection,
+          asOf: "2026-09-21T15:03:00.000Z",
+          keyIdentifier: "missing",
+          reconciliationState: "IntegrityBlocked",
+          valuationSnapshotId: deterministicUuid(group, 6),
+        }),
+        (error) => error.code === "55000" && error.message === "LEDGER_INTEGRITY_FAILED",
+      );
+      assert.deepEqual(await snapshot(), beforeAnchorFailure);
+    } finally {
+      try {
+        await cleanBootstrap(client);
+      } finally {
+        await client.query(fixtureUnlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
   "CT-LED-008 detects every keyed cache corruption without repair",
   { skip: !connectionString },
   async () => {

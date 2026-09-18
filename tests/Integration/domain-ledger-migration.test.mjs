@@ -431,13 +431,13 @@ test(
       const manifest = JSON.parse(manifestJson);
       assert.equal(
         applied.contentHash,
-        "b984aed437def76e4e7725fda0a5cba571b3bca794fa4a101410858fd4fd2628",
+        "b152f8625921ca79514234c56558025e5579dcc0449dec96ec5d8cf25ad15134",
       );
       assert.equal(
         applied.schemaManifestHash,
-        "d6f43bb9d850ea6902cc7f9dcd62384094bf2357600aa517e69ade1fd31f87ef",
+        "ad12ccbc94da550d546c05b24b538056a7178c03e2333514dfb319ca5116092f",
       );
-      assert.equal(Buffer.byteLength(manifestJson, "utf8"), 15233);
+      assert.equal(Buffer.byteLength(manifestJson, "utf8"), 15771);
       assert.equal(manifest.migrationSequence.length, 3);
       assert.equal(manifest.objects.filter(({ kind }) => kind === "table").length, 28);
       assert.equal(manifest.objects.filter(({ kind }) => kind === "function").length, 11);
@@ -3046,6 +3046,142 @@ test(
           { outcome: "IntentRecorded", error_code: null, old_order_version: 1, new_order_version: null },
           { outcome: "Rejected", error_code: "ORDER_VERSION_CONFLICT", old_order_version: 1, new_order_version: null },
         ],
+      );
+    } finally {
+      try {
+        await cleanBootstrap(client);
+      } finally {
+        await client.query(fixtureUnlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
+  "CT-LED-014 commits or rolls back ledger and dual chains together",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    const group = "56000000";
+    const portfolioId = deterministicUuid(group, 1);
+    const successful = cashDeposit({
+      portfolioId,
+      transactionId: deterministicUuid(group, 1),
+      correlationId: deterministicUuid(group, 2),
+      version: 0,
+      effectiveAt: "2026-09-21T13:00:00.000Z",
+    });
+    const snapshot = async () => (await client.query(
+      `SELECT portfolio.portfolio_version::integer AS portfolio_version,
+              (SELECT count(*)::integer FROM etf.ledger_transactions WHERE portfolio_id = $1::uuid) AS transactions,
+              (SELECT count(*)::integer FROM etf.ledger_audit WHERE portfolio_id = $1::uuid) AS audits,
+              (SELECT count(*)::integer FROM etf.ledger_commitments WHERE portfolio_id = $1::uuid) AS ledger_commitments,
+              (SELECT count(*)::integer FROM etf.ledger_anchors WHERE portfolio_id = $1::uuid) AS ledger_anchors,
+              (SELECT count(*)::integer FROM etf.audit_commitments) AS audit_commitments,
+              (SELECT count(*)::integer FROM etf.audit_anchor_checkpoints) AS audit_checkpoints,
+              (SELECT count(*)::integer FROM etf.portfolio_anchor_checkpoints WHERE portfolio_id = $1::uuid) AS portfolio_checkpoints
+         FROM etf.portfolios AS portfolio
+        WHERE portfolio.portfolio_id = $1::uuid`,
+      [portfolioId],
+    )).rows;
+    await client.connect();
+    await client.query(fixtureLockSql);
+    try {
+      await cleanBootstrap(client);
+      await applyPrerequisites(client);
+      await prepareLedgerBoundary(client);
+      await appendLedger(client, successful);
+      assert.deepEqual(await snapshot(), [{
+        portfolio_version: 1,
+        transactions: 1,
+        audits: 1,
+        ledger_commitments: 1,
+        ledger_anchors: 1,
+        audit_commitments: 1,
+        audit_checkpoints: 1,
+        portfolio_checkpoints: 1,
+      }]);
+      const beforeFailure = await snapshot();
+
+      await assert.rejects(
+        () => appendLedger(client, {
+          ...cashDeposit({
+            portfolioId,
+            transactionId: deterministicUuid(group, 3),
+            correlationId: deterministicUuid(group, 4),
+            version: 1,
+            effectiveAt: "2026-09-21T13:01:00.000Z",
+          }),
+          keyIdentifier: "missing",
+        }),
+        (error) => error.code === "55000" && error.message === "LEDGER_INTEGRITY_FAILED",
+      );
+      assert.deepEqual(await snapshot(), beforeFailure);
+
+      const attemptIntentId = deterministicUuid(group, 10);
+      const correlationId = deterministicUuid(group, 11);
+      const intent = {
+        action: "LedgerAppend",
+        attemptIntentId,
+        correlationId,
+        domain: "Ledger",
+        keyIdentifier: "primary",
+        outcome: "IntentRecorded",
+        subject: {
+          auditId: deterministicUuid(group, 12),
+          portfolioId,
+          oldPortfolioVersion: 1,
+          replayClassification: "New",
+        },
+      };
+      await appendAudit(client, intent);
+      const beforeAuditFailure = await snapshot();
+      const rejected = {
+        ...intent,
+        keyIdentifier: "missing",
+        outcome: "Rejected",
+        subject: {
+          ...intent.subject,
+          auditId: deterministicUuid(group, 13),
+          errorCode: "LEDGER_VERSION_CONFLICT",
+        },
+      };
+      await assert.rejects(
+        () => appendAudit(client, rejected),
+        (error) => error.code === "55000" && error.message === "LEDGER_INTEGRITY_FAILED",
+      );
+      assert.deepEqual(await snapshot(), beforeAuditFailure);
+      await appendAudit(client, { ...rejected, keyIdentifier: "primary" });
+
+      const auditChain = await client.query(
+        `SELECT audit.outcome,
+                commitment.audit_sequence::integer,
+                commitment.previous_audit_commitment,
+                commitment.audit_commitment,
+                commitment.key_identifier
+           FROM etf.ledger_audit AS audit
+           JOIN etf.audit_commitments AS commitment
+             ON commitment.audit_segment_hash = audit.audit_evidence_hash
+          WHERE audit.attempt_intent_id = $1::uuid
+          ORDER BY commitment.audit_sequence`,
+        [attemptIntentId],
+      );
+      assert.equal(auditChain.rowCount, 2);
+      assert.deepEqual(
+        auditChain.rows.map(({ outcome, audit_sequence, key_identifier }) => ({
+          outcome,
+          audit_sequence,
+          key_identifier,
+        })),
+        [
+          { outcome: "IntentRecorded", audit_sequence: 2, key_identifier: "primary" },
+          { outcome: "Rejected", audit_sequence: 3, key_identifier: "primary" },
+        ],
+      );
+      assert.equal(
+        auditChain.rows[1].previous_audit_commitment,
+        auditChain.rows[0].audit_commitment,
       );
     } finally {
       try {

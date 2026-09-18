@@ -46,10 +46,26 @@
 | DEC-048 | 2026-09-18 | Reversal and concurrency integrity | Accept CT-LED-010/011 with immutable reversal lineage, observed two-client serialization, replay stability, and atomic loser rollback | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-049 | 2026-09-18 | Stale-order integrity | Accept CT-LED-012 with identity-before-version precedence, stable owner mapping, exact rollback, and canonical migration identities | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-050 | 2026-09-18 | Audit lifecycle integrity | Accept CT-LED-013 with linked immutable intents, serialized terminal cardinality, ordered recovery, and migrated collector authority | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
+| DEC-051 | 2026-09-18 | Dual-chain atomicity | Accept CT-LED-014 with atomic business and audit-only chains, forced anchor rollback, migrated runtime schema authority, and canonical identities | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 
 ---
 
 ## Decision Records
+
+### DEC-051: Accept Dual-Chain Atomicity
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-051 |
+| **Date** | 2026-09-18 |
+| **Category** | Dual-chain atomicity |
+| **Decision** | Accept CT-LED-014 after proving successful ledger commands commit business rows, audit evidence, both commitments, anchors, and checkpoints together; forced portfolio-anchor and audit-only anchor failures roll back every provisional mutation; a valid audit retry advances exactly one sequence with the active key and exact predecessor; and migration 0003 itself supplies required runtime schema usage |
+| **Policy** | DEC-014; DEC-015; DEC-042; DEC-050; ledger and PostgreSQL contracts; test-first development; least privilege; independent code and security review |
+| **Authority** | Agent under Fully Agentic mode with Workspace Owner authorization to continue WP-6 |
+| **Accountability** | Solo Orchestrator preserves controlled PostgreSQL transaction ownership and minimal runtime grants, continues CT-LED-015..019, retains nonblocking hardening in GitHub issue #81, and keeps WP-6 and issue #79 open |
+| **Status** | Reviewed; REV-123 Code PASS and REV-124 Security PASS |
+
+---
 
 ### DEC-050: Accept Audit Lifecycle Integrity
 

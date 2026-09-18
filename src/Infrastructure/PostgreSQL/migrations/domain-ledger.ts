@@ -776,6 +776,7 @@ SET LOCAL ROLE anchor_owner;
 GRANT EXECUTE ON FUNCTION etf.anchor_append(jsonb) TO ledger_writer_owner, audit_writer_owner, projection_owner;
 
 SET LOCAL ROLE schema_owner;
+GRANT USAGE ON SCHEMA etf TO app_runtime, projection_runtime, audit_runtime, key_injector;
 REVOKE CREATE ON SCHEMA etf FROM application_writer_owner;
 REVOKE CREATE ON SCHEMA etf FROM ledger_writer_owner;
 REVOKE CREATE ON SCHEMA etf FROM projection_owner;

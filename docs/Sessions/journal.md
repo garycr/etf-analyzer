@@ -6,6 +6,20 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-18 | WP-6 dual-chain atomicity checkpoint validated | Ring-2 | @solo-orchestrator
+
+**Type:** IMPLEMENTATION-CHECKPOINT
+**Decision:** DEC-051 accepts CT-LED-014 with transaction-owned business and audit-only chain commits, forced missing-key rollback, exact audit predecessor continuity, and migrated sequence-3 namespace authority
+**Policy:** DEC-014; DEC-015; DEC-042; DEC-050; ledger and PostgreSQL contracts; test-first development; least privilege; independent code and security review
+**Authority:** Agent under Fully Agentic mode with Workspace Owner authorization to continue WP-6; REV-123 Code PASS and REV-124 Security PASS
+**Accountability:** Solo Orchestrator continues CT-LED-015..019, retains nonblocking hardening in GitHub issue #81, and keeps WP-6 and issue #79 open
+**Result:** PostgreSQL 16.15 C/UTF8/UTC CT-LED-014 focused evidence 1/1 and complete suite 419/419 passed with zero skips or failures; migration identities 0003..0006 passed; dependency audit reports zero vulnerabilities; diagnostics and diff checks are clean
+**Remediation:** Initial review identified a test-side audit schema grant; removing it exposed migrated `42501`, so migration 0003 now grants schema usage to its four controlled runtime roles and tests rely on migrated authority
+**Artifact:** ledger/PostgreSQL implementation, contracts, and tests | DEC-051 | REV-123 | REV-124 | GitHub issues #79/#81
+**authorization-boundary:** Checkpoint only; no WP-6 closure, WP-7, brokerage, live provider, public ingress, durable event, queue, scheduler, worker, baseline, release, deployment, or production action
+
+---
+
 ## 2026-09-18 | WP-6 exact projection reconciliation checkpoint validated | Ring-2 | @solo-orchestrator
 
 **Type:** IMPLEMENTATION-CHECKPOINT

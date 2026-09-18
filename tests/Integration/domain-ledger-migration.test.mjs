@@ -201,6 +201,7 @@ async function snapshotLedger(client, portfolioId) {
     `SELECT portfolio.portfolio_version::text AS portfolio_version,
             (SELECT count(*)::integer FROM etf.ledger_transactions WHERE portfolio_id = $1::uuid) AS transactions,
             (SELECT count(*)::integer FROM etf.ledger_effects WHERE portfolio_id = $1::uuid) AS effects,
+            (SELECT count(*)::integer FROM etf.ledger_lots WHERE portfolio_id = $1::uuid) AS lots,
             (SELECT count(*)::integer FROM etf.ledger_allocations WHERE portfolio_id = $1::uuid) AS allocations,
             (SELECT count(*)::integer FROM etf.ledger_reversal_links WHERE portfolio_id = $1::uuid) AS reversal_links,
             (SELECT count(*)::integer FROM etf.fills WHERE portfolio_id = $1::uuid) AS fills,
@@ -223,6 +224,40 @@ async function snapshotLedger(client, portfolioId) {
   );
   assert.equal(snapshot.rowCount, 1);
   return snapshot.rows[0];
+}
+
+async function raceUnderPortfolioLock(admin, portfolioId, contenders, operations) {
+  await admin.query("BEGIN");
+  await admin.query(
+    "SELECT pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('etf:portfolio:' || $1::uuid::text, 0))",
+    [portfolioId],
+  );
+  const backendPids = await Promise.all(contenders.map(async (client) => {
+    const result = await client.query("SELECT pg_catalog.pg_backend_pid() AS pid");
+    return result.rows[0].pid;
+  }));
+  const outcomes = Promise.allSettled(operations.map((operation) => operation()));
+  try {
+    let waiting = 0;
+    for (let attempt = 0; attempt < 1000 && waiting !== contenders.length; attempt += 1) {
+      const result = await admin.query(
+        `SELECT count(*)::integer AS waiting
+           FROM pg_catalog.pg_stat_activity
+          WHERE pid = ANY($1::integer[])
+            AND wait_event_type = 'Lock'
+            AND wait_event = 'advisory'`,
+        [backendPids],
+      );
+      waiting = result.rows[0].waiting;
+      if (waiting !== contenders.length) {
+        await new Promise((resolve) => setImmediate(resolve));
+      }
+    }
+    assert.equal(waiting, contenders.length, "both contenders must wait on the portfolio lock");
+  } finally {
+    await admin.query("COMMIT");
+  }
+  return outcomes;
 }
 
 function cashDeposit({ portfolioId, transactionId, correlationId, version, effectiveAt, amount = "100.00000000" }) {
@@ -3515,6 +3550,211 @@ test(
       } finally {
         await client.query(fixtureUnlockSql);
         await client.end();
+      }
+    }
+  },
+);
+
+test(
+  "CT-LED-011 serializes races replay and rollback atomically",
+  { skip: !connectionString },
+  async () => {
+    const admin = new pg.Client({ connectionString });
+    const contenderA = new pg.Client({ connectionString });
+    const contenderB = new pg.Client({ connectionString });
+    const group = "55000000";
+    const portfolioId = deterministicUuid(group, 1);
+    const instrumentId = "CONCURRENT-BUY-ETF";
+    const buyA = fillFixture({
+      group,
+      index: 1,
+      side: "Buy",
+      quantity: "8.0000000000",
+      unitPrice: "10.0000000000",
+      effectiveAt: "2026-09-14T05:01:00.000Z",
+    });
+    const buyB = fillFixture({
+      group,
+      index: 2,
+      side: "Buy",
+      quantity: "8.0000000000",
+      unitPrice: "10.0000000000",
+      effectiveAt: "2026-09-14T05:01:00.000Z",
+    });
+    const sellA = fillFixture({
+      group,
+      index: 3,
+      side: "Sell",
+      quantity: "8.0000000000",
+      unitPrice: "12.0000000000",
+      effectiveAt: "2026-09-14T05:02:00.000Z",
+    });
+    const sellB = fillFixture({
+      group,
+      index: 4,
+      side: "Sell",
+      quantity: "8.0000000000",
+      unitPrice: "12.0000000000",
+      effectiveAt: "2026-09-14T05:02:00.000Z",
+    });
+    await admin.connect();
+    await admin.query(fixtureLockSql);
+    try {
+      await cleanBootstrap(admin);
+      await applyPrerequisites(admin);
+      await prepareLedgerBoundary(admin);
+      await seedFillOrder(admin, { ...buyA, instrumentId });
+      await seedFillOrder(admin, { ...buyB, instrumentId });
+      await seedFillOrder(admin, { ...sellA, instrumentId });
+      await seedFillOrder(admin, { ...sellB, instrumentId });
+      await appendLedger(admin, cashDeposit({
+        portfolioId,
+        transactionId: deterministicUuid(group, 1),
+        correlationId: deterministicUuid(group, 2),
+        version: 0,
+        effectiveAt: "2026-09-14T05:00:00.000Z",
+      }));
+      const beforeRace = await snapshotLedger(admin, portfolioId);
+      await contenderA.connect();
+      await contenderB.connect();
+
+      const outcomes = await raceUnderPortfolioLock(
+        admin,
+        portfolioId,
+        [contenderA, contenderB],
+        [
+          () => appendLedger(contenderA, fillCommand({
+          ...buyA,
+          portfolioId,
+          instrumentId,
+          version: 1,
+          })),
+          () => appendLedger(contenderB, fillCommand({
+          ...buyB,
+          portfolioId,
+          instrumentId,
+          version: 1,
+          })),
+        ],
+      );
+      const committed = outcomes.filter(({ status }) => status === "fulfilled");
+      const rejected = outcomes.filter(({ status }) => status === "rejected");
+      assert.equal(committed.length, 1);
+      assert.equal(rejected.length, 1);
+      assert.match(rejected[0].reason.message, /LEDGER_VERSION_CONFLICT/);
+
+      const afterRace = await snapshotLedger(admin, portfolioId);
+      assert.deepEqual(afterRace, {
+        ...beforeRace,
+        portfolio_version: "2",
+        transactions: beforeRace.transactions + 1,
+        effects: beforeRace.effects + 3,
+        lots: beforeRace.lots + 1,
+        fills: beforeRace.fills + 1,
+        command_replays: beforeRace.command_replays + 1,
+        audits: beforeRace.audits + 1,
+        commitments: beforeRace.commitments + 1,
+        anchors: beforeRace.anchors + 1,
+        transaction_hashes: [
+          ...beforeRace.transaction_hashes,
+          committed[0].value.transactionEvidenceHash,
+        ],
+        allocation_hashes: [
+          ...beforeRace.allocation_hashes,
+          committed[0].value.allocationEvidenceHash,
+        ],
+        commitment_hashes: [
+          ...beforeRace.commitment_hashes,
+          committed[0].value.commitmentHash,
+        ],
+      });
+      const persistedRace = await admin.query(
+        `SELECT transaction_id::text
+           FROM etf.ledger_transactions
+          WHERE portfolio_id = $1::uuid
+            AND transaction_id = ANY($2::uuid[])
+          ORDER BY transaction_id`,
+        [portfolioId, [buyA.transactionId, buyB.transactionId]],
+      );
+      assert.deepEqual(persistedRace.rows, [{
+        transaction_id: committed[0].value.transactionId,
+      }]);
+
+      const beforeSellRace = await snapshotLedger(admin, portfolioId);
+      const sellCommands = [sellA, sellB].map((sell) => fillCommand({
+        ...sell,
+        portfolioId,
+        instrumentId,
+        version: 2,
+      }));
+      const sellOutcomes = await raceUnderPortfolioLock(
+        admin,
+        portfolioId,
+        [contenderA, contenderB],
+        [
+          () => appendLedger(contenderA, sellCommands[0]),
+          () => appendLedger(contenderB, sellCommands[1]),
+        ],
+      );
+      const committedSells = sellOutcomes.filter(({ status }) => status === "fulfilled");
+      const rejectedSells = sellOutcomes.filter(({ status }) => status === "rejected");
+      assert.equal(committedSells.length, 1);
+      assert.equal(rejectedSells.length, 1);
+      assert.match(rejectedSells[0].reason.message, /LEDGER_VERSION_CONFLICT/);
+
+      const committedSell = committedSells[0].value;
+      const afterSellRace = await snapshotLedger(admin, portfolioId);
+      assert.deepEqual(afterSellRace, {
+        ...beforeSellRace,
+        portfolio_version: "3",
+        transactions: beforeSellRace.transactions + 1,
+        effects: beforeSellRace.effects + 4,
+        allocations: beforeSellRace.allocations + 1,
+        fills: beforeSellRace.fills + 1,
+        command_replays: beforeSellRace.command_replays + 1,
+        audits: beforeSellRace.audits + 1,
+        commitments: beforeSellRace.commitments + 1,
+        anchors: beforeSellRace.anchors + 1,
+        transaction_hashes: [
+          ...beforeSellRace.transaction_hashes,
+          committedSell.transactionEvidenceHash,
+        ],
+        allocation_hashes: [
+          ...beforeSellRace.allocation_hashes,
+          committedSell.allocationEvidenceHash,
+        ],
+        commitment_hashes: [
+          ...beforeSellRace.commitment_hashes,
+          committedSell.commitmentHash,
+        ],
+      });
+
+      const committedSellCommand = sellCommands.find(
+        ({ transactionId }) => transactionId === committedSell.transactionId,
+      );
+      const replayOutcomes = await Promise.all([
+        appendLedger(contenderA, committedSellCommand),
+        appendLedger(contenderB, committedSellCommand),
+      ]);
+      assert.deepEqual(replayOutcomes, [committedSell, committedSell]);
+      assert.deepEqual(await snapshotLedger(admin, portfolioId), afterSellRace);
+
+      await assert.rejects(
+        () => appendLedger(contenderA, {
+          ...committedSellCommand,
+          correlationId: deterministicUuid(group, 999),
+        }),
+        /LEDGER_IDEMPOTENCY_CONFLICT/,
+      );
+      assert.deepEqual(await snapshotLedger(admin, portfolioId), afterSellRace);
+    } finally {
+      await contenderA.end().catch(() => undefined);
+      await contenderB.end().catch(() => undefined);
+      try {
+        await cleanBootstrap(admin);
+      } finally {
+        await admin.query(fixtureUnlockSql);
+        await admin.end();
       }
     }
   },

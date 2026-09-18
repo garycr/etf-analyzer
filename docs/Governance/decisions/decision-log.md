@@ -43,10 +43,26 @@
 | DEC-045 | 2026-09-18 | Ledger numeric integrity | Accept CT-LED-003..007 with exact FIFO, half-even arithmetic, cross-runtime strings, and fail-closed numeric admission | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-046 | 2026-09-18 | Projection integrity | Accept CT-LED-008 with exact keyed cache reconciliation and no repair | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-047 | 2026-09-18 | FIFO determinism | Accept CT-LED-009 with equal-timestamp allocation ordered by ledger sequence independent of physical fetch order | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
+| DEC-048 | 2026-09-18 | Reversal and concurrency integrity | Accept CT-LED-010/011 with immutable reversal lineage, observed two-client serialization, replay stability, and atomic loser rollback | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 
 ---
 
 ## Decision Records
+
+### DEC-048: Accept Reversal and Concurrency Integrity
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-048 |
+| **Date** | 2026-09-18 |
+| **Category** | Reversal and concurrency integrity |
+| **Decision** | Accept CT-LED-010/011 after proving exact immutable reversal and reversal-of-reversal lineage, active dependency rejection, observed two-client portfolio-lock contention, one-winner version races for buys and sells, stable equivalent replay, conflicting replay rejection, and complete loser rollback |
+| **Policy** | DEC-014; DEC-042; DEC-047; ledger and PostgreSQL contracts; test-first development; least privilege; independent code and security review |
+| **Authority** | Agent under Fully Agentic mode with Workspace Owner authorization to continue WP-6 |
+| **Accountability** | Solo Orchestrator preserves PostgreSQL mutation authority, continues CT-LED-012..019, retains decimal input-length hardening in GitHub issue #81, and keeps WP-6 and issue #79 open |
+| **Status** | Reviewed; REV-117 Code PASS and REV-118 Security PASS |
+
+---
 
 ### DEC-047: Accept Equal-Timestamp FIFO Determinism
 

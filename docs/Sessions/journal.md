@@ -2746,3 +2746,16 @@
 **authorization-boundary:** Checkpoint only; no WP-6 closure, WP-7, brokerage, live provider, public ingress, durable event, queue, scheduler, worker, baseline, release, deployment, or production action
 
 ---
+
+## 2026-09-18 | WP-6 reversal and concurrency checkpoint validated | Ring-2 | @solo-orchestrator
+
+**Type:** IMPLEMENTATION-CHECKPOINT
+**Decision:** DEC-048 accepts CT-LED-010/011 with immutable reversal lineage, active dependency rejection, observed two-client portfolio serialization, one-winner buy and sell races, stable equivalent replay, conflicting replay rejection, and complete loser rollback
+**Policy:** DEC-014; DEC-042; DEC-047; ledger and PostgreSQL contracts; test-first development; least privilege; independent code and security review
+**Authority:** Agent under Fully Agentic mode with Workspace Owner authorization to continue WP-6; REV-117 Code PASS and REV-118 Security PASS
+**Accountability:** Solo Orchestrator continues CT-LED-012..019, tracks nonblocking decimal input-length hardening in GitHub issue #81, and keeps WP-6 and issue #79 open
+**Result:** PostgreSQL 16.15 UTF8/C/UTC focused CT-LED-011 evidence 1/1 and complete suite 416/416 passed with zero skips or failures; dependency audit reports zero vulnerabilities; diagnostics and diff checks pass
+**Artifact:** CT-LED-010/011 integration tests | DEC-048 | REV-117 | REV-118 | GitHub issues #79/#81
+**authorization-boundary:** Checkpoint only; no WP-6 closure, WP-7, brokerage, live provider, public ingress, durable event, queue, scheduler, worker, baseline, release, deployment, or production action
+
+---

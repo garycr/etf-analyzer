@@ -33,8 +33,8 @@ const lockSql =
   "SELECT pg_catalog.pg_advisory_lock(pg_catalog.hashtextextended('etf:test:role-bootstrap', 0))";
 const unlockSql =
   "SELECT pg_catalog.pg_advisory_unlock(pg_catalog.hashtextextended('etf:test:role-bootstrap', 0))";
-const controlledAccessContentHash = "1bafffc644bfe57fc487e0aa9363626cd0273653c8c4278049b2a6421c6b87ed";
-const controlledAccessManifestHash = "dc6ee366c319160961b791af96c531ff931d7569c1b75c04132578e152541298";
+const controlledAccessContentHash = "609dcf7bd1faa472e850b7ed1cd32511987a596e7f52403ede1b832fc1e4e8dc";
+const controlledAccessManifestHash = "af70acc24cdf99a0f4ca60b4c6c51eceaf8a26609369228db063d30d62e35d42";
 
 async function cleanBootstrap(client) {
   await client.query("ROLLBACK").catch(() => undefined);
@@ -426,6 +426,149 @@ test(
       await cleanBootstrap(client).catch(() => undefined);
       await client.query(unlockSql).catch(() => undefined);
       await client.end();
+    }
+  },
+);
+
+test(
+  "CT-LED-015 denies controlled-procedure bypass with correlated audit",
+  { skip: connectionString ? false : "ETF_TEST_POSTGRES_URL is not configured" },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    const expectAs = async (sessionUser, statement, parameters, expectedCode) => {
+      await client.query(`SET SESSION AUTHORIZATION ${sessionUser}`);
+      try {
+        await assert.rejects(
+          () => client.query(statement, parameters),
+          (error) => error.code === expectedCode,
+        );
+      } finally {
+        await client.query("RESET ROLE").catch(() => undefined);
+        await client.query("RESET SESSION AUTHORIZATION");
+      }
+    };
+    const snapshot = async () => (await client.query(
+      `SELECT
+         (SELECT count(*)::integer FROM etf.ledger_transactions) AS transactions,
+         (SELECT count(*)::integer FROM etf.ledger_audit) AS ledger_audits,
+         (SELECT count(*)::integer FROM etf.order_audit) AS order_audits,
+         (SELECT count(*)::integer FROM etf.access_denial_audit) AS denial_audits,
+         (SELECT count(*)::integer FROM etf.ledger_commitments) AS ledger_commitments,
+         (SELECT count(*)::integer FROM etf.audit_commitments) AS audit_commitments,
+         (SELECT count(*)::integer FROM etf.ledger_anchors) AS ledger_anchors,
+         (SELECT count(*)::integer FROM etf.anchor_keys) AS anchor_keys,
+         (SELECT count(*)::integer FROM etf.portfolio_anchor_checkpoints) AS portfolio_checkpoints,
+         (SELECT count(*)::integer FROM etf.audit_anchor_checkpoints) AS audit_checkpoints,
+         (SELECT count(*)::integer FROM etf.portfolio_projections) AS projections,
+         (SELECT COALESCE(sum(portfolio_version), 0)::integer FROM etf.portfolios) AS portfolio_versions`,
+    )).rows;
+    const anchorPayload = {
+      domain: "Verify",
+      portfolioId: "30000000-0000-0000-0000-000000000001",
+      sourceCommitmentHash: "1".repeat(64),
+    };
+    const rejectedAuditPayload = {
+      action: "LedgerAppend",
+      attemptIntentId: "40000000-0000-4000-8000-000000000001",
+      correlationId: "40000000-0000-4000-8000-000000000002",
+      domain: "Ledger",
+      keyIdentifier: "primary",
+      outcome: "Rejected",
+      subject: {},
+    };
+    const invalidLedgerPayload = {
+      canonicalContent: "{}",
+      correlationId: "40000000-0000-4000-8000-000000000003",
+      effectiveAt: "2026-09-18T00:00:00.000Z",
+      expectedPortfolioVersion: 2,
+      keyIdentifier: "primary",
+      portfolioId: "30000000-0000-0000-0000-000000000001",
+      transactionId: "40000000-0000-4000-8000-000000000004",
+      type: "CashDeposit",
+    };
+    const invalidProjectionPayload = {
+      allocations: null,
+      asOf: "invalid",
+      baselineVersion: "v1.0.0",
+      cash: null,
+      keyIdentifier: "primary",
+      lots: null,
+      portfolioId: "30000000-0000-0000-0000-000000000001",
+      portfolioVersion: "invalid",
+      precisionPolicyVersion: "DEC-014",
+      positions: null,
+      realizedPnL: null,
+      reconciliationState: "Reconciled",
+      sourceCommitmentHash: "1".repeat(64),
+      totalEquity: null,
+      valuationSnapshotId: "40000000-0000-4000-8000-000000000005",
+    };
+    await client.connect();
+    await client.query(lockSql);
+    try {
+      await cleanBootstrap(client);
+      await applyCompleteMigrationSet(client);
+      const before = await snapshot();
+
+      assert.equal(
+        (await client.query(
+          "SELECT pg_catalog.has_function_privilege('public', 'etf.anchor_append(jsonb)', 'EXECUTE') AS allowed",
+        )).rows[0].allowed,
+        false,
+      );
+      for (const sessionUser of ["app_runtime", "projection_runtime", "audit_runtime", "postgres"]) {
+        await expectAs(
+          sessionUser,
+          "SELECT etf.anchor_append($1::jsonb)",
+          [anchorPayload],
+          "42501",
+        );
+      }
+      for (const sessionUser of ["app_runtime", "projection_runtime"]) {
+        await expectAs(
+          sessionUser,
+          "SELECT etf.audit_append($1::jsonb)",
+          [rejectedAuditPayload],
+          "42501",
+        );
+      }
+      await expectAs(
+        "app_runtime",
+        "SET ROLE application_writer_owner",
+        [],
+        "42501",
+      );
+      for (const sessionUser of ["app_runtime", "projection_runtime", "audit_runtime"]) {
+        await expectAs(
+          sessionUser,
+          "INSERT INTO etf.ledger_audit DEFAULT VALUES",
+          [],
+          "42501",
+        );
+      }
+      assert.deepEqual(await snapshot(), before);
+
+      await expectAs(
+        "app_runtime",
+        "SELECT etf.ledger_append($1::jsonb)",
+        [invalidLedgerPayload],
+        "22023",
+      );
+      await expectAs(
+        "projection_runtime",
+        "SELECT etf.projection_publish($1::jsonb)",
+        [invalidProjectionPayload],
+        "22023",
+      );
+      await expectAs("audit_runtime", "SELECT etf.audit_append('{}'::jsonb)", [], "22023");
+      assert.deepEqual(await snapshot(), before);
+    } finally {
+      try {
+        await cleanBootstrap(client);
+      } finally {
+        await client.query(unlockSql).catch(() => undefined);
+        await client.end();
+      }
     }
   },
 );

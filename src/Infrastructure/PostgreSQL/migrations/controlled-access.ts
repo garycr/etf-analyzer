@@ -418,8 +418,11 @@ SET LOCAL ROLE application_writer_owner;
 GRANT EXECUTE ON FUNCTION etf.paper_order_transition(jsonb) TO app_runtime;
 GRANT EXECUTE ON FUNCTION etf.application_replay_get(text, uuid, text), etf.application_replay_get_or_put(text, uuid, text, text) TO app_runtime;
 GRANT EXECUTE ON FUNCTION etf.job_get(uuid), etf.paper_order_get(uuid), etf.paper_order_command_get(uuid, uuid) TO app_runtime;
+SET LOCAL ROLE ledger_writer_owner;
+GRANT EXECUTE ON FUNCTION etf.ledger_append(jsonb) TO app_runtime;
 SET LOCAL ROLE projection_owner;
 GRANT EXECUTE ON FUNCTION etf.portfolio_get(uuid, timestamp with time zone) TO app_runtime;
+GRANT EXECUTE ON FUNCTION etf.projection_publish(jsonb) TO projection_runtime;
 
 SET LOCAL ROLE schema_owner;
 REVOKE CREATE ON SCHEMA etf FROM application_writer_owner, projection_owner;

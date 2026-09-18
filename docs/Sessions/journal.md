@@ -6,6 +6,20 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-18 | WP-6 controlled authorization checkpoint validated | Ring-2 | @solo-orchestrator
+
+**Type:** IMPLEMENTATION-CHECKPOINT
+**Decision:** DEC-052 accepts CT-LED-015 with one exact controlled entry point per runtime, direct anchor and audit bypass denial, owner-role isolation, no direct table mutation, and unchanged state on every denial
+**Policy:** DEC-015; DEC-025; DEC-042; DEC-051; ledger and PostgreSQL contracts; least privilege; test-first development; independent code and security review
+**Authority:** Agent under Fully Agentic mode with Workspace Owner authorization to continue WP-6; REV-125 Code PASS and REV-126 Security PASS
+**Accountability:** Solo Orchestrator continues CT-LED-016..019, retains nonblocking hardening in GitHub issue #81, and keeps WP-6 and issue #79 open
+**Result:** PostgreSQL 16.15 C/UTF8/UTC CT-LED-015 focused evidence 1/1, sequence-6 identity plus CT evidence 2/2, and complete suite 420/420 passed with zero skips or failures; dependency audit reports zero vulnerabilities; diagnostics and diff checks are clean
+**Remediation:** The named test exposed missing final runtime execution grants; migration 0006 now grants only `ledger_append` to `app_runtime` and `projection_publish` to `projection_runtime`, while audit and anchor boundaries remain closed
+**Artifact:** controlled-access/PostgreSQL implementation, contract, and tests | DEC-052 | REV-125 | REV-126 | GitHub issues #79/#81
+**authorization-boundary:** Checkpoint only; no WP-6 closure, WP-7, brokerage, live provider, public ingress, durable event, queue, scheduler, worker, baseline, release, deployment, or production action
+
+---
+
 ## 2026-09-18 | WP-6 dual-chain atomicity checkpoint validated | Ring-2 | @solo-orchestrator
 
 **Type:** IMPLEMENTATION-CHECKPOINT

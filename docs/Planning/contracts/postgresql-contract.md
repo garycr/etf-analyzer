@@ -50,7 +50,7 @@ The final WP-1 PostgreSQL 16.15 identities are:
 | 3 | `b152f8625921ca79514234c56558025e5579dcc0449dec96ec5d8cf25ad15134` | `ad12ccbc94da550d546c05b24b538056a7178c03e2333514dfb319ca5116092f` |
 | 4 | `9bf81885aab5fafe8bcac9b372d7bbd0bec601fc29e0cdbc234a65fc3d5489f1` | `f8d5f8f717eec97c8ca9840155a2c99d9c7250d1d18ccf20c734fadffeecd88e` |
 | 5 | `638fdcb40695be04a30c56807e529f753fd37c80ccfdcd6ad58f04e603287cc4` | `7832569fded48a31c07b400d599e9f3c94d94cd7f23062062a0627e8fd74efc4` |
-| 6 | `1bafffc644bfe57fc487e0aa9363626cd0273653c8c4278049b2a6421c6b87ed` | `dc6ee366c319160961b791af96c531ff931d7569c1b75c04132578e152541298` |
+| 6 | `609dcf7bd1faa472e850b7ed1cd32511987a596e7f52403ede1b832fc1e4e8dc` | `af70acc24cdf99a0f4ca60b4c6c51eceaf8a26609369228db063d30d62e35d42` |
 
 **2026-09-15 PT-FIX-001F amendment.** The re-baseline corrected sequence 4 to preserve the full 20-integer-digit capacity of DEC-014 `NUMERIC(28,8)` Money values while continuing to reject excess precision and scale before PostgreSQL casts. Sequence 5 and 6 SQL bytes are unchanged; their cumulative manifest hashes changed because the canonical root includes the corrected sequence-4 definition and content hash. No released or production database is in scope.
 
@@ -65,6 +65,8 @@ The final WP-1 PostgreSQL 16.15 identities are:
 **2026-09-18 CT-LED-013 amendment.** Sequence 3 serializes audit lifecycle transitions by attempt identity and requires audit-runtime order and ledger terminal outcomes to link to one matching immutable intent. It rejects orphan or duplicate terminals, invalid old versions, and recovery completion before a unique timeout without advancing the audit chain. The prototype remains inactive and empty-database-only, so sequence 3 was re-baselined in place; sequence 4 through 6 SQL bytes remain unchanged and their cumulative manifest hashes inherit the new sequence-3 definition.
 
 **2026-09-18 CT-LED-014 amendment.** Sequence 3 grants the four controlled runtime roles schema usage when their sequence-3 entry points become available, rather than deferring namespace access to sequence 6 or test setup. Successful ledger and audit-only appends commit their rows, commitments, anchors, and checkpoints atomically; missing active keys roll back every provisional mutation. The prototype remains inactive and empty-database-only, so sequence 3 was re-baselined in place; sequence 4 through 6 SQL bytes remain unchanged and their cumulative manifest hashes inherit the sequence-3 ACL.
+
+**2026-09-18 CT-LED-015 amendment.** Sequence 6 exposes only the permitted parent entry points: `app_runtime` may execute `ledger_append`, `projection_runtime` may execute `projection_publish`, and the existing sequence-3 grant leaves `audit_append` solely available to `audit_runtime` among runtime roles. Direct anchor execution, caller/outcome mismatches, table DML, and owner-role inheritance remain denied before persistence. The prototype remains inactive and empty-database-only, so sequence 6 was re-baselined in place without changing earlier migration identities.
 
 **2026-09-16 PT-APP-001D amendment.** Job restart and durable JobGet retain the latest committed checkpoint across attempt increments. The prototype remains inactive and empty-database-only, so sequences 2 and 6 were re-baselined in place; sequence 3 through 5 SQL bytes remain unchanged and their cumulative manifest hashes inherit the sequence-2 root.
 

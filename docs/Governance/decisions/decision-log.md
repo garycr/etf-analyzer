@@ -47,10 +47,26 @@
 | DEC-049 | 2026-09-18 | Stale-order integrity | Accept CT-LED-012 with identity-before-version precedence, stable owner mapping, exact rollback, and canonical migration identities | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-050 | 2026-09-18 | Audit lifecycle integrity | Accept CT-LED-013 with linked immutable intents, serialized terminal cardinality, ordered recovery, and migrated collector authority | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-051 | 2026-09-18 | Dual-chain atomicity | Accept CT-LED-014 with atomic business and audit-only chains, forced anchor rollback, migrated runtime schema authority, and canonical identities | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
+| DEC-052 | 2026-09-18 | Controlled authorization | Accept CT-LED-015 with exact runtime entry grants, direct bypass denial, owner-role isolation, unchanged state, and canonical sequence-6 identity | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 
 ---
 
 ## Decision Records
+
+### DEC-052: Accept Controlled-Procedure Authorization
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-052 |
+| **Date** | 2026-09-18 |
+| **Category** | Controlled authorization |
+| **Decision** | Accept CT-LED-015 after proving `app_runtime`, `projection_runtime`, and `audit_runtime` can enter only ledger, projection, and audit respectively; direct anchor calls, caller/outcome mismatches, runtime table DML, public execution, unknown callers, and owner-role inheritance fail before persistence; every denial preserves exact ledger, projection, audit, key, anchor, sequence, checkpoint, and version state |
+| **Policy** | DEC-015; DEC-025; DEC-042; DEC-051; ledger and PostgreSQL contracts; least privilege; test-first development; independent code and security review |
+| **Authority** | Agent under Fully Agentic mode with Workspace Owner authorization to continue WP-6 |
+| **Accountability** | Solo Orchestrator preserves minimal runtime grants and session-user enforcement, continues CT-LED-016..019, retains nonblocking hardening in GitHub issue #81, and keeps WP-6 and issue #79 open |
+| **Status** | Reviewed; REV-125 Code PASS and REV-126 Security PASS |
+
+---
 
 ### DEC-051: Accept Dual-Chain Atomicity
 

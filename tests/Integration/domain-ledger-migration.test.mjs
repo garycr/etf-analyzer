@@ -179,6 +179,19 @@ async function appendLedger(client, command) {
   }
 }
 
+async function appendAudit(client, payload) {
+  await client.query("SET SESSION AUTHORIZATION audit_runtime");
+  try {
+    const result = await client.query(
+      "SELECT etf.audit_append($1::jsonb) AS result",
+      [payload],
+    );
+    return result.rows[0].result;
+  } finally {
+    await client.query("RESET SESSION AUTHORIZATION");
+  }
+}
+
 async function transitionPaperOrder(client, command) {
   const payload = {
     canonicalContent: canonicalizeJson(command),
@@ -418,13 +431,13 @@ test(
       const manifest = JSON.parse(manifestJson);
       assert.equal(
         applied.contentHash,
-        "77309c05e92f12cd7a2cf17b8d9ecbf30289d9664aa0009b125b11c04792397f",
+        "b984aed437def76e4e7725fda0a5cba571b3bca794fa4a101410858fd4fd2628",
       );
       assert.equal(
         applied.schemaManifestHash,
-        "ce497a3306392153c3622b2a54addf4721bd18d080215c5f942c80f8ebff857b",
+        "d6f43bb9d850ea6902cc7f9dcd62384094bf2357600aa517e69ade1fd31f87ef",
       );
-      assert.equal(Buffer.byteLength(manifestJson, "utf8"), 15070);
+      assert.equal(Buffer.byteLength(manifestJson, "utf8"), 15233);
       assert.equal(manifest.migrationSequence.length, 3);
       assert.equal(manifest.objects.filter(({ kind }) => kind === "table").length, 28);
       assert.equal(manifest.objects.filter(({ kind }) => kind === "function").length, 11);
@@ -2717,6 +2730,323 @@ test(
         (error) => error.code === "P0001" && error.message === "LEDGER_ORDER_MISMATCH",
       );
       assert.deepEqual(await snapshotLedger(client, portfolioId), before);
+    } finally {
+      try {
+        await cleanBootstrap(client);
+      } finally {
+        await client.query(fixtureUnlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
+  "CT-LED-013 records the complete immutable audit outcome lifecycle",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    const group = "55900000";
+    const portfolioId = deterministicUuid(group, 1);
+    const order = fillFixture({
+      group,
+      index: 40,
+      side: "Buy",
+      quantity: "1.0000000000",
+      unitPrice: "10.0000000000",
+      effectiveAt: "2026-09-21T12:01:00.000Z",
+    });
+    await client.connect();
+    await client.query(fixtureLockSql);
+    try {
+      await cleanBootstrap(client);
+      await applyPrerequisites(client);
+      await prepareLedgerBoundary(client);
+      await seedFillOrder(client, { ...order, instrumentId: "AUDIT-ORDER-ETF" });
+      await appendLedger(client, cashDeposit({
+        portfolioId,
+        transactionId: deterministicUuid(group, 1),
+        correlationId: deterministicUuid(group, 2),
+        version: 0,
+        effectiveAt: "2026-09-21T12:00:00.000Z",
+      }));
+      await client.query("GRANT USAGE ON SCHEMA etf TO audit_runtime");
+      assert.equal(
+        (await client.query(
+          "SELECT pg_catalog.has_function_privilege('audit_runtime', 'etf.audit_append(jsonb)', 'EXECUTE') AS allowed",
+        )).rows[0].allowed,
+        true,
+      );
+      const before = await client.query(
+        "SELECT (SELECT count(*)::integer FROM etf.ledger_audit) AS audits, (SELECT count(*)::integer FROM etf.audit_commitments) AS commitments",
+      );
+      const payload = {
+        action: "LedgerAppend",
+        attemptIntentId: deterministicUuid(group, 10),
+        correlationId: deterministicUuid(group, 11),
+        domain: "Ledger",
+        keyIdentifier: "primary",
+        outcome: "Rejected",
+        subject: {
+          auditId: deterministicUuid(group, 12),
+          portfolioId,
+          errorCode: "LEDGER_VERSION_CONFLICT",
+          oldPortfolioVersion: 1,
+          replayClassification: "New",
+        },
+      };
+
+      await assert.rejects(
+        () => appendAudit(client, payload),
+        (error) => error.code === "22023" && error.message === "AUDIT_REQUEST_INVALID",
+      );
+      assert.deepEqual(
+        (await client.query(
+          "SELECT (SELECT count(*)::integer FROM etf.ledger_audit) AS audits, (SELECT count(*)::integer FROM etf.audit_commitments) AS commitments",
+        )).rows,
+        before.rows,
+      );
+
+      await assert.rejects(
+        () => appendAudit(client, {
+          ...payload,
+          attemptIntentId: deterministicUuid(group, 15),
+          outcome: "IntentRecorded",
+          subject: {
+            auditId: deterministicUuid(group, 16),
+            portfolioId,
+            oldPortfolioVersion: -1,
+            replayClassification: "New",
+          },
+        }),
+        (error) => error.code === "22023" && error.message === "AUDIT_REQUEST_INVALID",
+      );
+      assert.deepEqual(
+        (await client.query(
+          "SELECT (SELECT count(*)::integer FROM etf.ledger_audit) AS audits, (SELECT count(*)::integer FROM etf.audit_commitments) AS commitments",
+        )).rows,
+        before.rows,
+      );
+
+      const intent = {
+        ...payload,
+        outcome: "IntentRecorded",
+        subject: {
+          auditId: deterministicUuid(group, 13),
+          portfolioId,
+          oldPortfolioVersion: 1,
+          replayClassification: "New",
+        },
+      };
+      await appendAudit(client, intent);
+      await appendAudit(client, payload);
+      const afterTerminal = await client.query(
+        "SELECT (SELECT count(*)::integer FROM etf.ledger_audit) AS audits, (SELECT count(*)::integer FROM etf.audit_commitments) AS commitments",
+      );
+      assert.deepEqual(afterTerminal.rows, [{ audits: 3, commitments: 3 }]);
+      assert.deepEqual(
+        (await client.query(
+          `SELECT outcome, error_code, old_portfolio_version::integer, new_portfolio_version
+             FROM etf.ledger_audit
+            WHERE attempt_intent_id = $1::uuid
+            ORDER BY CASE outcome WHEN 'IntentRecorded' THEN 1 ELSE 2 END`,
+          [payload.attemptIntentId],
+        )).rows,
+        [
+          {
+            outcome: "IntentRecorded",
+            error_code: null,
+            old_portfolio_version: 1,
+            new_portfolio_version: null,
+          },
+          {
+            outcome: "Rejected",
+            error_code: "LEDGER_VERSION_CONFLICT",
+            old_portfolio_version: 1,
+            new_portfolio_version: null,
+          },
+        ],
+      );
+
+      await assert.rejects(
+        () => appendAudit(client, {
+          ...payload,
+          subject: { ...payload.subject, auditId: deterministicUuid(group, 14) },
+        }),
+        (error) => error.code === "22023" && error.message === "AUDIT_REQUEST_INVALID",
+      );
+      assert.deepEqual(
+        (await client.query(
+          "SELECT (SELECT count(*)::integer FROM etf.ledger_audit) AS audits, (SELECT count(*)::integer FROM etf.audit_commitments) AS commitments",
+        )).rows,
+        afterTerminal.rows,
+      );
+
+      const recoveryIntent = {
+        ...intent,
+        attemptIntentId: deterministicUuid(group, 20),
+        correlationId: deterministicUuid(group, 21),
+        subject: { ...intent.subject, auditId: deterministicUuid(group, 22) },
+      };
+      const recoveryCompleted = {
+        ...recoveryIntent,
+        outcome: "RecoveryCompleted",
+        subject: { ...recoveryIntent.subject, auditId: deterministicUuid(group, 23) },
+      };
+      await appendAudit(client, recoveryIntent);
+      await assert.rejects(
+        () => appendAudit(client, recoveryCompleted),
+        (error) => error.code === "22023" && error.message === "AUDIT_REQUEST_INVALID",
+      );
+      await appendAudit(client, {
+        ...recoveryIntent,
+        outcome: "TimeoutRecovery",
+        subject: {
+          ...recoveryIntent.subject,
+          auditId: deterministicUuid(group, 24),
+          errorCode: "AUDIT_ATTEMPT_TIMEOUT",
+        },
+      });
+      await appendAudit(client, recoveryCompleted);
+      await assert.rejects(
+        () => appendAudit(client, {
+          ...recoveryCompleted,
+          subject: { ...recoveryCompleted.subject, auditId: deterministicUuid(group, 25) },
+        }),
+        (error) => error.code === "22023" && error.message === "AUDIT_REQUEST_INVALID",
+      );
+      await assert.rejects(
+        () => appendAudit(client, {
+          ...recoveryCompleted,
+          outcome: "Rejected",
+          subject: {
+            ...recoveryCompleted.subject,
+            auditId: deterministicUuid(group, 26),
+            errorCode: "LEDGER_VERSION_CONFLICT",
+          },
+        }),
+        (error) => error.code === "22023" && error.message === "AUDIT_REQUEST_INVALID",
+      );
+      assert.deepEqual(
+        (await client.query(
+          "SELECT outcome FROM etf.ledger_audit WHERE attempt_intent_id = $1::uuid ORDER BY recorded_at, audit_id",
+          [recoveryIntent.attemptIntentId],
+        )).rows.map(({ outcome }) => outcome).sort(),
+        ["IntentRecorded", "RecoveryCompleted", "TimeoutRecovery"].sort(),
+      );
+
+      const committedTransactionId = deterministicUuid(group, 30);
+      const committedIntent = {
+        ...intent,
+        attemptIntentId: committedTransactionId,
+        correlationId: deterministicUuid(group, 31),
+        subject: { ...intent.subject, auditId: deterministicUuid(group, 32) },
+      };
+      await appendAudit(client, committedIntent);
+      await appendLedger(client, cashDeposit({
+        portfolioId,
+        transactionId: committedTransactionId,
+        correlationId: committedIntent.correlationId,
+        version: 1,
+        effectiveAt: "2026-09-21T12:02:00.000Z",
+        amount: "1.00000000",
+      }));
+      assert.deepEqual(
+        (await client.query(
+          `SELECT outcome, error_code, old_portfolio_version::integer, new_portfolio_version::integer
+             FROM etf.ledger_audit
+            WHERE attempt_intent_id = $1::uuid
+            ORDER BY CASE outcome WHEN 'IntentRecorded' THEN 1 ELSE 2 END`,
+          [committedTransactionId],
+        )).rows,
+        [
+          { outcome: "IntentRecorded", error_code: null, old_portfolio_version: 1, new_portfolio_version: null },
+          { outcome: "Committed", error_code: null, old_portfolio_version: 1, new_portfolio_version: 2 },
+        ],
+      );
+
+      const integrityIntent = {
+        ...intent,
+        attemptIntentId: deterministicUuid(group, 33),
+        correlationId: deterministicUuid(group, 34),
+        subject: {
+          ...intent.subject,
+          auditId: deterministicUuid(group, 35),
+          oldPortfolioVersion: 2,
+        },
+      };
+      await appendAudit(client, integrityIntent);
+      await appendAudit(client, {
+        ...integrityIntent,
+        outcome: "IntegrityFailed",
+        subject: {
+          ...integrityIntent.subject,
+          auditId: deterministicUuid(group, 36),
+          errorCode: "LEDGER_INTEGRITY_FAILED",
+        },
+      });
+      assert.deepEqual(
+        (await client.query(
+          "SELECT portfolio_version::integer FROM etf.portfolios WHERE portfolio_id = $1::uuid",
+          [portfolioId],
+        )).rows,
+        [{ portfolio_version: 2 }],
+      );
+
+      const beforeOrder = await client.query(
+        "SELECT (SELECT count(*)::integer FROM etf.order_audit) AS audits, (SELECT count(*)::integer FROM etf.audit_commitments) AS commitments",
+      );
+      const orderRejected = {
+        action: "PaperOrderTransition",
+        attemptIntentId: deterministicUuid(group, 40),
+        correlationId: deterministicUuid(group, 41),
+        domain: "Order",
+        keyIdentifier: "primary",
+        outcome: "Rejected",
+        subject: {
+          auditId: deterministicUuid(group, 42),
+          orderId: order.orderId,
+          errorCode: "ORDER_VERSION_CONFLICT",
+          oldOrderVersion: 1,
+        },
+      };
+      await assert.rejects(
+        () => appendAudit(client, orderRejected),
+        (error) => error.code === "22023" && error.message === "AUDIT_REQUEST_INVALID",
+      );
+      assert.deepEqual(
+        (await client.query(
+          "SELECT (SELECT count(*)::integer FROM etf.order_audit) AS audits, (SELECT count(*)::integer FROM etf.audit_commitments) AS commitments",
+        )).rows,
+        beforeOrder.rows,
+      );
+      await appendAudit(client, {
+        ...orderRejected,
+        outcome: "IntentRecorded",
+        subject: {
+          auditId: deterministicUuid(group, 43),
+          orderId: order.orderId,
+          oldOrderVersion: 1,
+        },
+      });
+      await appendAudit(client, orderRejected);
+      await assert.rejects(
+        () => appendAudit(client, {
+          ...orderRejected,
+          subject: { ...orderRejected.subject, auditId: deterministicUuid(group, 44) },
+        }),
+        (error) => error.code === "22023" && error.message === "AUDIT_REQUEST_INVALID",
+      );
+      assert.deepEqual(
+        (await client.query(
+          "SELECT outcome, error_code, old_order_version::integer, new_order_version FROM etf.order_audit WHERE attempt_intent_id = $1::uuid ORDER BY CASE outcome WHEN 'IntentRecorded' THEN 1 ELSE 2 END",
+          [orderRejected.attemptIntentId],
+        )).rows,
+        [
+          { outcome: "IntentRecorded", error_code: null, old_order_version: 1, new_order_version: null },
+          { outcome: "Rejected", error_code: "ORDER_VERSION_CONFLICT", old_order_version: 1, new_order_version: null },
+        ],
+      );
     } finally {
       try {
         await cleanBootstrap(client);

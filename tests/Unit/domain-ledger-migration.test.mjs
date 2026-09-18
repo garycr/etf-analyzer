@@ -104,7 +104,7 @@ test("0003 domain ledger grants only the nested owner call graph and authoritati
   );
   assert.match(
     sql,
-    /GRANT EXECUTE ON FUNCTION etf\.audit_append\(jsonb\) TO application_writer_owner, ledger_writer_owner, projection_owner;/,
+    /GRANT EXECUTE ON FUNCTION etf\.audit_append\(jsonb\) TO audit_runtime, application_writer_owner, ledger_writer_owner, projection_owner;/,
   );
   assert.match(
     sql,

@@ -45,10 +45,26 @@
 | DEC-047 | 2026-09-18 | FIFO determinism | Accept CT-LED-009 with equal-timestamp allocation ordered by ledger sequence independent of physical fetch order | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-048 | 2026-09-18 | Reversal and concurrency integrity | Accept CT-LED-010/011 with immutable reversal lineage, observed two-client serialization, replay stability, and atomic loser rollback | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-049 | 2026-09-18 | Stale-order integrity | Accept CT-LED-012 with identity-before-version precedence, stable owner mapping, exact rollback, and canonical migration identities | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
+| DEC-050 | 2026-09-18 | Audit lifecycle integrity | Accept CT-LED-013 with linked immutable intents, serialized terminal cardinality, ordered recovery, and migrated collector authority | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 
 ---
 
 ## Decision Records
+
+### DEC-050: Accept Audit Lifecycle Integrity
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-050 |
+| **Date** | 2026-09-18 |
+| **Category** | Audit lifecycle integrity |
+| **Decision** | Accept CT-LED-013 after proving migrated collector authority, one immutable Order or Ledger intent per attempt, exact entity/action/correlation/version linkage, one mutually exclusive business terminal, timeout-before-recovery ordering, duplicate rejection, linked real business commit, and no audit-chain advancement on invalid transitions |
+| **Policy** | DEC-014; DEC-015; DEC-042; DEC-049; ledger and PostgreSQL contracts; test-first development; least privilege; independent code and security review |
+| **Authority** | Agent under Fully Agentic mode with Workspace Owner authorization to continue WP-6 |
+| **Accountability** | Solo Orchestrator preserves attempt and audit-chain serialization, continues CT-LED-014..019, verifies nested business and projection linkage in their allocated vectors, retains decimal input-length hardening in GitHub issue #81, and keeps WP-6 and issue #79 open |
+| **Status** | Reviewed; REV-121 Code PASS and REV-122 Security PASS |
+
+---
 
 ### DEC-049: Accept Stale-Order Integrity
 

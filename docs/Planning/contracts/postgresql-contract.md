@@ -47,10 +47,10 @@ The final WP-1 PostgreSQL 16.15 identities are:
 | ---: | --- | --- |
 | 1 | `a604802a67bed66c6ce79d2f2f856b48e184ae5b4f76803ab8ead3a135c85291` | `3ba3b63c429cf051378ce3eb4adafe0db697dec487d070669a6bc47dba2f8f7c` |
 | 2 | `ad458453834e72413f644e81e38829ae491a26a44f1ca03deeaf71349552c198` | `7f6929ff5e9414a99921fd74d26ef9795a10cfeb1f8939ef240d974834873abb` |
-| 3 | `77309c05e92f12cd7a2cf17b8d9ecbf30289d9664aa0009b125b11c04792397f` | `ce497a3306392153c3622b2a54addf4721bd18d080215c5f942c80f8ebff857b` |
-| 4 | `9bf81885aab5fafe8bcac9b372d7bbd0bec601fc29e0cdbc234a65fc3d5489f1` | `dd1ad611a6f8b2f705f9ea357337b7d53c77b3464c5901fcabbad0f2bc24c46b` |
-| 5 | `638fdcb40695be04a30c56807e529f753fd37c80ccfdcd6ad58f04e603287cc4` | `e5df31918da5e9db1db379fedeffbe7ce717d50ea853c925914ccb9334b326fa` |
-| 6 | `1bafffc644bfe57fc487e0aa9363626cd0273653c8c4278049b2a6421c6b87ed` | `298299a7e68d90e6e806aa269e09f137d9f4cc09891d069475af76b51775c110` |
+| 3 | `b984aed437def76e4e7725fda0a5cba571b3bca794fa4a101410858fd4fd2628` | `d6f43bb9d850ea6902cc7f9dcd62384094bf2357600aa517e69ade1fd31f87ef` |
+| 4 | `9bf81885aab5fafe8bcac9b372d7bbd0bec601fc29e0cdbc234a65fc3d5489f1` | `d70bdd29b9cabda11ef832817dc4bcf7e648eaf33358e4467ce1229fe46d2df9` |
+| 5 | `638fdcb40695be04a30c56807e529f753fd37c80ccfdcd6ad58f04e603287cc4` | `f73b23a9bb43a1927d9e21a0c11ab792681cebc7809e891bf155be41c59eb113` |
+| 6 | `1bafffc644bfe57fc487e0aa9363626cd0273653c8c4278049b2a6421c6b87ed` | `25cb5c4a4fc79887b6386068969aa1f2bb3828abb75dcb41ef03e5c4d4e86025` |
 
 **2026-09-15 PT-FIX-001F amendment.** The re-baseline corrected sequence 4 to preserve the full 20-integer-digit capacity of DEC-014 `NUMERIC(28,8)` Money values while continuing to reject excess precision and scale before PostgreSQL casts. Sequence 5 and 6 SQL bytes are unchanged; their cumulative manifest hashes changed because the canonical root includes the corrected sequence-4 definition and content hash. No released or production database is in scope.
 
@@ -61,6 +61,8 @@ The final WP-1 PostgreSQL 16.15 identities are:
 **2026-09-18 WP-6 reconciliation amendment.** Sequence 3 now rebuilds and exactly compares scalar, keyed lot, keyed position, valuation, allocation, version, and established snapshot identities before projection publication. Projection owner receives only the ledger columns required for that controlled rebuild. The prototype remains inactive and empty-database-only, so sequence 3 was re-baselined in place; sequence 4 through 6 SQL bytes remain unchanged and their cumulative manifest hashes inherit the new sequence-3 definition and grants.
 
 **2026-09-18 WP-6 stale-order amendment.** Sequence 3 now distinguishes a stale fill order version as `ORDER_VERSION_CONFLICT` while retaining `LEDGER_ORDER_MISMATCH` for missing orders and identity, side, or fill-kind mismatches. Identity validation precedes version validation after the order advisory lock, and both failures roll back without ledger mutation. The prototype remains inactive and empty-database-only, so sequence 3 was re-baselined in place; sequence 4 through 6 SQL bytes remain unchanged and their cumulative manifest hashes inherit the new sequence-3 definition.
+
+**2026-09-18 CT-LED-013 amendment.** Sequence 3 serializes audit lifecycle transitions by attempt identity and requires audit-runtime order and ledger terminal outcomes to link to one matching immutable intent. It rejects orphan or duplicate terminals, invalid old versions, and recovery completion before a unique timeout without advancing the audit chain. The prototype remains inactive and empty-database-only, so sequence 3 was re-baselined in place; sequence 4 through 6 SQL bytes remain unchanged and their cumulative manifest hashes inherit the new sequence-3 definition.
 
 **2026-09-16 PT-APP-001D amendment.** Job restart and durable JobGet retain the latest committed checkpoint across attempt increments. The prototype remains inactive and empty-database-only, so sequences 2 and 6 were re-baselined in place; sequence 3 through 5 SQL bytes remain unchanged and their cumulative manifest hashes inherit the sequence-2 root.
 

@@ -6,6 +6,19 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-18 | CT-LED-019 custom restore controls deferred | Ring-2 | @solo-orchestrator
+
+**Type:** SCOPE-CORRECTION
+**Decision:** DEC-057 removes CT-LED-019 from the WP-6 implementation baseline and defers ADR-002 custom restore-control SQL until production backup/restore requirements exist
+**Policy:** Workspace Owner scope authority; ruthless simplicity; greenfield PostgreSQL boundary; GitHub issue #82
+**Authority:** Workspace Owner explicitly confirmed there is no SQL Server data migration or DDL conversion requirement
+**Accountability:** Solo Orchestrator removed only the uncommitted CT-LED-019 implementation and tests, preserved CT-LED-001..018, and validated the accepted baseline
+**Result:** Build PASS; 423/423 tests PASS; zero skipped; npm audit reports zero vulnerabilities
+**Artifact:** ADR-002 | DEC-057 | GitHub issues #79/#82
+**authorization-boundary:** No custom restore manifest, database-wide restore gate, key-rotation workflow, SQL Server data transfer, or SQL Server DDL conversion is authorized by WP-6
+
+---
+
 ## 2026-09-18 | CT-LED-019 restore integrity architecture accepted | Ring-2 | @solo-orchestrator
 
 **Type:** ARCHITECTURE-CHECKPOINT

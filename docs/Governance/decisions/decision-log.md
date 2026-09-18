@@ -48,6 +48,7 @@
 | DEC-050 | 2026-09-18 | Audit lifecycle integrity | Accept CT-LED-013 with linked immutable intents, serialized terminal cardinality, ordered recovery, and migrated collector authority | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-051 | 2026-09-18 | Dual-chain atomicity | Accept CT-LED-014 with atomic business and audit-only chains, forced anchor rollback, migrated runtime schema authority, and canonical identities | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-052 | 2026-09-18 | Controlled authorization | Accept CT-LED-015 with exact runtime entry grants, direct bypass denial, owner-role isolation, unchanged state, and canonical sequence-6 identity | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
+| DEC-057 | 2026-09-18 | Scope correction | Defer CT-LED-019 custom restore controls because the greenfield PostgreSQL delivery has no SQL Server data or DDL migration | Workspace Owner | Solo Orchestrator | Active |
 | DEC-056 | 2026-09-18 | Restore integrity architecture | Accept ADR-002 with signed coherent backup manifests, durable global restore gating, full retained-chain verification, and append-only rotation continuity | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-055 | 2026-09-18 | Crash-intent recovery | Accept CT-LED-018 with immutable unresolved intent, ordered anchored recovery, exact replay idempotency, and collision-safe audit identity | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-054 | 2026-09-18 | Fail-closed projection publication | Accept CT-LED-017 with durable blocked evidence, unchanged accepted projection, and atomic anchor-failure rollback | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
@@ -56,6 +57,21 @@
 ---
 
 ## Decision Records
+
+### DEC-057: Defer Custom Restore-Control Implementation
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-057 |
+| **Date** | 2026-09-18 |
+| **Category** | Scope correction |
+| **Decision** | Remove CT-LED-019 from the WP-6 implementation baseline and defer ADR-002 custom PostgreSQL restore-control functions, manifests, global gates, and rotation transitions until production backup/restore requirements exist |
+| **Policy** | Workspace Owner scope authority; ruthless simplicity; greenfield PostgreSQL boundary; GitHub issue #82 |
+| **Authority** | Workspace Owner |
+| **Accountability** | Solo Orchestrator preserves the reviewed ADR as a future option, removes the uncommitted implementation slice, validates the last accepted WP-6 baseline, and prevents SQL Server data migration or DDL conversion work from entering scope |
+| **Status** | Active; supersedes DEC-056 implementation authorization without invalidating REV-133 as historical design review |
+
+---
 
 ### DEC-056: Accept Restore Integrity Architecture
 

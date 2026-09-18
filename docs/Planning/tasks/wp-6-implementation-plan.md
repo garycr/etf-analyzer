@@ -81,7 +81,7 @@ Each row names the test before implementation. A renamed or split test must upda
 | CT-LED-016 | `CT-LED-016 publishes a verified projection and audit atomically` | `tests/Integration/domain-ledger-migration.test.mjs` |
 | CT-LED-017 | `CT-LED-017 blocks publication on integrity failure without replacing cache` | `tests/Integration/domain-ledger-migration.test.mjs` |
 | CT-LED-018 | `CT-LED-018 appends timeout and recovery outcomes for unresolved intent` | `tests/Integration/domain-ledger-migration.test.mjs` |
-| CT-LED-019 | `CT-LED-019 detects rollback behind the protected checkpoint` | `tests/Integration/domain-ledger-migration.test.mjs` |
+| CT-LED-019 | Deferred operational hardening under DEC-057; not a WP-6 acceptance vector | GitHub #82 |
 
 ## Boundaries
 

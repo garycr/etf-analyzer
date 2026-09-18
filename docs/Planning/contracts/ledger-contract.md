@@ -312,11 +312,11 @@ A crash after committed `IntentRecorded` but before a terminal outcome leaves th
 
 ### CT-LED-019 - Anti-Rollback Recovery
 
-Restore verification covers: database sequence older than the protected checkpoint; checkpoint older than the restored verified backup; missing or altered chain segments; and rotation-in-progress with predecessor and successor key identifiers. Every stale, missing, or mismatched case returns `LEDGER_INTEGRITY_FAILED`, keeps readiness false, and blocks projection publication and writes. A valid dual-key rotation resume verifies retained commitments under both identifiers, restores the latest accepted sequence, and sets readiness true only after full portfolio-chain, audit-chain, checkpoint, and exact-rebuild verification.
+Deferred by DEC-057. This future operational-hardening vector is not part of WP-6 acceptance because the current delivery creates a greenfield PostgreSQL database and performs no SQL Server data migration or DDL conversion. Re-entry requires defined production backup technology, recovery objectives, retention, key custody, and restore-runbook ownership.
 
 ## Behavioral Evidence Status
 
-CT-LED-001..019 are pre-implementation vectors, not executed evidence. Ring 2 must provide a runner and bindings, database constraints/migrations, the deny-by-default role matrix and append-only guards, TypeScript/Python cross-language fixtures, RFC 8785/SHA-256 golden bytes, allocation/audit digests and separately keyed chain anchors, trusted audit provenance, fail-closed evidence redaction, concurrency/abuse/security tests, property tests within supported bounds, and per-file coverage gates. No public accounting API is complete without executable tests.
+CT-LED-001..018 require executable Ring 2 evidence. CT-LED-019 is deferred by DEC-057 and does not block WP-6 acceptance.
 
 ## Traceability
 

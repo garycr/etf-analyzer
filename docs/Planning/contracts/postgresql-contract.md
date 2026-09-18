@@ -204,7 +204,7 @@ The exhaustive column-to-record/hash-domain registry under Numeric, Time, and JS
 
 Database readiness covers PostgreSQL and Migrations. `readiness_append` persists the complete application snapshot only in order PostgreSQL, Migrations, FixturePolicy, LocalDependency, DenialAudit, LedgerIntegrity. Connectivity/drift use application database/migration codes; denial audit and protected checkpoint failure preserve analytics/ledger codes. Liveness remains orthogonal.
 
-CT-LED-019 restore integrity targets PostgreSQL 16 and requires built-in transaction advisory functions `pg_advisory_xact_lock_shared(bigint)` and `pg_advisory_xact_lock(bigint)`, `hashtextextended(text,bigint)`, exported repeatable-read snapshots through `pg_export_snapshot()`, and `pgcrypto` 1.3 SHA-256/HMAC support. Runtime ledger, projection, and anchor paths take the shared `etf:ledger-integrity` lock before existing locks; backup export also holds the shared lock for its exported snapshot; restore transitions take the exclusive variant on the identical hash key. `anchor_keys.key_ciphertext` stores usable HMAC key bytes under anchor-owner-only access and storage encryption at rest; it is not application-wrapped ciphertext.
+CT-LED-019 custom restore integrity is deferred by DEC-057 and is not part of the closed WP-6 physical manifest. The current delivery provisions a greenfield PostgreSQL database and performs no SQL Server data migration or DDL conversion. Production backup/restore technology and recovery objectives must be defined before any custom restore gate or manifest becomes schema scope.
 
 ## Closed Physical Manifest
 

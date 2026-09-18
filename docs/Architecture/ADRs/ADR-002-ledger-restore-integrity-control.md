@@ -1,12 +1,15 @@
 # ADR-002 - Ledger Restore Integrity Control
 
-**Status:** Accepted
+**Status:** Deferred by DEC-057
 **Date:** 2026-09-18
 **Decision owner:** Agent under Fully Agentic mode
 **Accountable custodian:** Solo Orchestrator
 **Decision:** DEC-056
 **Review:** REV-133 Architect PASS
 **Related:** DEC-016; REV-011; CT-LED-019; GitHub #79 and #82
+
+> **Scope correction (2026-09-18):** This is a reviewed future operational-hardening option, not a WP-6 implementation requirement. The application uses a greenfield PostgreSQL schema and requires no SQL Server data migration or DDL conversion. Native backup/restore operations and their production recovery objectives must be selected before this design is reconsidered.
+> No ADR-002 schema objects or functions are implemented in the current baseline.
 
 ## Context
 

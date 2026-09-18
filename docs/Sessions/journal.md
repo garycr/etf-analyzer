@@ -6,6 +6,20 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-18 | WP-6 atomic projection publication checkpoint validated | Ring-2 | @solo-orchestrator
+
+**Type:** IMPLEMENTATION-CHECKPOINT
+**Decision:** DEC-053 accepts CT-LED-016 with verified projection publication, linked `PublicationCompleted` audit anchoring, staged fault rollback, and unchanged current snapshot until complete commit
+**Policy:** DEC-015; DEC-042; DEC-051; DEC-052; ledger and PostgreSQL contracts; test-first development; independent code and security review
+**Authority:** Agent under Fully Agentic mode with Workspace Owner authorization to continue WP-6; REV-127 Code PASS and REV-128 Security PASS
+**Accountability:** Solo Orchestrator continues CT-LED-017..019, retains nonblocking hardening in GitHub issue #81, and keeps WP-6 and issue #79 open
+**Result:** PostgreSQL 16.15 C/UTF8/UTC CT-LED-016 focused evidence 1/1 and complete suite 421/421 passed with zero skips or failures; dependency audit reports zero vulnerabilities; diagnostics and diff checks are clean
+**Fault evidence:** Reconciliation mismatch fails before projection; revoked nested-audit execution rolls back provisional projection; missing active key rolls back provisional projection and audit before commitment/checkpoint; prior snapshot remains current
+**Artifact:** PostgreSQL projection test evidence | DEC-053 | REV-127 | REV-128 | GitHub issues #79/#81
+**authorization-boundary:** Checkpoint only; no WP-6 closure, WP-7, brokerage, live provider, public ingress, durable event, queue, scheduler, worker, baseline, release, deployment, or production action
+
+---
+
 ## 2026-09-18 | WP-6 controlled authorization checkpoint validated | Ring-2 | @solo-orchestrator
 
 **Type:** IMPLEMENTATION-CHECKPOINT

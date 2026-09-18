@@ -48,10 +48,26 @@
 | DEC-050 | 2026-09-18 | Audit lifecycle integrity | Accept CT-LED-013 with linked immutable intents, serialized terminal cardinality, ordered recovery, and migrated collector authority | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-051 | 2026-09-18 | Dual-chain atomicity | Accept CT-LED-014 with atomic business and audit-only chains, forced anchor rollback, migrated runtime schema authority, and canonical identities | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-052 | 2026-09-18 | Controlled authorization | Accept CT-LED-015 with exact runtime entry grants, direct bypass denial, owner-role isolation, unchanged state, and canonical sequence-6 identity | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
+| DEC-053 | 2026-09-18 | Projection publication atomicity | Accept CT-LED-016 with verified projection publication, linked audit anchoring, staged rollback, and unchanged current snapshot | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 
 ---
 
 ## Decision Records
+
+### DEC-053: Accept Atomic Projection Publication
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-053 |
+| **Date** | 2026-09-18 |
+| **Category** | Projection publication atomicity |
+| **Decision** | Accept CT-LED-016 after proving a verified bounded projection commits with one linked `PublicationCompleted`, audit commitment, and checkpoint; reconciliation failure before projection, nested-audit denial after provisional projection, and missing-key failure after provisional audit each roll back all publication state; the prior snapshot remains current until complete commit |
+| **Policy** | DEC-015; DEC-042; DEC-051; DEC-052; ledger and PostgreSQL contracts; test-first development; independent code and security review |
+| **Authority** | Agent under Fully Agentic mode with Workspace Owner authorization to continue WP-6 |
+| **Accountability** | Solo Orchestrator preserves same-transaction projection and audit ownership, continues CT-LED-017..019, retains nonblocking hardening in GitHub issue #81, and keeps WP-6 and issue #79 open |
+| **Status** | Reviewed; REV-127 Code PASS and REV-128 Security PASS |
+
+---
 
 ### DEC-052: Accept Controlled-Procedure Authorization
 

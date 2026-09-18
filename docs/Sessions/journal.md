@@ -6,6 +6,19 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-18 | WP-6 paper order and ledger approved | Ring-2 | @solo-orchestrator
+
+**Type:** PACKAGE-CLOSURE
+**Decision:** DEC-058 closes WP-6 and makes WP-7 eligible as the next sequential package without starting it
+**Policy:** DEC-023; DEC-028; DEC-042; DEC-057; approved Ring 2 WBS; WP-6 exit criteria; code, security, and plan review
+**Authority:** Agent under Fully Agentic mode with Workspace Owner direction to continue to approval; REV-134 Plan Reviewer PASS
+**Accountability:** Solo Orchestrator selectively publishes closure evidence, closes WP-6 tracking issues after push, retains #81/#82 as nonblocking hardening, and requires a separate action before WP-7 starts
+**Result:** Build and lint PASS; PostgreSQL suite 423/423 PASS with zero skips; 18/18 immutable hashes match; npm audit reports zero vulnerabilities; REV-106..132 and REV-134 PASS
+**Artifact:** docs/artifacts/gate-evidence/wp-6-exit.md | DEC-058 | REV-134 | GitHub issues #79/#80
+**authorization-boundary:** WP-7 is eligible but not started; no Ring 3 transition, baseline activation, live provider, brokerage, public ingress, release, deployment, production action, SQL Server data migration, or SQL Server DDL conversion is authorized
+
+---
+
 ## 2026-09-18 | CT-LED-019 custom restore controls deferred | Ring-2 | @solo-orchestrator
 
 **Type:** SCOPE-CORRECTION

@@ -1,7 +1,7 @@
 # WP-6 Paper Order and Ledger Implementation Plan
 
 **Date:** 2026-09-17
-**Status:** Active under DEC-042 and REV-105 PASS; tracked through GitHub issues #79/#80
+**Status:** Complete under DEC-058 and REV-134 PASS; CT-LED-019 deferred by DEC-057 to nonblocking GitHub issue #82
 **Estimate:** XXL risk label / 32 agent-hours
 
 ## Ownership
@@ -26,7 +26,7 @@ Hypothesis: a Domain-canonicalized OT command can pass unchanged through Applica
 1. Order core: all eight states, OT-01..OT-10, 62 invalid source/target complements, terminal states, confirmation, chronology, versions, idempotency content, and bounded primitive admission.
 2. Numeric/canonical ledger core: DEC-014 quantity/money/rate classes, golden transaction/effect hash, half-even/residual vectors, stable precedence, and cross-runtime bytes.
 3. PostgreSQL composition: draft, confirmation, validation, partial/complete fills, cancellation, expiry, atomic rollback, replay, version races, FIFO, reversal dependencies, and no-short/no-overspend guards.
-4. Rebuild/reconciliation: CT-LED-001..019 exact cash/lot/position/allocation/P&L/valuation sets, cache corruption, fetch/batch ordering, commitments, anchors, and blocked publication.
+4. Rebuild/reconciliation: CT-LED-001..018 exact cash/lot/position/allocation/P&L/valuation sets, cache corruption, fetch/batch ordering, commitments, anchors, and blocked publication; CT-LED-019 is deferred by DEC-057.
 5. Aggregate zero-skip PostgreSQL suite, lint, audit, diagnostics, immutable evidence, and independent code/security/architecture/plan review.
 
 ## Exact Test Traceability

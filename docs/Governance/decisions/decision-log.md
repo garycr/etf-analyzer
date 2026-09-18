@@ -48,6 +48,7 @@
 | DEC-050 | 2026-09-18 | Audit lifecycle integrity | Accept CT-LED-013 with linked immutable intents, serialized terminal cardinality, ordered recovery, and migrated collector authority | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-051 | 2026-09-18 | Dual-chain atomicity | Accept CT-LED-014 with atomic business and audit-only chains, forced anchor rollback, migrated runtime schema authority, and canonical identities | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-052 | 2026-09-18 | Controlled authorization | Accept CT-LED-015 with exact runtime entry grants, direct bypass denial, owner-role isolation, unchanged state, and canonical sequence-6 identity | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
+| DEC-058 | 2026-09-18 | Package closure | Close WP-6 and make WP-7 eligible as the next sequential package without starting it | Agent (Fully Agentic) | Solo Orchestrator | Approved |
 | DEC-057 | 2026-09-18 | Scope correction | Defer CT-LED-019 custom restore controls because the greenfield PostgreSQL delivery has no SQL Server data or DDL migration | Workspace Owner | Solo Orchestrator | Active |
 | DEC-056 | 2026-09-18 | Restore integrity architecture | Accept ADR-002 with signed coherent backup manifests, durable global restore gating, full retained-chain verification, and append-only rotation continuity | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-055 | 2026-09-18 | Crash-intent recovery | Accept CT-LED-018 with immutable unresolved intent, ordered anchored recovery, exact replay idempotency, and collision-safe audit identity | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
@@ -57,6 +58,21 @@
 ---
 
 ## Decision Records
+
+### DEC-058: Close WP-6 Paper Order and Ledger
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-058 |
+| **Date** | 2026-09-18 |
+| **Category** | Package closure |
+| **Decision** | Close WP-6 after accepting OT-01..OT-10, CT-ORD-001..012, and CT-LED-001..018 executable evidence; make WP-7 eligible as the next sequential package without starting it |
+| **Policy** | DEC-023; DEC-028; DEC-042; DEC-057; approved sequential Ring 2 WBS; WP-6 exit criteria; test-first development; code, security, and closure-plan review |
+| **Authority** | Agent under Fully Agentic mode with Workspace Owner direction to continue to approval |
+| **Accountability** | Solo Orchestrator preserves the validated implementation hashes, keeps #81 and #82 nonblocking, publishes only closure artifacts, closes WP-6 tracking issues after push, and does not start WP-7 without a separate package-entry action |
+| **Status** | Approved; REV-134 Plan Reviewer PASS; 423/423 tests, zero skips, zero audit vulnerabilities |
+
+---
 
 ### DEC-057: Defer Custom Restore-Control Implementation
 

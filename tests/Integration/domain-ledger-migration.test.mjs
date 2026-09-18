@@ -2911,6 +2911,116 @@ test(
 );
 
 test(
+  "CT-LED-009 orders equal-timestamp lots by ledger sequence independent of fetch order",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    const group = "51500000";
+    const portfolioId = deterministicUuid(group, 1);
+    const instrumentId = "EQUAL-TIME-ETF";
+    const acquiredAt = "2026-09-14T01:01:00.000Z";
+    const lotA = fillFixture({
+      group,
+      index: 1,
+      side: "Buy",
+      quantity: "1.0000000000",
+      unitPrice: "11.0000000000",
+      effectiveAt: acquiredAt,
+    });
+    const lotB = fillFixture({
+      group,
+      index: 2,
+      side: "Buy",
+      quantity: "1.0000000000",
+      unitPrice: "10.0000000000",
+      effectiveAt: acquiredAt,
+    });
+    const sell = fillFixture({
+      group,
+      index: 3,
+      side: "Sell",
+      quantity: "1.0000000000",
+      unitPrice: "12.0000000000",
+      effectiveAt: "2026-09-14T01:02:00.000Z",
+    });
+    await client.connect();
+    await client.query(fixtureLockSql);
+    try {
+      await cleanBootstrap(client);
+      await applyPrerequisites(client);
+      await prepareLedgerBoundary(client);
+      for (const fill of [lotA, lotB, sell]) {
+        await seedFillOrder(client, { ...fill, instrumentId });
+      }
+
+      await appendLedger(client, cashDeposit({
+        portfolioId,
+        transactionId: deterministicUuid(group, 1),
+        correlationId: deterministicUuid(group, 2),
+        version: 0,
+        effectiveAt: "2026-09-14T01:00:00.000Z",
+      }));
+      await appendLedger(client, fillCommand({
+        ...lotB,
+        portfolioId,
+        instrumentId,
+        version: 1,
+      }));
+      await appendLedger(client, fillCommand({
+        ...lotA,
+        portfolioId,
+        instrumentId,
+        version: 2,
+      }));
+
+      await client.query("CLUSTER etf.ledger_lots USING pk_ledger_lots");
+      const physicalOrder = await client.query(
+        `SELECT lot_id::text AS lot_id
+           FROM etf.ledger_lots
+          WHERE portfolio_id = $1::uuid
+          ORDER BY ctid`,
+        [portfolioId],
+      );
+      assert.deepEqual(
+        physicalOrder.rows.map(({ lot_id }) => lot_id),
+        [lotA.fillId, lotB.fillId],
+      );
+
+      await appendLedger(client, fillCommand({
+        ...sell,
+        portfolioId,
+        instrumentId,
+        version: 3,
+      }));
+      const allocations = await client.query(
+        `SELECT allocation.effect_ordinal::integer AS effect_ordinal,
+                allocation.lot_id::text AS lot_id,
+                allocation.consumed_quantity::text AS consumed_quantity,
+                allocation.allocated_basis::text AS allocated_basis
+           FROM etf.ledger_allocations AS allocation
+          WHERE allocation.portfolio_id = $1::uuid
+            AND allocation.sell_transaction_id = $2::uuid
+          ORDER BY allocation.effect_ordinal`,
+        [portfolioId, sell.transactionId],
+      );
+      assert.deepEqual(allocations.rows, [{
+        effect_ordinal: 1,
+        lot_id: lotB.fillId,
+        consumed_quantity: "1.0000000000",
+        allocated_basis: "10.00000000",
+      }]);
+    } finally {
+      try {
+        await cleanBootstrap(client);
+      } finally {
+        await client.query(fixtureUnlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
   "CT-LED-005 assigns the final proportional sale the exact residual lot basis",
   { skip: !connectionString },
   async () => {

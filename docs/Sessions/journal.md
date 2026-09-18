@@ -2713,3 +2713,36 @@
 **duration-ms:** 11
 
 ---
+
+## 2026-09-18T14:31:50 | WORK-020 | Ring-0 | @extension
+
+**Type:** WORK
+**action:** extension-activated
+**version:** 13.2.0
+**workspace:** etf-analyzer [WSL: Ubuntu]
+**duration-ms:** 10
+
+---
+
+## 2026-09-18T14:46:01 | WORK-021 | Ring-0 | @extension
+
+**Type:** WORK
+**action:** extension-activated
+**version:** 13.2.0
+**workspace:** etf-analyzer [WSL: Ubuntu]
+**duration-ms:** 7
+
+---
+
+## 2026-09-18 | WP-6 equal-timestamp FIFO checkpoint validated | Ring-2 | @solo-orchestrator
+
+**Type:** IMPLEMENTATION-CHECKPOINT
+**Decision:** DEC-047 accepts CT-LED-009 after proving that equal-effective-time lots allocate by ledger sequence rather than physical fetch order, with lot identity retained as the final deterministic key
+**Policy:** DEC-014; DEC-042; DEC-046; ledger and PostgreSQL contracts; test-first development; least privilege; independent code and security review
+**Authority:** Agent under Fully Agentic mode with Workspace Owner authorization to continue WP-6; REV-115 Code PASS and REV-116 Security PASS
+**Accountability:** Solo Orchestrator continues CT-LED-010..019 with CT-LED-011 live serialization next, tracks nonblocking decimal input-length hardening in GitHub issue #81, and keeps WP-6 and issue #79 open
+**Result:** PostgreSQL 16.15 UTF8/C/UTC complete suite 415/415 passed with zero skips or failures; dependency audit reports zero vulnerabilities; exact test traceability and diff checks pass
+**Artifact:** CT-LED-009 integration test | DEC-047 | REV-115 | REV-116 | GitHub issues #79/#81
+**authorization-boundary:** Checkpoint only; no WP-6 closure, WP-7, brokerage, live provider, public ingress, durable event, queue, scheduler, worker, baseline, release, deployment, or production action
+
+---

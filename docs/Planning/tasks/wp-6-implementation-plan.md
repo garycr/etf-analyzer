@@ -71,7 +71,7 @@ Each row names the test before implementation. A renamed or split test must upda
 | CT-LED-006 | `CT-LED-006 produces identical TypeScript and PostgreSQL canonical strings` | `tests/Integration/domain-ledger-migration.test.mjs` |
 | CT-LED-007 | `CT-LED-007 rejects invalid scale grammar and bounds before persistence` | `tests/Integration/domain-ledger-migration.test.mjs` |
 | CT-LED-008 | `CT-LED-008 detects every keyed cache corruption without repair` | `tests/Integration/domain-ledger-migration.test.mjs` |
-| CT-LED-009 | `CT-LED-009 FIFO allocation ignores fetch and batch order` | `tests/Integration/domain-ledger-migration.test.mjs` |
+| CT-LED-009 | `CT-LED-009 orders equal-timestamp lots by ledger sequence independent of fetch order` | `tests/Integration/domain-ledger-migration.test.mjs` |
 | CT-LED-010 | `CT-LED-010 enforces reversal dependencies and exact stored restoration` | `tests/Integration/domain-ledger-migration.test.mjs` |
 | CT-LED-011 | `CT-LED-011 serializes races replay and rollback atomically` | `tests/Integration/domain-ledger-migration.test.mjs` |
 | CT-LED-012 | `CT-LED-012 enforces bounds permissions precedence and golden hashes` | `tests/Integration/controlled-access-migration.test.mjs` |

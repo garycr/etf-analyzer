@@ -42,10 +42,26 @@
 | DEC-044 | 2026-09-17 | Order and ledger integrity | Close CT-ORD-001..012 and begin exact ledger vectors with state-aware terminal quantities and byte-canonical replay | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-045 | 2026-09-18 | Ledger numeric integrity | Accept CT-LED-003..007 with exact FIFO, half-even arithmetic, cross-runtime strings, and fail-closed numeric admission | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-046 | 2026-09-18 | Projection integrity | Accept CT-LED-008 with exact keyed cache reconciliation and no repair | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
+| DEC-047 | 2026-09-18 | FIFO determinism | Accept CT-LED-009 with equal-timestamp allocation ordered by ledger sequence independent of physical fetch order | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 
 ---
 
 ## Decision Records
+
+### DEC-047: Accept Equal-Timestamp FIFO Determinism
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-047 |
+| **Date** | 2026-09-18 |
+| **Category** | FIFO determinism |
+| **Decision** | Accept CT-LED-009 after proving that equal-effective-time lots are consumed by ledger sequence, then lot identity, even when physical row order presents the higher-sequence lot first |
+| **Policy** | DEC-014; DEC-042; DEC-046; ledger and PostgreSQL contracts; test-first development; least privilege; independent code and security review |
+| **Authority** | Agent under Fully Agentic mode with Workspace Owner authorization to continue WP-6 |
+| **Accountability** | Solo Orchestrator preserves PostgreSQL mutation authority, continues CT-LED-010..019 with CT-LED-011 live serialization next, retains decimal input-length hardening in GitHub issue #81, and keeps WP-6 and issue #79 open |
+| **Status** | Reviewed; REV-115 Code PASS and REV-116 Security PASS |
+
+---
 
 ### DEC-046: Accept Exact Keyed Projection Reconciliation
 

@@ -526,7 +526,8 @@ BEGIN
     IF payload - ARRAY['canonicalContent','correlationId','effectiveAt','expectedOrderVersion','expectedPortfolioVersion','fee','fillId','instrumentId','keyIdentifier','orderId','orderSide','portfolioId','quantity','simulatedAt','transactionId','transitionCommandId','type','unitPrice']::text[] <> '{}'::jsonb THEN RAISE EXCEPTION 'LEDGER_REQUEST_INVALID' USING ERRCODE='22023'; END IF;
     PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('etf:paper-order:' || (payload ->> 'orderId'),0));
     SELECT order_id,instrument_id,side,aggregate_version INTO order_record FROM etf.paper_orders WHERE order_id=(payload ->> 'orderId')::uuid;
-    IF NOT FOUND OR order_record.instrument_id <> payload ->> 'instrumentId' OR order_record.side <> payload ->> 'orderSide' OR order_record.aggregate_version <> (payload ->> 'expectedOrderVersion')::bigint OR (order_record.side='Buy') <> (kind='BuyFill') THEN RAISE EXCEPTION 'LEDGER_ORDER_MISMATCH' USING ERRCODE='P0001'; END IF;
+    IF NOT FOUND OR order_record.instrument_id <> payload ->> 'instrumentId' OR order_record.side <> payload ->> 'orderSide' OR (order_record.side='Buy') <> (kind='BuyFill') THEN RAISE EXCEPTION 'LEDGER_ORDER_MISMATCH' USING ERRCODE='P0001'; END IF;
+    IF order_record.aggregate_version <> (payload ->> 'expectedOrderVersion')::bigint THEN RAISE EXCEPTION 'ORDER_VERSION_CONFLICT' USING ERRCODE='40001'; END IF;
     quantity_value:=(payload ->> 'quantity')::numeric; price_value:=(payload ->> 'unitPrice')::numeric; fee_value:=(payload ->> 'fee')::numeric;
     gross_value:=quantity_value*price_value;
     gross_value:=trunc(gross_value,8)+CASE WHEN gross_value-trunc(gross_value,8)>0.000000005 OR (gross_value-trunc(gross_value,8)=0.000000005 AND mod(trunc(gross_value,8)*100000000,2)<>0) THEN 0.00000001 ELSE 0 END;

@@ -44,10 +44,26 @@
 | DEC-046 | 2026-09-18 | Projection integrity | Accept CT-LED-008 with exact keyed cache reconciliation and no repair | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-047 | 2026-09-18 | FIFO determinism | Accept CT-LED-009 with equal-timestamp allocation ordered by ledger sequence independent of physical fetch order | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-048 | 2026-09-18 | Reversal and concurrency integrity | Accept CT-LED-010/011 with immutable reversal lineage, observed two-client serialization, replay stability, and atomic loser rollback | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
+| DEC-049 | 2026-09-18 | Stale-order integrity | Accept CT-LED-012 with identity-before-version precedence, stable owner mapping, exact rollback, and canonical migration identities | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 
 ---
 
 ## Decision Records
+
+### DEC-049: Accept Stale-Order Integrity
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-049 |
+| **Date** | 2026-09-18 |
+| **Category** | Stale-order integrity |
+| **Decision** | Accept CT-LED-012 after proving identity-correct stale fills return `ORDER_VERSION_CONFLICT`, combined identity mismatch and staleness return `LEDGER_ORDER_MISMATCH`, both failures leave exact ledger state unchanged, owner mapping remains stable, and sequence 3 through 6 identities are canonically reprojected |
+| **Policy** | DEC-014; DEC-042; DEC-048; ledger and PostgreSQL contracts; test-first development; least privilege; independent code and security review |
+| **Authority** | Agent under Fully Agentic mode with Workspace Owner authorization to continue WP-6 |
+| **Accountability** | Solo Orchestrator preserves PostgreSQL mutation authority and identity-before-version precedence, continues CT-LED-013..019, retains decimal input-length hardening in GitHub issue #81, and keeps WP-6 and issue #79 open |
+| **Status** | Reviewed; REV-119 Code PASS and REV-120 Security PASS |
+
+---
 
 ### DEC-048: Accept Reversal and Concurrency Integrity
 

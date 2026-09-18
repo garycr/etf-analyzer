@@ -197,23 +197,28 @@ test("WP-6 enforces the documented safe-integer UInt boundary", async () => {
 });
 
 test("WP-6 maps allowlisted PostgreSQL order errors to stable owner codes", async () => {
-  const client = {
-    async query() {
-      throw Object.assign(new Error("ORDER_VERSION_CONFLICT"), { code: "40001" });
-    },
-  };
-
-  await assert.rejects(
-    dispatchPostgresPaperOrder(
-      client,
-      { operation: "PaperOrderDraftCreate", kind: "command" },
-      draftPayload,
-      {
-        commandId: "77000000-0000-4000-8000-000000000003",
-        correlationId: "77000000-0000-4000-8000-000000000002",
-        requestedAt: "2026-09-17T12:00:00.000Z",
+  for (const expected of [
+    { code: "40001", message: "ORDER_VERSION_CONFLICT" },
+    { code: "P0001", message: "LEDGER_ORDER_MISMATCH" },
+  ]) {
+    const client = {
+      async query() {
+        throw Object.assign(new Error(expected.message), { code: expected.code });
       },
-    ),
-    (error) => error.code === "ORDER_VERSION_CONFLICT" && error.message === "ORDER_VERSION_CONFLICT",
-  );
+    };
+
+    await assert.rejects(
+      dispatchPostgresPaperOrder(
+        client,
+        { operation: "PaperOrderDraftCreate", kind: "command" },
+        draftPayload,
+        {
+          commandId: "77000000-0000-4000-8000-000000000003",
+          correlationId: "77000000-0000-4000-8000-000000000002",
+          requestedAt: "2026-09-17T12:00:00.000Z",
+        },
+      ),
+      (error) => error.code === expected.message && error.message === expected.message,
+    );
+  }
 });

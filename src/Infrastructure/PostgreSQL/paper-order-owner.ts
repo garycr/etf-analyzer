@@ -54,6 +54,7 @@ const postgresOrderErrors: Readonly<Record<string, ReadonlySet<string>>> = Objec
   "40001": new Set(["ORDER_VERSION_CONFLICT", "LEDGER_VERSION_CONFLICT"]),
   "42501": new Set(["permission denied"]),
   "P0001": new Set([
+    "LEDGER_ORDER_MISMATCH",
     "ORDER_GUARD_FAILED",
     "ORDER_IDEMPOTENCY_CONFLICT",
     "ORDER_INVALID_TRANSITION",

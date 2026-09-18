@@ -418,11 +418,11 @@ test(
       const manifest = JSON.parse(manifestJson);
       assert.equal(
         applied.contentHash,
-        "745f2ba8bbfcdb00a4f0f3d235ae29cf4ed19ab8d1056799fdea2356f0ddbf80",
+        "77309c05e92f12cd7a2cf17b8d9ecbf30289d9664aa0009b125b11c04792397f",
       );
       assert.equal(
         applied.schemaManifestHash,
-        "70fa686b79e5e8f0dfb923d2f9497c778e2560c7526e0dccb892c98abcfca5f6",
+        "ce497a3306392153c3622b2a54addf4721bd18d080215c5f942c80f8ebff857b",
       );
       assert.equal(Buffer.byteLength(manifestJson, "utf8"), 15070);
       assert.equal(manifest.migrationSequence.length, 3);
@@ -2656,6 +2656,67 @@ test(
         effects: 0,
         replays: 0,
       }]);
+    } finally {
+      try {
+        await cleanBootstrap(client);
+      } finally {
+        await client.query(fixtureUnlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
+  "CT-LED-012 distinguishes stale fill versions from order mismatches without mutation",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    const group = "55800000";
+    const portfolioId = deterministicUuid(group, 1);
+    const instrumentId = "STALE-ORDER-ETF";
+    const buy = fillFixture({
+      group,
+      index: 1,
+      side: "Buy",
+      quantity: "1.0000000000",
+      unitPrice: "10.0000000000",
+      effectiveAt: "2026-09-21T11:01:00.000Z",
+    });
+    await client.connect();
+    await client.query(fixtureLockSql);
+    try {
+      await cleanBootstrap(client);
+      await applyPrerequisites(client);
+      await prepareLedgerBoundary(client);
+      await seedFillOrder(client, { ...buy, instrumentId });
+      await appendLedger(client, cashDeposit({
+        portfolioId,
+        transactionId: deterministicUuid(group, 1),
+        correlationId: deterministicUuid(group, 2),
+        version: 0,
+        effectiveAt: "2026-09-21T11:00:00.000Z",
+      }));
+      const before = await snapshotLedger(client, portfolioId);
+      const staleOrder = fillCommand({
+        ...buy,
+        portfolioId,
+        instrumentId,
+        version: 1,
+      });
+      staleOrder.expectedOrderVersion = 0;
+
+      await assert.rejects(
+        () => appendLedger(client, staleOrder),
+        (error) => error.code === "40001" && error.message === "ORDER_VERSION_CONFLICT",
+      );
+      assert.deepEqual(await snapshotLedger(client, portfolioId), before);
+
+      await assert.rejects(
+        () => appendLedger(client, { ...staleOrder, instrumentId: "WRONG-ORDER-ETF" }),
+        (error) => error.code === "P0001" && error.message === "LEDGER_ORDER_MISMATCH",
+      );
+      assert.deepEqual(await snapshotLedger(client, portfolioId), before);
     } finally {
       try {
         await cleanBootstrap(client);

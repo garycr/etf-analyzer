@@ -49,6 +49,7 @@
 | DEC-051 | 2026-09-18 | Dual-chain atomicity | Accept CT-LED-014 with atomic business and audit-only chains, forced anchor rollback, migrated runtime schema authority, and canonical identities | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-052 | 2026-09-18 | Controlled authorization | Accept CT-LED-015 with exact runtime entry grants, direct bypass denial, owner-role isolation, unchanged state, and canonical sequence-6 identity | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-058 | 2026-09-18 | Package closure | Close WP-6 and make WP-7 eligible as the next sequential package without starting it | Agent (Fully Agentic) | Solo Orchestrator | Approved |
+| DEC-059 | 2026-09-19 | Package activation | Activate WP-7 and accept the dependency-free semantic workbench shell as its first slice | Agent (Fully Agentic) | Solo Orchestrator | Active |
 | DEC-057 | 2026-09-18 | Scope correction | Defer CT-LED-019 custom restore controls because the greenfield PostgreSQL delivery has no SQL Server data or DDL migration | Workspace Owner | Solo Orchestrator | Active |
 | DEC-056 | 2026-09-18 | Restore integrity architecture | Accept ADR-002 with signed coherent backup manifests, durable global restore gating, full retained-chain verification, and append-only rotation continuity | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-055 | 2026-09-18 | Crash-intent recovery | Accept CT-LED-018 with immutable unresolved intent, ordered anchored recovery, exact replay idempotency, and collision-safe audit identity | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
@@ -58,6 +59,21 @@
 ---
 
 ## Decision Records
+
+### DEC-059: Activate WP-7 Local Browser Workbench
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-059 |
+| **Date** | 2026-09-19 |
+| **Category** | Package activation |
+| **Decision** | Activate WP-7 under the approved sequential WBS and accept PT-UI-001..002 as a semantic, responsive shell served by the existing loopback process without a frontend dependency or second runtime |
+| **Policy** | DEC-023; DEC-028; DEC-058; approved Ring 2 WBS; WCAG 2.1 AA expectations; test-first development; independent code review |
+| **Authority** | Agent under Fully Agentic mode following the Workspace Owner directive to continue |
+| **Accountability** | Solo Orchestrator preserves Application ownership of canonical values and warning text, keeps the 16-operation API unchanged, wires live readiness and workflows in later tested slices, and does not start WP-8 |
+| **Status** | Active; PT-UI-001..002 PASS; REV-135 code PASS; REV-136 plan PASS; GitHub issue #83 |
+
+---
 
 ### DEC-058: Close WP-6 Paper Order and Ledger
 

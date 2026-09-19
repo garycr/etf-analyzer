@@ -352,6 +352,9 @@ export type ResearchWarningResultKind =
   | "PaperAction"
   | "NonAnalytical";
 
+export const researchWarningText =
+  "Research only — hypothetical — user makes all investment decisions." as const;
+
 export type ResearchWarningPresentation =
   | {
     readonly researchWarningRequired: true;
@@ -2335,7 +2338,7 @@ function createApplicationResultPresentation(
     statusText: outcome,
     announcement: outcome === "Succeeded" ? "None" : "AssertiveAlert",
     warningText: warningRequired
-      ? "Research only — hypothetical — user makes all investment decisions."
+      ? researchWarningText
       : null,
     researchWarningRequired: warningRequired,
   });
@@ -2752,8 +2755,7 @@ export function presentCanonicalValue(
 
 const requiredResearchWarning = Object.freeze({
   researchWarningRequired: true as const,
-  warningText:
-    "Research only — hypothetical — user makes all investment decisions." as const,
+  warningText: researchWarningText,
 });
 const absentResearchWarning = Object.freeze({
   researchWarningRequired: false as const,

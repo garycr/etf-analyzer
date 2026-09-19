@@ -31,6 +31,58 @@ function send({ port, method, path, headers, body = "" }) {
   });
 }
 
+test("PT-UI-002 serves the workbench at the loopback root without application dispatch", async (context) => {
+  const executed = [];
+  const server = await startLoopbackApiServer(
+    { allowedOrigins: ["http://127.0.0.1:5173"], bodyLimitBytes: 1_048_576, port: 0 },
+    (requestJson) => {
+      executed.push(requestJson);
+      return Object.freeze({});
+    },
+  );
+  context.after(() => new Promise((resolve, reject) => {
+    server.close((error) => error ? reject(error) : resolve());
+  }));
+
+  const address = server.address();
+  assert.notEqual(address, null);
+  assert.equal(typeof address, "object");
+  const response = await send({
+    port: address.port,
+    method: "GET",
+    path: "/?view=dashboard",
+    headers: {
+      accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,*/*;q=0.8",
+    },
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers["content-type"], "text/html; charset=utf-8");
+  assert.match(response.headers["content-security-policy"], /default-src 'none'/);
+  assert.equal(response.headers["referrer-policy"], "no-referrer");
+  assert.equal(response.headers["x-content-type-options"], "nosniff");
+  assert.equal(response.headers["x-frame-options"], "DENY");
+  assert.match(response.body, /<h1>ETF Analyzer<\/h1>/);
+  assert.deepEqual(executed, []);
+
+  const unacceptable = await send({
+    port: address.port,
+    method: "GET",
+    path: "/",
+    headers: { accept: "application/json" },
+  });
+  assert.equal(unacceptable.status, 406);
+
+  const invalidHost = await send({
+    port: address.port,
+    method: "GET",
+    path: "/",
+    headers: { accept: "text/html", host: `localhost:${address.port}` },
+  });
+  assert.equal(invalidHost.status, 400);
+  assert.deepEqual(executed, []);
+});
+
 test("CT-API-001A/K serves only loopback HTTP and keeps preflight side-effect free", async (context) => {
   const origin = "http://127.0.0.1:5173";
   const executed = [];

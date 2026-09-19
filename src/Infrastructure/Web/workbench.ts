@@ -1,0 +1,161 @@
+import { researchWarningText } from "../../Application/application-boundary.js";
+
+export const researchWarning = researchWarningText;
+
+export type WorkbenchReadiness = "Ready" | "NotReady";
+
+export interface WorkbenchDocumentInput {
+  readonly readiness: WorkbenchReadiness;
+}
+
+export function renderWorkbenchDocument(
+  input: WorkbenchDocumentInput,
+): string {
+  if (input.readiness !== "Ready" && input.readiness !== "NotReady") {
+    throw new TypeError("Workbench readiness must be Ready or NotReady");
+  }
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ETF Analyzer</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17211b;
+      --muted: #56625b;
+      --paper: #f5f7f2;
+      --surface: #ffffff;
+      --line: #cbd2ca;
+      --forest: #174c3c;
+      --signal: #b83b2d;
+      --gold: #d8a23f;
+      --focus: #0067b8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: "Aptos", "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+    a { color: inherit; }
+    a:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+    .skip-link {
+      position: fixed;
+      inset: 0 auto auto 1rem;
+      z-index: 10;
+      padding: .75rem 1rem;
+      color: white;
+      background: var(--focus);
+      transform: translateY(-120%);
+    }
+    .skip-link:focus { transform: translateY(1rem); }
+    header {
+      color: white;
+      background: var(--forest);
+      border-bottom: 5px solid var(--gold);
+    }
+    .header-inner, main {
+      width: min(100% - 2rem, 90rem);
+      margin-inline: auto;
+    }
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 5.5rem;
+      gap: 2rem;
+    }
+    h1, h2 { font-family: "Charter", "Georgia", serif; letter-spacing: 0; }
+    h1 { margin: 0; font-size: 1.75rem; }
+    nav ul { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; margin: 0; padding: 0; list-style: none; }
+    nav a { text-decoration-thickness: 2px; text-underline-offset: .3rem; }
+    main { padding-block: 2rem 4rem; }
+    .workspace-status {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding-block: 0 1.25rem;
+      border-bottom: 1px solid var(--line);
+    }
+    .workspace-status p { margin: 0; font-weight: 700; }
+    .workspace-status span { color: var(--muted); font-weight: 500; }
+    .workspace-grid {
+      display: grid;
+      grid-template-columns: minmax(16rem, .8fr) minmax(26rem, 1.7fr);
+      gap: 0 2rem;
+    }
+    section { min-width: 0; padding-block: 1.75rem; border-bottom: 1px solid var(--line); }
+    section h2 { margin: 0 0 .75rem; font-size: 1.35rem; }
+    section p { max-width: 72ch; margin: .4rem 0; color: var(--muted); }
+    .warning {
+      color: var(--ink);
+      font-weight: 650;
+      border-inline-start: 4px solid var(--signal);
+      padding-inline-start: .75rem;
+    }
+    @media (max-width: 52rem) {
+      .header-inner { align-items: flex-start; flex-direction: column; padding-block: 1.25rem; gap: 1rem; }
+      .workspace-grid { display: block; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header>
+    <div class="header-inner">
+      <h1>ETF Analyzer</h1>
+      <nav aria-label="Primary">
+        <ul>
+          <li><a href="#watchlist">Watchlist</a></li>
+          <li><a href="#analytics">Analytics</a></li>
+          <li><a href="#evidence">Evidence</a></li>
+          <li><a href="#paper">Paper orders</a></li>
+          <li><a href="#portfolio">Portfolio</a></li>
+          <li><a href="#operations">Operations</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+  <main id="main-content">
+    <div class="workspace-status">
+      <strong>Local workspace</strong>
+      <p role="status" data-state="${input.readiness}"><span>Status: </span>${input.readiness}</p>
+    </div>
+    <div class="workspace-grid">
+      <section id="watchlist" aria-labelledby="watchlist-heading">
+        <h2 id="watchlist-heading">Watchlist</h2>
+        <p>No instruments added.</p>
+      </section>
+      <section id="analytics" aria-labelledby="analytics-heading">
+        <h2 id="analytics-heading">Analytics</h2>
+        <p class="warning">${researchWarning}</p>
+        <p>No published result.</p>
+      </section>
+      <section id="evidence" aria-labelledby="evidence-heading">
+        <h2 id="evidence-heading">Evidence</h2>
+        <p class="warning">${researchWarning}</p>
+        <p>No authorized evidence selected.</p>
+      </section>
+      <section id="paper" aria-labelledby="paper-heading">
+        <h2 id="paper-heading">Paper orders</h2>
+        <p class="warning">${researchWarning}</p>
+        <p>No hypothetical orders.</p>
+      </section>
+      <section id="portfolio" aria-labelledby="portfolio-heading">
+        <h2 id="portfolio-heading">Portfolio</h2>
+        <p>No reconciled portfolio selected.</p>
+      </section>
+      <section id="operations" aria-labelledby="operations-heading">
+        <h2 id="operations-heading">Operations</h2>
+        <p>No active jobs.</p>
+      </section>
+    </div>
+  </main>
+</body>
+</html>`;
+}

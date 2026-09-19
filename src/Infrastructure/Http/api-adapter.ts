@@ -10,6 +10,7 @@ import {
   parseApplicationPayload,
   type ApplicationOperation,
 } from "../../Application/application-boundary.js";
+import { renderWorkbenchDocument } from "../Web/workbench.js";
 
 export type ApiMethod = "GET" | "POST" | "PUT" | "DELETE";
 
@@ -235,6 +236,50 @@ function writeApiResponse(response: ServerResponse, apiResponse: ApiResponse): v
   response.end(apiResponse.body);
 }
 
+function acceptsMediaType(
+  accept: string | undefined,
+  expectedType: string,
+): boolean {
+  if (accept === undefined) return true;
+  const [expectedGroup] = expectedType.split("/");
+  return accept.split(",").some((entry) => {
+    const [mediaType, ...parameters] = entry.trim().toLowerCase().split(";");
+    const quality = parameters
+      .map((parameter) => parameter.trim())
+      .find((parameter) => parameter.startsWith("q="));
+    if (quality === "q=0" || quality === "q=0.0" || quality === "q=0.00" || quality === "q=0.000") {
+      return false;
+    }
+    return mediaType === expectedType || mediaType === `${expectedGroup}/*` || mediaType === "*/*";
+  });
+}
+
+function workbenchResponse(
+  headers: IncomingHttpHeaders,
+  config: ApiAdapterConfig,
+): ApiResponse {
+  if (header(headers, "host") !== `127.0.0.1:${config.port}`) {
+    return problem(400, "invalid-host", "Invalid Host", "The request Host is not the configured loopback API.");
+  }
+  const accept = header(headers, "accept");
+  if (!acceptsMediaType(accept, "text/html")) {
+    return problem(406, "unacceptable-response-type", "Not Acceptable", "The workbench returns only text/html.");
+  }
+  return Object.freeze({
+    status: 200,
+    statusText: "OK",
+    detail: "",
+    headers: Object.freeze({
+      "content-type": "text/html; charset=utf-8",
+      "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
+      "referrer-policy": "no-referrer",
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "DENY",
+    }),
+    body: renderWorkbenchDocument({ readiness: "Ready" }),
+  });
+}
+
 function preflightResponse(
   headers: IncomingHttpHeaders,
   config: ApiAdapterConfig,
@@ -285,6 +330,18 @@ export function startLoopbackApiServer(
       ? localAddress.port
       : config.port;
     const requestConfig = Object.freeze({ ...config, port: localPort });
+    if (
+      request.method === "GET" &&
+      parseTarget(request.url ?? "")?.pathname === "/"
+    ) {
+      request.resume();
+      try {
+        writeApiResponse(response, workbenchResponse(request.headers, requestConfig));
+      } catch {
+        writeApiResponse(response, internalServerError());
+      }
+      return;
+    }
     if (request.method === "OPTIONS") {
       request.resume();
       try {

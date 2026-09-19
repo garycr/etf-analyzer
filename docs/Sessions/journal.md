@@ -6,6 +6,19 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-19 | WP-7 activated and workbench shell accepted | Ring-2 | @solo-orchestrator
+
+**Type:** PACKAGE-ACTIVATION
+**Decision:** DEC-059 activates WP-7 and accepts PT-UI-001..002 as the first browser slice
+**Policy:** DEC-023; DEC-028; DEC-058; approved Ring 2 WBS; accessibility requirements; test-first development
+**Authority:** Agent under Fully Agentic mode following the Workspace Owner directive to continue; REV-135 Code Reviewer PASS; REV-136 Plan Reviewer PASS
+**Accountability:** Solo Orchestrator retains canonical Application semantics, serves only from the existing loopback process, completes live readiness and interactive workflows in later slices, and does not start WP-8
+**Result:** Focused tests 5/5 PASS; aggregate suite 426 discovered, 371 passed, 0 failed, 55 PostgreSQL-environment skips; npm audit zero vulnerabilities; desktop/mobile browser verification PASS
+**Artifact:** docs/Planning/tasks/wp-7-implementation-plan.md | docs/artifacts/gate-evidence/wp-7-workbench-shell.md | DEC-059 | REV-135 | REV-136 | GitHub issue #83
+**authorization-boundary:** WP-7 is active but incomplete; no WP-8, Ring 3 transition, baseline activation, live provider, brokerage, public ingress, release, deployment, or production action is authorized
+
+---
+
 ## 2026-09-18 | WP-6 paper order and ledger approved | Ring-2 | @solo-orchestrator
 
 **Type:** PACKAGE-CLOSURE

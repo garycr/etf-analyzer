@@ -1,19 +1,81 @@
-import { researchWarningText } from "../../Application/application-boundary.js";
+import {
+  researchWarningText,
+  type FailedJobForPresentation,
+  type FailedJobPresentation,
+  type ReadinessSnapshot,
+} from "../../Application/application-boundary.js";
 
 export const researchWarning = researchWarningText;
 
 export type WorkbenchReadiness = "Ready" | "NotReady";
 
 export interface WorkbenchDocumentInput {
-  readonly readiness: WorkbenchReadiness;
+  readonly readiness: WorkbenchReadiness | ReadinessSnapshot;
+  readonly failedJobs?: readonly FailedJobPresentation<FailedJobForPresentation>[];
+}
+
+function escapeHtml(value: string | number): string {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function renderReadinessDetails(readiness: ReadinessSnapshot): string {
+  const dependencies = readiness.dependencies.map((dependency) => `
+          <li>
+            <strong>${escapeHtml(dependency.dependency)}</strong>
+            <span>${escapeHtml(dependency.state)}</span>
+            ${dependency.code === null ? "" : `<code>${escapeHtml(dependency.code)}</code>`}
+          </li>`).join("");
+  const error = readiness.controllingError === null
+    ? ""
+    : `<p>${escapeHtml(readiness.controllingError.message)}</p>
+        <p>Recovery: ${escapeHtml(readiness.controllingError.recovery.label)}</p>`;
+  return `<div id="readiness-details">
+      <p>Checked ${escapeHtml(readiness.checkedAt)} ${escapeHtml(readiness.displayTimezone)}; liveness ${escapeHtml(readiness.liveness)}.</p>
+        <ul>${dependencies}
+        </ul>
+        ${error}
+      </div>`;
+}
+
+function renderFailedJobs(
+  failedJobs: readonly FailedJobPresentation<FailedJobForPresentation>[],
+): string {
+  if (failedJobs.length === 0) return "<p>No active jobs.</p>";
+  return `<ul>${failedJobs.map((presentation) => `
+          <li data-job-id="${escapeHtml(presentation.recoveryTarget.jobId)}">
+            <strong>Failed job</strong>
+            <code>${escapeHtml(presentation.error.code)}</code>
+            <p>${escapeHtml(presentation.error.message)}</p>
+            <p>Recovery: ${escapeHtml(presentation.error.recovery.label)}</p>
+            <p>Dependent research: ${escapeHtml(presentation.dependentResearch)}</p>
+          </li>`).join("")}
+        </ul>`;
 }
 
 export function renderWorkbenchDocument(
   input: WorkbenchDocumentInput,
 ): string {
-  if (input.readiness !== "Ready" && input.readiness !== "NotReady") {
+  if (
+    input.readiness === null ||
+    (typeof input.readiness !== "object" &&
+    input.readiness !== "Ready" &&
+    input.readiness !== "NotReady")
+  ) {
     throw new TypeError("Workbench readiness must be Ready or NotReady");
   }
+  const readinessState = typeof input.readiness === "object"
+    ? input.readiness.state
+    : input.readiness;
+  const readinessRole = readinessState === "Ready" ? "status" : "alert";
+  const readinessDetails = typeof input.readiness === "object"
+    ? renderReadinessDetails(input.readiness)
+    : "";
+  const jobs = renderFailedJobs(input.failedJobs ?? []);
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -124,8 +186,9 @@ export function renderWorkbenchDocument(
   <main id="main-content">
     <div class="workspace-status">
       <strong>Local workspace</strong>
-      <p role="status" data-state="${input.readiness}"><span>Status: </span>${input.readiness}</p>
+      <p role="${readinessRole}" data-state="${escapeHtml(readinessState)}"><span>Status: </span>${escapeHtml(readinessState)}</p>
     </div>
+    ${readinessDetails}
     <div class="workspace-grid">
       <section id="watchlist" aria-labelledby="watchlist-heading">
         <h2 id="watchlist-heading">Watchlist</h2>
@@ -152,7 +215,7 @@ export function renderWorkbenchDocument(
       </section>
       <section id="operations" aria-labelledby="operations-heading">
         <h2 id="operations-heading">Operations</h2>
-        <p>No active jobs.</p>
+        ${jobs}
       </section>
     </div>
   </main>

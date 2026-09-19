@@ -6,6 +6,10 @@ import {
   renderWorkbenchDocument,
 } from "../../dist/Infrastructure/Web/workbench.js";
 import { researchWarningText } from "../../dist/Application/application-boundary.js";
+import {
+  evaluateReadiness,
+  presentFailedJob,
+} from "../../dist/Application/application-boundary.js";
 
 test("PT-UI-001 renders an accessible research workbench shell", () => {
   const html = renderWorkbenchDocument({ readiness: "Ready" });
@@ -41,4 +45,78 @@ test("PT-UI-001 renders explicit NotReady status and rejects unknown state", () 
     () => renderWorkbenchDocument({ readiness: "Unknown" }),
     /Workbench readiness must be Ready or NotReady/,
   );
+  assert.throws(
+    () => renderWorkbenchDocument({ readiness: null }),
+    /Workbench readiness must be Ready or NotReady/,
+  );
+});
+
+test("PT-UI-003A presents authoritative readiness jobs and bounded recovery", () => {
+  const checkedAt = "2026-09-19T12:00:00.000Z";
+  const readiness = evaluateReadiness({
+    checkedAt,
+    liveness: "Live",
+    dependencies: {
+      PostgreSQL: { ready: true, checkedAt },
+      Migrations: { ready: true, checkedAt },
+      FixturePolicy: { ready: false, checkedAt, errorCode: "APPLICATION_CONFIGURATION_INVALID" },
+      LocalDependency: { ready: true, checkedAt },
+      DenialAudit: { ready: true, checkedAt },
+      LedgerIntegrity: { ready: true, checkedAt },
+    },
+  });
+  const failedJob = presentFailedJob(Object.freeze({
+    jobId: "40000000-0000-4000-8000-000000000001",
+    status: "Failed",
+    restartability: "Restartable",
+    acceptedCount: 0,
+    controllingError: Object.freeze({ code: "FIXTURE_REQUIRED_INPUT_MISSING" }),
+  }));
+
+  const html = renderWorkbenchDocument({ readiness, failedJobs: [failedJob] });
+
+  assert.match(html, /<p role="alert"[^>]*><span>Status: <\/span>NotReady<\/p>/);
+  assert.match(html, /id="readiness-details"/);
+  assert.match(html, /FixturePolicy[\s\S]+NotReady[\s\S]+APPLICATION_CONFIGURATION_INVALID/);
+  assert.match(html, /Application readiness is blocked\. Review readiness details\./);
+  assert.match(html, /data-job-id="40000000-0000-4000-8000-000000000001"/);
+  assert.match(html, /FIXTURE_REQUIRED_INPUT_MISSING/);
+  assert.match(html, /The job failed\. Correct the reported cause, then retry the job\./);
+  assert.match(html, /Recovery: Retry job/);
+  assert.doesNotMatch(html, /secret|password/i);
+});
+
+test("PT-UI-003A renders Ready detail and nonrestartable escaped job evidence", () => {
+  const checkedAt = "2026-09-19T12:30:00.000Z";
+  const readiness = evaluateReadiness({
+    checkedAt,
+    liveness: "NotLive",
+    dependencies: {
+      PostgreSQL: { ready: true, checkedAt },
+      Migrations: { ready: true, checkedAt },
+      FixturePolicy: { ready: true, checkedAt },
+      LocalDependency: { ready: true, checkedAt },
+      DenialAudit: { ready: true, checkedAt },
+      LedgerIntegrity: { ready: true, checkedAt },
+    },
+  });
+  const failedJob = presentFailedJob(Object.freeze({
+    jobId: "job-<unsafe>&\"",
+    status: "Failed",
+    restartability: "NotRestartable",
+    acceptedCount: 0,
+    controllingError: Object.freeze({ code: "CODE_<unsafe>&\"" }),
+  }));
+
+  const html = renderWorkbenchDocument({ readiness, failedJobs: [failedJob] });
+
+  assert.match(html, /<p role="status"[^>]*><span>Status: <\/span>Ready<\/p>/);
+  assert.match(html, /PostgreSQL[\s\S]+Migrations[\s\S]+FixturePolicy[\s\S]+LocalDependency[\s\S]+DenialAudit[\s\S]+LedgerIntegrity/);
+  assert.doesNotMatch(html, /Application readiness is blocked/);
+  assert.match(html, /data-job-id="job-&lt;unsafe&gt;&amp;&quot;"/);
+  assert.match(html, /CODE_&lt;unsafe&gt;&amp;&quot;/);
+  assert.match(html, /cannot be restarted\. Review the job details\./);
+  assert.match(html, /Recovery: Review job details/);
+  assert.match(html, /Dependent research: Blocked/);
+  assert.doesNotMatch(html, /job-<unsafe>|CODE_<unsafe>/);
 });

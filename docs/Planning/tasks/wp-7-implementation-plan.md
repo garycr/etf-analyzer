@@ -43,7 +43,8 @@ Hypothesis: a semantic browser shell can be served from the existing loopback pr
 
 | Acceptance ID | Intended test title | Path | Status |
 | --- | --- | --- | --- |
-| PT-UI-003 | `PT-UI-003 presents authoritative readiness jobs and bounded recovery` | `tests/Integration/workbench.test.mjs` | PENDING |
+| PT-UI-003A | `PT-UI-003A presents authoritative readiness jobs and bounded recovery` | `tests/Unit/workbench.test.mjs` | PASS |
+| PT-UI-003B | `PT-UI-003B wires authoritative readiness and jobs through the browser composition root` | `tests/Integration/workbench.test.mjs` | PENDING |
 | PT-UI-004 | `PT-UI-004 performs watchlist workflows with keyboard and version safety` | `tests/Integration/workbench.test.mjs` | PENDING |
 | PT-UI-005 | `PT-UI-005 preserves analytical and evidence warnings values and blocked states` | `tests/Integration/workbench.test.mjs` | PENDING |
 | PT-ANA-A11Y-001 | `PT-ANA-A11Y-001 exposes blocked denied quarantined and no-signal analytics accessibly` | `tests/Integration/workbench-accessibility.test.mjs` | PENDING |

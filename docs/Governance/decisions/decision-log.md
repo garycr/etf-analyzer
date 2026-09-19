@@ -71,7 +71,7 @@
 | **Policy** | DEC-023; DEC-028; DEC-058; approved Ring 2 WBS; WCAG 2.1 AA expectations; test-first development; independent code review |
 | **Authority** | Agent under Fully Agentic mode following the Workspace Owner directive to continue |
 | **Accountability** | Solo Orchestrator preserves Application ownership of canonical values and warning text, keeps the 16-operation API unchanged, wires live readiness and workflows in later tested slices, and does not start WP-8 |
-| **Status** | Active; PT-UI-001..002 PASS; REV-135 code PASS; REV-136 plan PASS; GitHub issue #83 |
+| **Status** | Active; PT-UI-001..002 and PT-UI-003A PASS; REV-135/137 code PASS; REV-136 plan PASS; PT-UI-003B pending; GitHub issue #83 |
 
 ---
 

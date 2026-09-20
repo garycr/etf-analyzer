@@ -6,6 +6,19 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-20 | WP-7 authoritative workbench composition accepted | Ring-2 | @solo-orchestrator
+
+**Type:** IMPLEMENTATION-CHECKPOINT
+**Decision:** DEC-060 accepts PT-UI-003B authoritative readiness and known-job composition with exact not-found omission and fail-closed actionable degradation
+**Policy:** DEC-059; approved WP-7 implementation plan; accessibility and monitoring requirements; test-first development
+**Authority:** Agent under Fully Agentic mode; REV-138 Architect Reviewer PASS; REV-139 Code Reviewer PASS
+**Accountability:** Solo Orchestrator keeps job discovery injected and provisional, starts PT-UI-004 next, requires PostgreSQL zero-skip evidence at WP-7 closure, and does not start WP-8
+**Result:** Focused tests 8/8 PASS; aggregate suite 432 discovered, 377 passed, 0 failed, 55 PostgreSQL-environment skips; npm audit zero vulnerabilities; diff integrity PASS
+**Artifact:** docs/artifacts/gate-evidence/wp-7-workbench-composition.md | DEC-060 | REV-138 | REV-139 | GitHub issue #83
+**authorization-boundary:** PT-UI-004..010, PT-ANA-A11Y-001, WP-7 closure, WP-8, Ring 3, baseline activation, release, deployment, and production remain unauthorized or incomplete
+
+---
+
 ## 2026-09-19 | WP-7 readiness and failed-job presenter accepted | Ring-2 | @solo-orchestrator
 
 **Type:** IMPLEMENTATION-CHECKPOINT

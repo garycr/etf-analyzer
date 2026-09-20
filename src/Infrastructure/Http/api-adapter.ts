@@ -10,7 +10,10 @@ import {
   parseApplicationPayload,
   type ApplicationOperation,
 } from "../../Application/application-boundary.js";
-import { renderWorkbenchDocument } from "../Web/workbench.js";
+import {
+  renderWorkbenchDocument,
+  type WorkbenchDocumentInput,
+} from "../Web/workbench.js";
 
 export type ApiMethod = "GET" | "POST" | "PUT" | "DELETE";
 
@@ -76,6 +79,8 @@ export interface ApiResponse {
 export type ApiApplicationExecutor = (
   requestJson: string,
 ) => Readonly<Record<string, unknown>>;
+
+export type WorkbenchDocumentProvider = () => WorkbenchDocumentInput;
 
 const corsMethods = Object.freeze(["GET", "POST", "PUT", "DELETE"] as const);
 const corsHeaders = Object.freeze([
@@ -257,6 +262,7 @@ function acceptsMediaType(
 function workbenchResponse(
   headers: IncomingHttpHeaders,
   config: ApiAdapterConfig,
+  provideDocument: WorkbenchDocumentProvider,
 ): ApiResponse {
   if (header(headers, "host") !== `127.0.0.1:${config.port}`) {
     return problem(400, "invalid-host", "Invalid Host", "The request Host is not the configured loopback API.");
@@ -276,7 +282,7 @@ function workbenchResponse(
       "x-content-type-options": "nosniff",
       "x-frame-options": "DENY",
     }),
-    body: renderWorkbenchDocument({ readiness: "Ready" }),
+    body: renderWorkbenchDocument(provideDocument()),
   });
 }
 
@@ -322,6 +328,7 @@ function preflightResponse(
 export function startLoopbackApiServer(
   config: ApiAdapterConfig,
   execute: ApiApplicationExecutor,
+  provideWorkbenchDocument: WorkbenchDocumentProvider = () => ({ readiness: "Ready" }),
 ): Promise<Server> {
   validateConfig(config);
   const server = createServer((request, response) => {
@@ -336,7 +343,11 @@ export function startLoopbackApiServer(
     ) {
       request.resume();
       try {
-        writeApiResponse(response, workbenchResponse(request.headers, requestConfig));
+        writeApiResponse(response, workbenchResponse(
+          request.headers,
+          requestConfig,
+          provideWorkbenchDocument,
+        ));
       } catch {
         writeApiResponse(response, internalServerError());
       }

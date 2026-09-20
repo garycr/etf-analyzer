@@ -74,6 +74,10 @@ export function renderWorkbenchDocument(
   const readinessRole = readinessState === "Ready" ? "status" : "alert";
   const readinessDetails = typeof input.readiness === "object"
     ? renderReadinessDetails(input.readiness)
+    : input.readiness === "NotReady"
+    ? `<div id="readiness-details">
+      <p>Application status is unavailable. Retry the request or review local diagnostics.</p>
+      </div>`
     : "";
   const jobs = renderFailedJobs(input.failedJobs ?? []);
   return `<!doctype html>

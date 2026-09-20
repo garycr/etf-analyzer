@@ -50,6 +50,7 @@
 | DEC-052 | 2026-09-18 | Controlled authorization | Accept CT-LED-015 with exact runtime entry grants, direct bypass denial, owner-role isolation, unchanged state, and canonical sequence-6 identity | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-058 | 2026-09-18 | Package closure | Close WP-6 and make WP-7 eligible as the next sequential package without starting it | Agent (Fully Agentic) | Solo Orchestrator | Approved |
 | DEC-059 | 2026-09-19 | Package activation | Activate WP-7 and accept the dependency-free semantic workbench shell as its first slice | Agent (Fully Agentic) | Solo Orchestrator | Active |
+| DEC-060 | 2026-09-20 | Browser composition | Source workbench readiness and known jobs through fail-closed Application queries | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-057 | 2026-09-18 | Scope correction | Defer CT-LED-019 custom restore controls because the greenfield PostgreSQL delivery has no SQL Server data or DDL migration | Workspace Owner | Solo Orchestrator | Active |
 | DEC-056 | 2026-09-18 | Restore integrity architecture | Accept ADR-002 with signed coherent backup manifests, durable global restore gating, full retained-chain verification, and append-only rotation continuity | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-055 | 2026-09-18 | Crash-intent recovery | Accept CT-LED-018 with immutable unresolved intent, ordered anchored recovery, exact replay idempotency, and collision-safe audit identity | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
@@ -59,6 +60,21 @@
 ---
 
 ## Decision Records
+
+### DEC-060: Accept Fail-Closed Workbench Composition
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-060 |
+| **Date** | 2026-09-20 |
+| **Category** | Browser composition |
+| **Decision** | Accept PT-UI-003B with workbench readiness sourced from canonical `ReadinessGet`, failed-job presentation sourced from successful `JobGet` records, exact not-found omission, and all unexpected provider failures degraded to a redacted actionable `NotReady` document with bounded observability; narrow `FailedJobForPresentation` to fields the presenter consumes |
+| **Policy** | DEC-028; DEC-059; approved WP-7 plan; accessibility plain-remediation requirement; monitoring requirement; test-first development; architecture and code review |
+| **Authority** | Agent under Fully Agentic mode following the Workspace Owner directive to continue |
+| **Accountability** | Solo Orchestrator keeps known-job discovery injected and provisional, preserves the closed 16-operation API and single HTML render site, requires a bounded duplicate-free supplier before production bootstrap, continues PT-UI-004 next, and does not claim WP-7 closure |
+| **Status** | Reviewed; PT-UI-003B PASS; REV-138 Architect PASS; REV-139 Code PASS; 432 discovered, 377 passed, 0 failed, 55 PostgreSQL-environment skips |
+
+---
 
 ### DEC-059: Activate WP-7 Local Browser Workbench
 
@@ -71,7 +87,7 @@
 | **Policy** | DEC-023; DEC-028; DEC-058; approved Ring 2 WBS; WCAG 2.1 AA expectations; test-first development; independent code review |
 | **Authority** | Agent under Fully Agentic mode following the Workspace Owner directive to continue |
 | **Accountability** | Solo Orchestrator preserves Application ownership of canonical values and warning text, keeps the 16-operation API unchanged, wires live readiness and workflows in later tested slices, and does not start WP-8 |
-| **Status** | Active; PT-UI-001..002 and PT-UI-003A PASS; REV-135/137 code PASS; REV-136 plan PASS; PT-UI-003B pending; GitHub issue #83 |
+| **Status** | Active; PT-UI-001..003B PASS; REV-135/137/139 code PASS; REV-136 plan PASS; REV-138 architecture PASS; PT-UI-004 next; GitHub issue #83 |
 
 ---
 

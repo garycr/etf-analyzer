@@ -1,7 +1,7 @@
 # WP-7 Local Browser Workbench Implementation Plan
 
 **Date:** 2026-09-19
-**Status:** Active under DEC-059; first shell slice accepted under REV-135 PASS; implementation plan REV-136 PASS
+**Status:** Active under DEC-059; PT-UI-001..003B accepted; implementation plan REV-136 PASS
 **Estimate:** XL / 24 agent-hours
 **Tracking:** GitHub issue #83
 
@@ -44,7 +44,7 @@ Hypothesis: a semantic browser shell can be served from the existing loopback pr
 | Acceptance ID | Intended test title | Path | Status |
 | --- | --- | --- | --- |
 | PT-UI-003A | `PT-UI-003A presents authoritative readiness jobs and bounded recovery` | `tests/Unit/workbench.test.mjs` | PASS |
-| PT-UI-003B | `PT-UI-003B wires authoritative readiness and jobs through the browser composition root` | `tests/Integration/workbench.test.mjs` | PENDING |
+| PT-UI-003B | `PT-UI-003B wires authoritative readiness and jobs through the browser composition root` | `tests/Integration/workbench.test.mjs` | PASS |
 | PT-UI-004 | `PT-UI-004 performs watchlist workflows with keyboard and version safety` | `tests/Integration/workbench.test.mjs` | PENDING |
 | PT-UI-005 | `PT-UI-005 preserves analytical and evidence warnings values and blocked states` | `tests/Integration/workbench.test.mjs` | PENDING |
 | PT-ANA-A11Y-001 | `PT-ANA-A11Y-001 exposes blocked denied quarantined and no-signal analytics accessibly` | `tests/Integration/workbench-accessibility.test.mjs` | PENDING |
@@ -70,7 +70,8 @@ Hypothesis: a semantic browser shell can be served from the existing loopback pr
 
 | Risk or assumption | Mitigation |
 | --- | --- |
-| A static `Ready` shell could be mistaken for authoritative readiness. | PT-UI-003 replaces the static server input with `ReadinessGet` before any command control is enabled. |
+| A static `Ready` shell could be mistaken for authoritative readiness. | PT-UI-003B adds the authoritative provider callback and fail-closed `NotReady` behavior before any command control is enabled. |
+| No list-jobs query or production bootstrap exists in the approved boundary. | Keep known-job IDs injected and provisional; require a bounded duplicate-free supplier when a bootstrap is authorized. |
 | Canonical financial or owner-state values could drift in rendering. | Render admitted Application projections without numeric conversion or state inference; assert exact visible and accessible strings. |
 | Dynamic behavior could weaken the inline-style CSP accepted by REV-135. | Reassess CSP before introducing script or dynamic style; prefer an external same-origin stylesheet and nonce/hash-bound scripts. |
 | PostgreSQL-gated behavior may be unavailable in a generic test environment. | Preserve environment skips during development but require a PostgreSQL 16 zero-skip run for WP-7 closure. |
@@ -79,7 +80,6 @@ Hypothesis: a semantic browser shell can be served from the existing loopback pr
 
 ## Open Work
 
-- Wire the displayed readiness state to `ReadinessGet`; the first slice intentionally uses a static `Ready` server input.
 - Implement the interactive operation workflows and their loading, empty, success, blocked, conflict, and recovery states.
 - Execute `PT-ANA-A11Y-001` for blocked, denied, quarantined, and no-signal analytics states.
 - Complete Playwright plus `@axe-core/playwright` automated WCAG 2.1 AA checks after OSS review, covering semantic relationships, keyboard/focus order, names/roles/values, contrast, status announcements, reflow, and error identification; Ring 3 retains independent accessibility verification.

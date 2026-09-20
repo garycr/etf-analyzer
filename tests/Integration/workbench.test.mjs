@@ -1,0 +1,317 @@
+import assert from "node:assert/strict";
+import http from "node:http";
+import test from "node:test";
+
+import { evaluateReadiness } from "../../dist/Application/application-boundary.js";
+import { startLoopbackApiServer } from "../../dist/Infrastructure/Http/api-adapter.js";
+import { createWorkbenchModelProvider } from "../../dist/Infrastructure/Web/workbench-runtime.js";
+
+function send(port) {
+  return new Promise((resolve, reject) => {
+    const request = http.request({
+      host: "127.0.0.1",
+      port,
+      method: "GET",
+      path: "/",
+      headers: {
+        host: `127.0.0.1:${port}`,
+        accept: "text/html",
+      },
+    }, (response) => {
+      const chunks = [];
+      response.on("data", (chunk) => chunks.push(chunk));
+      response.on("end", () => resolve({
+        status: response.statusCode,
+        body: Buffer.concat(chunks).toString("utf8"),
+      }));
+    });
+    request.on("error", reject);
+    request.end();
+  });
+}
+
+function job(jobId, status) {
+  return {
+    jobId,
+    jobType: "FixtureIngestion",
+    status,
+    restartability: "Restartable",
+    attempt: "1",
+    operation: "FixtureIngestionStart",
+    originalCommandId: "51000000-0000-4000-8000-000000000001",
+    inputIdentity: {
+      datasetId: "prices",
+      datasetVersion: "2026-09-19",
+      fixturePackageHash: "a".repeat(64),
+    },
+    createdAt: "2026-09-19T12:00:00.000Z",
+    startedAt: "2026-09-19T12:01:00.000Z",
+    completedAt: status === "Failed" ? "2026-09-19T12:02:00.000Z" : null,
+    checkpoint: null,
+    acceptedCount: "0",
+    rejectedCount: status === "Failed" ? "1" : "0",
+    controllingError: status === "Failed"
+      ? {
+        code: "FIXTURE_REQUIRED_INPUT_MISSING",
+        message: "Required fixture input is missing.",
+        boundedIdentifiers: { jobId },
+        recovery: {
+          actionId: "retry-job",
+          label: "Retry job",
+          targetOperation: "JobRestart",
+          focusTarget: "job-status",
+          requiresConfirmation: false,
+        },
+      }
+      : null,
+  };
+}
+
+test("PT-UI-003B wires authoritative readiness and jobs through the browser composition root", async (context) => {
+  const checkedAt = "2026-09-19T12:10:00.000Z";
+  const readiness = evaluateReadiness({
+    checkedAt,
+    liveness: "Live",
+    dependencies: {
+      PostgreSQL: { ready: true, checkedAt },
+      Migrations: { ready: true, checkedAt },
+      FixturePolicy: { ready: false, checkedAt, errorCode: "APPLICATION_CONFIGURATION_INVALID" },
+      LocalDependency: { ready: true, checkedAt },
+      DenialAudit: { ready: true, checkedAt },
+      LedgerIntegrity: { ready: true, checkedAt },
+    },
+  });
+  const failedJobId = "50000000-0000-4000-8000-000000000001";
+  const runningJobId = "50000000-0000-4000-8000-000000000002";
+  const missingJobId = "50000000-0000-4000-8000-000000000003";
+  const requests = [];
+  const degraded = [];
+  let id = 10;
+  const execute = (requestJson) => {
+    const request = JSON.parse(requestJson);
+    requests.push(request);
+    if (request.operation === "ReadinessGet") {
+      return { operation: "ReadinessGet", outcome: "Succeeded", data: { readiness } };
+    }
+    if (request.payload.jobId === missingJobId) {
+      return {
+        operation: "JobGet",
+        outcome: "Failed",
+        error: { code: "APPLICATION_JOB_NOT_FOUND" },
+      };
+    }
+    return {
+      operation: "JobGet",
+      outcome: "Succeeded",
+      data: { job: job(request.payload.jobId, request.payload.jobId === failedJobId ? "Failed" : "Running") },
+    };
+  };
+  const provideWorkbenchModel = createWorkbenchModelProvider({
+    execute,
+    now: () => checkedAt,
+    createId: () => `52000000-0000-4000-8000-${String(id++).padStart(12, "0")}`,
+    knownJobIds: [failedJobId, runningJobId, missingJobId],
+    onDegraded: (event) => degraded.push(event),
+  });
+  const server = await startLoopbackApiServer(
+    { allowedOrigins: ["http://127.0.0.1:5173"], bodyLimitBytes: 1_048_576, port: 0 },
+    execute,
+    provideWorkbenchModel,
+  );
+  context.after(() => new Promise((resolve, reject) => {
+    server.close((error) => error ? reject(error) : resolve());
+  }));
+
+  const address = server.address();
+  assert.notEqual(address, null);
+  assert.equal(typeof address, "object");
+  const response = await send(address.port);
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(degraded, []);
+  assert.match(response.body, /<span>Status: <\/span>NotReady/);
+  assert.match(response.body, /APPLICATION_CONFIGURATION_INVALID/);
+  assert.match(response.body, new RegExp(`data-job-id="${failedJobId}"`));
+  assert.doesNotMatch(response.body, new RegExp(runningJobId));
+  assert.doesNotMatch(response.body, new RegExp(missingJobId));
+  assert.deepEqual(requests[0], {
+    operation: "ReadinessGet",
+    requestId: "52000000-0000-4000-8000-000000000010",
+    correlationId: "52000000-0000-4000-8000-000000000011",
+    actorId: "local-user",
+    prototypeCandidate: "v1.0.0-prototype.1",
+    contractVersion: "1.0.0-candidate.2",
+    requestedAt: checkedAt,
+    payload: {},
+  });
+  assert.deepEqual(requests.map(({ operation, payload }) => ({ operation, payload })), [
+    { operation: "ReadinessGet", payload: {} },
+    { operation: "JobGet", payload: { jobId: failedJobId } },
+    { operation: "JobGet", payload: { jobId: runningJobId } },
+    { operation: "JobGet", payload: { jobId: missingJobId } },
+  ]);
+});
+
+test("PT-UI-003B fails closed without an HTTP 500 for provider boundary failures", async (context) => {
+  const cases = [
+    {
+      name: "executor throws",
+      execute: () => { throw new Error("secret"); },
+      createId: () => "53000000-0000-4000-8000-000000000001",
+      reason: "ExecutionFailed",
+    },
+    {
+      name: "result is malformed",
+      execute: () => ({}),
+      createId: () => "53000000-0000-4000-8000-000000000002",
+      reason: "ResultInvalid",
+    },
+    {
+      name: "readiness query fails",
+      execute: () => ({ operation: "ReadinessGet", outcome: "Failed" }),
+      createId: () => "53000000-0000-4000-8000-000000000003",
+      reason: "QueryFailed",
+    },
+    {
+      name: "success data is invalid",
+      execute: () => ({ operation: "ReadinessGet", outcome: "Succeeded", data: { readiness: {} } }),
+      createId: () => "53000000-0000-4000-8000-000000000004",
+      reason: "ResultInvalid",
+    },
+    {
+      name: "envelope construction fails",
+      execute: () => assert.fail("executor must not be called"),
+      createId: () => { throw new Error("id source unavailable"); },
+      reason: "EnvelopeConstructionFailed",
+    },
+  ];
+
+  for (const scenario of cases) {
+    const degraded = [];
+    const provider = createWorkbenchModelProvider({
+      execute: scenario.execute,
+      now: () => "2026-09-19T12:10:00.000Z",
+      createId: scenario.createId,
+      knownJobIds: [],
+      onDegraded: (event) => {
+        degraded.push(event);
+        if (scenario.name === "executor throws") throw new Error("observer unavailable");
+      },
+    });
+    const server = await startLoopbackApiServer(
+      { allowedOrigins: ["http://127.0.0.1:5173"], bodyLimitBytes: 1_048_576, port: 0 },
+      scenario.execute,
+      provider,
+    );
+    context.after(() => new Promise((resolve, reject) => {
+      server.close((error) => error ? reject(error) : resolve());
+    }));
+    const address = server.address();
+    assert.notEqual(address, null, scenario.name);
+    assert.equal(typeof address, "object", scenario.name);
+
+    const response = await send(address.port);
+
+    assert.equal(response.status, 200, scenario.name);
+    assert.match(response.body, /<span>Status: <\/span>NotReady/, scenario.name);
+    assert.match(response.body, /Retry the request or review local diagnostics\./, scenario.name);
+    assert.doesNotMatch(
+      response.body,
+      /secret|id source unavailable|observer unavailable/,
+      scenario.name,
+    );
+    assert.deepEqual(degraded, [{
+      code: "WORKBENCH_MODEL_DEGRADED",
+      stage: "Readiness",
+      reason: scenario.reason,
+    }], scenario.name);
+  }
+});
+
+test("PT-UI-003B degrades for non-not-found JobGet failures", () => {
+  const checkedAt = "2026-09-19T12:10:00.000Z";
+  const readiness = evaluateReadiness({
+    checkedAt,
+    liveness: "Live",
+    dependencies: Object.fromEntries([
+      "PostgreSQL",
+      "Migrations",
+      "FixturePolicy",
+      "LocalDependency",
+      "DenialAudit",
+      "LedgerIntegrity",
+    ].map((dependency) => [dependency, { ready: true, checkedAt }])),
+  });
+  const degraded = [];
+  const provider = createWorkbenchModelProvider({
+    execute: (requestJson) => JSON.parse(requestJson).operation === "ReadinessGet"
+      ? { operation: "ReadinessGet", outcome: "Succeeded", data: { readiness } }
+      : {
+        operation: "JobGet",
+        outcome: "Failed",
+        error: { code: "APPLICATION_DATABASE_UNAVAILABLE" },
+      },
+    now: () => checkedAt,
+    createId: () => "55000000-0000-4000-8000-000000000001",
+    knownJobIds: ["55000000-0000-4000-8000-000000000002"],
+    onDegraded: (event) => degraded.push(event),
+  });
+
+  assert.deepEqual(provider(), { readiness: "NotReady" });
+  assert.deepEqual(degraded, [{
+    code: "WORKBENCH_MODEL_DEGRADED",
+    stage: "Jobs",
+    reason: "QueryFailed",
+  }]);
+});
+
+test("PT-UI-003B fails closed when known-job validation fails", async (context) => {
+  const checkedAt = "2026-09-19T12:10:00.000Z";
+  const readiness = evaluateReadiness({
+    checkedAt,
+    liveness: "Live",
+    dependencies: Object.fromEntries([
+      "PostgreSQL",
+      "Migrations",
+      "FixturePolicy",
+      "LocalDependency",
+      "DenialAudit",
+      "LedgerIntegrity",
+    ].map((dependency) => [dependency, { ready: true, checkedAt }])),
+  });
+  const degraded = [];
+  const execute = (requestJson) => {
+    const request = JSON.parse(requestJson);
+    return request.operation === "ReadinessGet"
+      ? { operation: "ReadinessGet", outcome: "Succeeded", data: { readiness } }
+      : { operation: "JobGet", outcome: "Succeeded", data: { job: {} } };
+  };
+  const provider = createWorkbenchModelProvider({
+    execute,
+    now: () => checkedAt,
+    createId: () => "54000000-0000-4000-8000-000000000001",
+    knownJobIds: ["54000000-0000-4000-8000-000000000002"],
+    onDegraded: (event) => degraded.push(event),
+  });
+  const server = await startLoopbackApiServer(
+    { allowedOrigins: ["http://127.0.0.1:5173"], bodyLimitBytes: 1_048_576, port: 0 },
+    execute,
+    provider,
+  );
+  context.after(() => new Promise((resolve, reject) => {
+    server.close((error) => error ? reject(error) : resolve());
+  }));
+  const address = server.address();
+  assert.notEqual(address, null);
+  assert.equal(typeof address, "object");
+
+  const response = await send(address.port);
+
+  assert.equal(response.status, 200);
+  assert.match(response.body, /<span>Status: <\/span>NotReady/);
+  assert.deepEqual(degraded, [{
+    code: "WORKBENCH_MODEL_DEGRADED",
+    stage: "Jobs",
+    reason: "ResultInvalid",
+  }]);
+});

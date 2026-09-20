@@ -195,7 +195,6 @@ export interface FailedJobForPresentation {
   readonly jobId: string;
   readonly status: "Failed";
   readonly restartability: "Restartable" | "NotRestartable";
-  readonly acceptedCount: number;
   readonly controllingError: {
     readonly code: string;
   };
@@ -1580,7 +1579,10 @@ function validateResultRecovery(value: unknown): Readonly<Record<string, unknown
   return Object.freeze({ ...recovery });
 }
 
-function validateResultError(value: unknown): Readonly<Record<string, unknown>> {
+function validateResultError(
+  value: unknown,
+  expectedMessage?: string,
+): Readonly<Record<string, unknown>> {
   const error = requireClosedResultRecord(value, [
     "code",
     "message",
@@ -1590,7 +1592,7 @@ function validateResultError(value: unknown): Readonly<Record<string, unknown>> 
   if (
     !isString(error.code) ||
     !isString(error.message) ||
-    applicationFailureMessages[error.code] !== error.message
+    (expectedMessage ?? applicationFailureMessages[error.code]) !== error.message
   ) invalidApplicationResult();
   const identifiers = requireClosedResultRecord(error.boundedIdentifiers);
   const allowedIdentifierFields = new Set([
@@ -1809,7 +1811,10 @@ function validateReadiness(value: unknown): Readonly<Record<string, unknown>> {
   );
   const controllingError = readiness.controllingError === null
     ? null
-    : validateResultError(readiness.controllingError);
+    : validateResultError(
+      readiness.controllingError,
+      "Application readiness is blocked. Review readiness details.",
+    );
   const firstFailedDependency = dependencies.find(
     (dependency) => dependency.state === "NotReady",
   );

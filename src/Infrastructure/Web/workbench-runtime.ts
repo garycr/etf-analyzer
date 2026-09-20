@@ -6,11 +6,15 @@ import {
   type ReadinessSnapshot,
 } from "../../Application/application-boundary.js";
 import type { ApiApplicationExecutor } from "../Http/api-adapter.js";
-import type { WorkbenchDocumentInput } from "./workbench.js";
+import type {
+  WorkbenchDocumentInput,
+  WorkbenchWatchlist,
+  WorkbenchWatchlistItem,
+} from "./workbench.js";
 
 export interface WorkbenchDegradedEvent {
   readonly code: "WORKBENCH_MODEL_DEGRADED";
-  readonly stage: "Readiness" | "Jobs";
+  readonly stage: "Readiness" | "Watchlist" | "Jobs";
   readonly reason:
     | "EnvelopeConstructionFailed"
     | "ExecutionFailed"
@@ -38,7 +42,7 @@ class WorkbenchModelError extends Error {
 }
 
 function queryEnvelope(
-  operation: "ReadinessGet" | "JobGet",
+  operation: "ReadinessGet" | "WatchlistGet" | "JobGet",
   payload: Readonly<Record<string, unknown>>,
   dependencies: WorkbenchModelProviderDependencies,
 ): string {
@@ -55,7 +59,7 @@ function queryEnvelope(
 }
 
 function successfulData(
-  operation: "ReadinessGet" | "JobGet",
+  operation: "ReadinessGet" | "WatchlistGet" | "JobGet",
   result: Readonly<Record<string, unknown>>,
 ): Readonly<Record<string, unknown>> | null {
   if (result.operation !== operation) throw new TypeError("Unexpected application result operation");
@@ -75,7 +79,7 @@ function successfulData(
 }
 
 function executeQuery(
-  operation: "ReadinessGet" | "JobGet",
+  operation: "ReadinessGet" | "WatchlistGet" | "JobGet",
   payload: Readonly<Record<string, unknown>>,
   dependencies: WorkbenchModelProviderDependencies,
 ): Readonly<Record<string, unknown>> | null {
@@ -113,6 +117,33 @@ function isFailedJob(value: unknown): value is FailedJobForPresentation {
     typeof (error as Readonly<Record<string, unknown>>).code === "string";
 }
 
+function isWatchlistItem(value: unknown): value is WorkbenchWatchlistItem {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  const candidate = value as Readonly<Record<string, unknown>>;
+  return typeof candidate.instrumentId === "string" &&
+    typeof candidate.displayName === "string" &&
+    (candidate.validationState === "Valid" || candidate.validationState === "Invalid") &&
+    isUInt(candidate.position);
+}
+
+  function isUInt(value: unknown): value is string {
+    return typeof value === "string" &&
+    /^(0|[1-9][0-9]*)$/.test(value) &&
+    (value.length < 16 || (value.length === 16 && value <= "9007199254740991"));
+  }
+
+function toWatchlist(data: Readonly<Record<string, unknown>>): WorkbenchWatchlist {
+  if (
+    !Array.isArray(data.orderedItems) ||
+    !data.orderedItems.every(isWatchlistItem) ||
+    !isUInt(data.version)
+  ) throw new WorkbenchModelError("ResultInvalid");
+  return Object.freeze({
+    orderedItems: Object.freeze([...data.orderedItems]),
+    version: data.version,
+  });
+}
+
 export function createWorkbenchModelProvider(
   dependencies: WorkbenchModelProviderDependencies,
 ): WorkbenchModelProvider {
@@ -123,6 +154,11 @@ export function createWorkbenchModelProvider(
       if (readinessData === null) throw new TypeError("Readiness query failed");
       const readiness = readinessData.readiness as ReadinessSnapshot;
       const failedJobs: FailedJobPresentation<FailedJobForPresentation>[] = [];
+
+      stage = "Watchlist";
+      const watchlistData = executeQuery("WatchlistGet", {}, dependencies);
+      if (watchlistData === null) throw new WorkbenchModelError("QueryFailed");
+      const watchlist = toWatchlist(watchlistData);
 
       stage = "Jobs";
       for (const jobId of dependencies.knownJobIds) {
@@ -137,7 +173,11 @@ export function createWorkbenchModelProvider(
         }
       }
 
-      return Object.freeze({ readiness, failedJobs: Object.freeze(failedJobs) });
+      return Object.freeze({
+        readiness,
+        watchlist,
+        failedJobs: Object.freeze(failedJobs),
+      });
     } catch (error) {
       const reason = error instanceof WorkbenchModelError
         ? error.reason

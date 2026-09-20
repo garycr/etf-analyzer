@@ -6,13 +6,13 @@ import { evaluateReadiness } from "../../dist/Application/application-boundary.j
 import { startLoopbackApiServer } from "../../dist/Infrastructure/Http/api-adapter.js";
 import { createWorkbenchModelProvider } from "../../dist/Infrastructure/Web/workbench-runtime.js";
 
-function send(port) {
+function send(port, path = "/") {
   return new Promise((resolve, reject) => {
     const request = http.request({
       host: "127.0.0.1",
       port,
       method: "GET",
-      path: "/",
+      path,
       headers: {
         host: `127.0.0.1:${port}`,
         accept: "text/html",
@@ -22,6 +22,7 @@ function send(port) {
       response.on("data", (chunk) => chunks.push(chunk));
       response.on("end", () => resolve({
         status: response.statusCode,
+        headers: response.headers,
         body: Buffer.concat(chunks).toString("utf8"),
       }));
     });
@@ -67,7 +68,7 @@ function job(jobId, status) {
   };
 }
 
-test("PT-UI-003B wires authoritative readiness and jobs through the browser composition root", async (context) => {
+test("PT-UI-003B and PT-UI-004 compose authoritative readiness jobs and watchlist", async (context) => {
   const checkedAt = "2026-09-19T12:10:00.000Z";
   const readiness = evaluateReadiness({
     checkedAt,
@@ -92,6 +93,29 @@ test("PT-UI-003B wires authoritative readiness and jobs through the browser comp
     requests.push(request);
     if (request.operation === "ReadinessGet") {
       return { operation: "ReadinessGet", outcome: "Succeeded", data: { readiness } };
+    }
+    if (request.operation === "WatchlistGet") {
+      return {
+        operation: "WatchlistGet",
+        outcome: "Succeeded",
+        data: {
+          orderedItems: [
+            {
+              instrumentId: "ETF-A",
+              displayName: "Alpha <Income>",
+              validationState: "Valid",
+              position: "0",
+            },
+            {
+              instrumentId: "ETF-B",
+              displayName: "Beta & Growth",
+              validationState: "Invalid",
+              position: "1",
+            },
+          ],
+          version: "7",
+        },
+      };
     }
     if (request.payload.jobId === missingJobId) {
       return {
@@ -131,6 +155,19 @@ test("PT-UI-003B wires authoritative readiness and jobs through the browser comp
   assert.deepEqual(degraded, []);
   assert.match(response.body, /<span>Status: <\/span>NotReady/);
   assert.match(response.body, /APPLICATION_CONFIGURATION_INVALID/);
+  assert.match(response.body, /Watchlist version 7/);
+  assert.match(response.body, /Alpha &lt;Income&gt;[\s\S]+ETF-A[\s\S]+Valid/);
+  assert.match(response.body, /Beta &amp; Growth[\s\S]+ETF-B[\s\S]+Invalid/);
+  assert.doesNotMatch(response.body, /Alpha <Income>|Beta & Growth/);
+  assert.match(response.body, /<form id="watchlist-form"/);
+  assert.match(response.body, /<label for="watchlist-instrument-id">Instrument ID<\/label>/);
+  assert.match(response.body, /<label for="watchlist-display-name">Display name<\/label>/);
+  assert.match(response.body, /<button type="submit">Add or update<\/button>/);
+  assert.match(response.body, /data-action="move-up"[\s\S]+data-action="move-down"[\s\S]+data-action="remove"/);
+  assert.match(response.body, /<p id="watchlist-status" role="status" aria-live="polite"/);
+  assert.match(response.body, /<script type="module" src="\/workbench\.js"><\/script>/);
+  assert.doesNotMatch(response.body, /onclick=|tabindex="[1-9]/i);
+  assert.match(response.headers["content-security-policy"], /script-src 'self'/);
   assert.match(response.body, new RegExp(`data-job-id="${failedJobId}"`));
   assert.doesNotMatch(response.body, new RegExp(runningJobId));
   assert.doesNotMatch(response.body, new RegExp(missingJobId));
@@ -146,10 +183,19 @@ test("PT-UI-003B wires authoritative readiness and jobs through the browser comp
   });
   assert.deepEqual(requests.map(({ operation, payload }) => ({ operation, payload })), [
     { operation: "ReadinessGet", payload: {} },
+    { operation: "WatchlistGet", payload: {} },
     { operation: "JobGet", payload: { jobId: failedJobId } },
     { operation: "JobGet", payload: { jobId: runningJobId } },
     { operation: "JobGet", payload: { jobId: missingJobId } },
   ]);
+
+  const script = await send(address.port, "/workbench.js");
+  assert.equal(script.status, 200);
+  assert.equal(script.headers["content-type"], "application/javascript; charset=utf-8");
+  assert.match(script.body, /WatchlistGet/);
+  assert.match(script.body, /WatchlistPut/);
+  assert.match(script.body, /WatchlistRemove/);
+  assert.match(script.body, /WatchlistReorder/);
 });
 
 test("PT-UI-003B fails closed without an HTTP 500 for provider boundary failures", async (context) => {
@@ -244,13 +290,24 @@ test("PT-UI-003B degrades for non-not-found JobGet failures", () => {
   });
   const degraded = [];
   const provider = createWorkbenchModelProvider({
-    execute: (requestJson) => JSON.parse(requestJson).operation === "ReadinessGet"
-      ? { operation: "ReadinessGet", outcome: "Succeeded", data: { readiness } }
-      : {
+    execute: (requestJson) => {
+      const operation = JSON.parse(requestJson).operation;
+      if (operation === "ReadinessGet") {
+        return { operation: "ReadinessGet", outcome: "Succeeded", data: { readiness } };
+      }
+      if (operation === "WatchlistGet") {
+        return {
+          operation: "WatchlistGet",
+          outcome: "Succeeded",
+          data: { orderedItems: [], version: "0" },
+        };
+      }
+      return {
         operation: "JobGet",
         outcome: "Failed",
         error: { code: "APPLICATION_DATABASE_UNAVAILABLE" },
-      },
+      };
+    },
     now: () => checkedAt,
     createId: () => "55000000-0000-4000-8000-000000000001",
     knownJobIds: ["55000000-0000-4000-8000-000000000002"],
@@ -282,9 +339,17 @@ test("PT-UI-003B fails closed when known-job validation fails", async (context) 
   const degraded = [];
   const execute = (requestJson) => {
     const request = JSON.parse(requestJson);
-    return request.operation === "ReadinessGet"
-      ? { operation: "ReadinessGet", outcome: "Succeeded", data: { readiness } }
-      : { operation: "JobGet", outcome: "Succeeded", data: { job: {} } };
+    if (request.operation === "ReadinessGet") {
+      return { operation: "ReadinessGet", outcome: "Succeeded", data: { readiness } };
+    }
+    if (request.operation === "WatchlistGet") {
+      return {
+        operation: "WatchlistGet",
+        outcome: "Succeeded",
+        data: { orderedItems: [], version: "0" },
+      };
+    }
+    return { operation: "JobGet", outcome: "Succeeded", data: { job: {} } };
   };
   const provider = createWorkbenchModelProvider({
     execute,
@@ -312,6 +377,43 @@ test("PT-UI-003B fails closed when known-job validation fails", async (context) 
   assert.deepEqual(degraded, [{
     code: "WORKBENCH_MODEL_DEGRADED",
     stage: "Jobs",
+    reason: "ResultInvalid",
+  }]);
+});
+
+test("PT-UI-004 fails closed when watchlist canonical values are invalid", () => {
+  const checkedAt = "2026-09-20T20:00:00.000Z";
+  const readiness = evaluateReadiness({
+    checkedAt,
+    liveness: "Live",
+    dependencies: Object.fromEntries([
+      "PostgreSQL",
+      "Migrations",
+      "FixturePolicy",
+      "LocalDependency",
+      "DenialAudit",
+      "LedgerIntegrity",
+    ].map((dependency) => [dependency, { ready: true, checkedAt }])),
+  });
+  const degraded = [];
+  const provider = createWorkbenchModelProvider({
+    execute: (requestJson) => JSON.parse(requestJson).operation === "ReadinessGet"
+      ? { operation: "ReadinessGet", outcome: "Succeeded", data: { readiness } }
+      : {
+        operation: "WatchlistGet",
+        outcome: "Succeeded",
+        data: { orderedItems: [], version: "9007199254740992" },
+      },
+    now: () => checkedAt,
+    createId: () => "56000000-0000-4000-8000-000000000001",
+    knownJobIds: [],
+    onDegraded: (event) => degraded.push(event),
+  });
+
+  assert.deepEqual(provider(), { readiness: "NotReady" });
+  assert.deepEqual(degraded, [{
+    code: "WORKBENCH_MODEL_DEGRADED",
+    stage: "Watchlist",
     reason: "ResultInvalid",
   }]);
 });

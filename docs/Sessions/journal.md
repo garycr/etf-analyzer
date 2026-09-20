@@ -2933,3 +2933,16 @@
 **authorization-boundary:** Checkpoint only; no WP-6 closure, WP-7, brokerage, live provider, public ingress, durable event, queue, scheduler, worker, baseline, release, deployment, or production action
 
 ---
+
+## 2026-09-20 | WP-7 watchlist workflows accepted | Ring-2 | @solo-orchestrator
+
+**Type:** IMPLEMENTATION-CHECKPOINT
+**Decision:** DEC-061 accepts PT-UI-004 and ADR-003 with version-bound watchlist mutations, authoritative reconciliation, canonical projection admission, accessible bounded recovery, and logical focus restoration
+**Policy:** DEC-028; DEC-059; DEC-060; approved WP-7 plan; WCAG 2.1 AA expectations; test-first development; architecture, security, and code review
+**Authority:** Agent under Fully Agentic mode following the Workspace Owner directive to continue; REV-140 Architecture PASS, REV-141 Security PASS, and REV-142 Code PASS
+**Accountability:** Solo Orchestrator continues PT-UI-005, retains real-DOM keyboard/focus/live-region/axe/viewport automation under PT-UI-009, requires PostgreSQL zero-skip evidence before WP-7 closure, and preserves the closed 16-operation API
+**Result:** Focused 21/21 and aggregate 439 discovered, 384 passed, 0 failed, 55 PostgreSQL-environment skips; build and lint pass; dependency audit reports zero vulnerabilities; no dependency added
+**Artifacts:** ADR-003 | DEC-061 | REV-140 | REV-141 | REV-142 | WP-7 watchlist workflow evidence | GitHub issue #83
+**authorization-boundary:** PT-UI-004 checkpoint only; no WP-7 closure, WP-8, brokerage, live provider, public ingress, deployment, release, or production action
+
+---

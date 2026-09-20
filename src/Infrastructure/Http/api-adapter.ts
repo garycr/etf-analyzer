@@ -4,6 +4,7 @@ import {
   type Server,
   type ServerResponse,
 } from "node:http";
+import { readFileSync } from "node:fs";
 
 import {
   applicationCommandOperations,
@@ -108,6 +109,10 @@ const createdOperations = new Set<ApplicationOperation>([
   "PaperOrderDraftCreate",
   "DiagnosticsExportCreate",
 ]);
+const workbenchClientScript = readFileSync(
+  new URL("../Web/workbench-client.js", import.meta.url),
+  "utf8",
+);
 
 const codesByStatus = Object.freeze({
   400: "APPLICATION_OPERATION_UNKNOWN,APPLICATION_REQUEST_INVALID,FIXTURE_MANIFEST_INVALID,FIXTURE_FILE_INTEGRITY_FAILED,FIXTURE_DATASET_HASH_MISMATCH,FIXTURE_TEMPORAL_INVALID,FIXTURE_DECIMAL_INVALID,FIXTURE_PROVENANCE_INVALID,FIXTURE_UNDECLARED_INPUT,FIXTURE_REQUIRED_MISSING,ANALYTICS_NUMERIC_CLASS_INVALID,ORDER_UNKNOWN_STATE,LEDGER_INVALID_DECIMAL,LEDGER_EXCESS_SCALE",
@@ -228,9 +233,14 @@ function allowedOriginForHeaders(
 ): string | undefined {
   if (header(headers, "host") !== `127.0.0.1:${config.port}`) return undefined;
   const origin = header(headers, "origin");
-  return origin !== undefined && config.allowedOrigins.includes(origin)
+  return origin !== undefined && isAllowedRequestOrigin(origin, config)
     ? origin
     : undefined;
+}
+
+function isAllowedRequestOrigin(origin: string, config: ApiAdapterConfig): boolean {
+  return origin === `http://127.0.0.1:${config.port}` ||
+    config.allowedOrigins.includes(origin);
 }
 
 function writeApiResponse(response: ServerResponse, apiResponse: ApiResponse): void {
@@ -277,12 +287,33 @@ function workbenchResponse(
     detail: "",
     headers: Object.freeze({
       "content-type": "text/html; charset=utf-8",
-      "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
+      "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; script-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
       "referrer-policy": "no-referrer",
       "x-content-type-options": "nosniff",
       "x-frame-options": "DENY",
     }),
     body: renderWorkbenchDocument(provideDocument()),
+  });
+}
+
+function workbenchScriptResponse(
+  headers: IncomingHttpHeaders,
+  config: ApiAdapterConfig,
+): ApiResponse {
+  if (header(headers, "host") !== `127.0.0.1:${config.port}`) {
+    return problem(400, "invalid-host", "Invalid Host", "The request Host is not the configured loopback API.");
+  }
+  return Object.freeze({
+    status: 200,
+    statusText: "OK",
+    detail: "",
+    headers: Object.freeze({
+      "content-type": "application/javascript; charset=utf-8",
+      "content-security-policy": "default-src 'none'",
+      "referrer-policy": "no-referrer",
+      "x-content-type-options": "nosniff",
+    }),
+    body: workbenchClientScript,
   });
 }
 
@@ -295,7 +326,7 @@ function preflightResponse(
     return problem(400, "invalid-host", "Invalid Host", "The request Host is not the configured loopback API.");
   }
   const origin = header(headers, "origin");
-  if (origin === undefined || !config.allowedOrigins.includes(origin)) {
+  if (origin === undefined || !isAllowedRequestOrigin(origin, config)) {
     return problem(403, "disallowed-origin", "Disallowed Origin", "The request Origin is not an allowed local workbench origin.");
   }
   const requestedMethod = header(headers, "access-control-request-method");
@@ -337,6 +368,14 @@ export function startLoopbackApiServer(
       ? localAddress.port
       : config.port;
     const requestConfig = Object.freeze({ ...config, port: localPort });
+    if (
+      request.method === "GET" &&
+      parseTarget(request.url ?? "")?.pathname === "/workbench.js"
+    ) {
+      request.resume();
+      writeApiResponse(response, workbenchScriptResponse(request.headers, requestConfig));
+      return;
+    }
     if (
       request.method === "GET" &&
       parseTarget(request.url ?? "")?.pathname === "/"
@@ -501,7 +540,7 @@ export function adaptApiRequest(
     return problem(400, "invalid-host", "Invalid Host", "The request Host is not the configured loopback API.");
   }
   const origin = header(request.headers, "origin");
-  if (origin !== undefined && !config.allowedOrigins.includes(origin)) {
+  if (origin !== undefined && !isAllowedRequestOrigin(origin, config)) {
     return problem(403, "disallowed-origin", "Disallowed Origin", "The request Origin is not an allowed local workbench origin.");
   }
   const allowedOrigin = origin !== undefined ? origin : undefined;

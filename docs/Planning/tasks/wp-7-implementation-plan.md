@@ -1,7 +1,7 @@
 # WP-7 Local Browser Workbench Implementation Plan
 
 **Date:** 2026-09-19
-**Status:** Active under DEC-059; PT-UI-001..003B accepted; implementation plan REV-136 PASS
+**Status:** Active under DEC-059; PT-UI-001..004 accepted; implementation plan REV-136 PASS
 **Estimate:** XL / 24 agent-hours
 **Tracking:** GitHub issue #83
 
@@ -45,7 +45,7 @@ Hypothesis: a semantic browser shell can be served from the existing loopback pr
 | --- | --- | --- | --- |
 | PT-UI-003A | `PT-UI-003A presents authoritative readiness jobs and bounded recovery` | `tests/Unit/workbench.test.mjs` | PASS |
 | PT-UI-003B | `PT-UI-003B wires authoritative readiness and jobs through the browser composition root` | `tests/Integration/workbench.test.mjs` | PASS |
-| PT-UI-004 | `PT-UI-004 performs watchlist workflows with keyboard and version safety` | `tests/Integration/workbench.test.mjs` | PENDING |
+| PT-UI-004 | `PT-UI-004 performs watchlist workflows with keyboard and version safety` | `tests/Unit/workbench-client.test.mjs`; `tests/Integration/workbench.test.mjs` | PASS |
 | PT-UI-005 | `PT-UI-005 preserves analytical and evidence warnings values and blocked states` | `tests/Integration/workbench.test.mjs` | PENDING |
 | PT-ANA-A11Y-001 | `PT-ANA-A11Y-001 exposes blocked denied quarantined and no-signal analytics accessibly` | `tests/Integration/workbench-accessibility.test.mjs` | PENDING |
 | PT-UI-006 | `PT-UI-006 requires explicit paper confirmation and presents all eight order states` | `tests/Integration/workbench.test.mjs` | PENDING |
@@ -75,7 +75,7 @@ Hypothesis: a semantic browser shell can be served from the existing loopback pr
 | Canonical financial or owner-state values could drift in rendering. | Render admitted Application projections without numeric conversion or state inference; assert exact visible and accessible strings. |
 | Dynamic behavior could weaken the inline-style CSP accepted by REV-135. | Reassess CSP before introducing script or dynamic style; prefer an external same-origin stylesheet and nonce/hash-bound scripts. |
 | PostgreSQL-gated behavior may be unavailable in a generic test environment. | Preserve environment skips during development but require a PostgreSQL 16 zero-skip run for WP-7 closure. |
-| Keyboard semantics may regress as controls are added. | Add Playwright keyboard workflows and `@axe-core/playwright` WCAG 2.1 AA checks after dependency license, vulnerability, and maintenance review. |
+| Keyboard semantics may regress as controls are added. | PT-UI-004 covers pure mutation, ordering, and logical focus behavior. PT-UI-009 retains real-DOM event wiring, keyboard traversal, focus restoration, live-region, axe, and viewport automation after dependency review. |
 | The reviewed API surface is closed. | Later slices consume the existing nine commands and seven queries; no new API operation is introduced by WP-7. |
 
 ## Open Work

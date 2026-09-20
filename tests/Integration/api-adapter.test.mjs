@@ -122,6 +122,22 @@ test("CT-API-001A/K serves only loopback HTTP and keeps preflight side-effect fr
   assert.equal(executed.length, 1);
   assert.equal(executed[0].operation, "ReadinessGet");
 
+  const sameOrigin = `http://127.0.0.1:${port}`;
+  const sameOriginResponse = await send({
+    port,
+    method: "GET",
+    path: "/api/v1/watchlist",
+    headers: {
+      accept: "application/json",
+      origin: sameOrigin,
+      "x-request-id": "30000000-0000-4000-8000-000000000013",
+      "x-correlation-id": "30000000-0000-4000-8000-000000000014",
+      "x-requested-at": "2026-09-17T12:00:00.000Z",
+    },
+  });
+  assert.equal(sameOriginResponse.status, 200);
+  assert.equal(sameOriginResponse.headers["access-control-allow-origin"], sameOrigin);
+
   const preflight = await send({
     port,
     method: "OPTIONS",
@@ -135,7 +151,7 @@ test("CT-API-001A/K serves only loopback HTTP and keeps preflight side-effect fr
   assert.equal(preflight.status, 204);
   assert.equal(preflight.headers["access-control-allow-origin"], origin);
   assert.match(preflight.headers["access-control-allow-methods"], /GET/);
-  assert.equal(executed.length, 1);
+  assert.equal(executed.length, 2);
 
   const invalidPreflight = await send({
     port,
@@ -149,7 +165,7 @@ test("CT-API-001A/K serves only loopback HTTP and keeps preflight side-effect fr
   });
   assert.equal(invalidPreflight.status, 400);
   assert.equal(invalidPreflight.headers["access-control-allow-origin"], origin);
-  assert.equal(executed.length, 1);
+  assert.equal(executed.length, 2);
 
   for (const vector of [
     {
@@ -211,7 +227,7 @@ test("CT-API-001A/K serves only loopback HTTP and keeps preflight side-effect fr
     const rejected = await send({ port, ...vector });
     assert.equal(rejected.status, vector.expectedStatus);
   }
-  assert.equal(executed.length, 1);
+  assert.equal(executed.length, 2);
 });
 
 test("CT-API-001E/K contains unexpected application and serialization failures", async (context) => {

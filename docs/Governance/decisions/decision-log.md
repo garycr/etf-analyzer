@@ -51,6 +51,7 @@
 | DEC-058 | 2026-09-18 | Package closure | Close WP-6 and make WP-7 eligible as the next sequential package without starting it | Agent (Fully Agentic) | Solo Orchestrator | Approved |
 | DEC-059 | 2026-09-19 | Package activation | Activate WP-7 and accept the dependency-free semantic workbench shell as its first slice | Agent (Fully Agentic) | Solo Orchestrator | Active |
 | DEC-060 | 2026-09-20 | Browser composition | Source workbench readiness and known jobs through fail-closed Application queries | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
+| DEC-061 | 2026-09-20 | Watchlist workflows | Accept the version-safe loopback watchlist browser adapter and defer real-DOM automation to PT-UI-009 | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-057 | 2026-09-18 | Scope correction | Defer CT-LED-019 custom restore controls because the greenfield PostgreSQL delivery has no SQL Server data or DDL migration | Workspace Owner | Solo Orchestrator | Active |
 | DEC-056 | 2026-09-18 | Restore integrity architecture | Accept ADR-002 with signed coherent backup manifests, durable global restore gating, full retained-chain verification, and append-only rotation continuity | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-055 | 2026-09-18 | Crash-intent recovery | Accept CT-LED-018 with immutable unresolved intent, ordered anchored recovery, exact replay idempotency, and collision-safe audit identity | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
@@ -60,6 +61,21 @@
 ---
 
 ## Decision Records
+
+### DEC-061: Accept Version-Safe Watchlist Workflows
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-061 |
+| **Date** | 2026-09-20 |
+| **Category** | Watchlist workflows |
+| **Decision** | Accept PT-UI-004 with a dependency-free same-origin browser module that sends only reviewed watchlist transport payloads, binds every mutation to the displayed canonical version, reloads authoritative `WatchlistGet` state after success or conflict, admits canonical UInt projections fail closed, locks controls while busy, announces bounded recovery, and restores a logical keyboard target; accept ADR-003 and retain real-DOM automation under PT-UI-009 |
+| **Policy** | DEC-028; DEC-059; DEC-060; approved WP-7 plan; WCAG 2.1 AA expectations; closed 16-operation API; test-first development; architecture, code, and security review |
+| **Authority** | Agent under Fully Agentic mode following the Workspace Owner directive to continue |
+| **Accountability** | Solo Orchestrator preserves the loopback-only and owner-authoritative boundaries, does not claim automated DOM coverage, completes PT-UI-009 browser/axe/viewport evidence later, requires a PostgreSQL zero-skip run for WP-7 closure, and continues PT-UI-005 next |
+| **Status** | Reviewed; PT-UI-004 PASS; ADR-003 Accepted; REV-140 Architecture PASS; REV-141 Security PASS; REV-142 Code PASS; 439 discovered, 384 passed, 0 failed, 55 PostgreSQL-environment skips |
+
+---
 
 ### DEC-060: Accept Fail-Closed Workbench Composition
 

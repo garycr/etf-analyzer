@@ -51,6 +51,19 @@ test("PT-UI-001 renders explicit NotReady status and rejects unknown state", () 
   );
 });
 
+test("PT-UI-004 keeps an authoritative empty watchlist operable", () => {
+  const html = renderWorkbenchDocument({
+    readiness: "Ready",
+    watchlist: { orderedItems: [], version: "0" },
+  });
+
+  assert.match(html, /Watchlist version 0/);
+  assert.match(html, /<p id="watchlist-empty">No instruments added\.<\/p>/);
+  assert.match(html, /<ol id="watchlist-items">\s*<\/ol>/);
+  assert.match(html, /<form id="watchlist-form"/);
+  assert.match(html, /<noscript>Watchlist changes require JavaScript\.<\/noscript>/);
+});
+
 test("PT-UI-003A presents authoritative readiness jobs and bounded recovery", () => {
   const checkedAt = "2026-09-19T12:00:00.000Z";
   const readiness = evaluateReadiness({

@@ -9,9 +9,22 @@ export const researchWarning = researchWarningText;
 
 export type WorkbenchReadiness = "Ready" | "NotReady";
 
+export interface WorkbenchWatchlistItem {
+  readonly instrumentId: string;
+  readonly displayName: string;
+  readonly validationState: "Valid" | "Invalid";
+  readonly position: string;
+}
+
+export interface WorkbenchWatchlist {
+  readonly orderedItems: readonly WorkbenchWatchlistItem[];
+  readonly version: string;
+}
+
 export interface WorkbenchDocumentInput {
   readonly readiness: WorkbenchReadiness | ReadinessSnapshot;
   readonly failedJobs?: readonly FailedJobPresentation<FailedJobForPresentation>[];
+  readonly watchlist?: WorkbenchWatchlist;
 }
 
 function escapeHtml(value: string | number): string {
@@ -57,6 +70,38 @@ function renderFailedJobs(
         </ul>`;
 }
 
+function renderWatchlist(watchlist: WorkbenchWatchlist | undefined): string {
+  if (watchlist === undefined) return "<p>No instruments added.</p>";
+  const items = watchlist.orderedItems.length === 0
+    ? ""
+    : watchlist.orderedItems.map((item, index) => `
+          <li data-instrument-id="${escapeHtml(item.instrumentId)}" data-position="${escapeHtml(item.position)}">
+            <strong>${escapeHtml(item.displayName)}</strong>
+            <code>${escapeHtml(item.instrumentId)}</code>
+            <span>Validation: ${escapeHtml(item.validationState)}</span>
+            <div class="watchlist-actions">
+              <button type="button" data-action="move-up" data-boundary-disabled="${index === 0}"${index === 0 ? " disabled" : ""}>Move ${escapeHtml(item.displayName)} up</button>
+              <button type="button" data-action="move-down" data-boundary-disabled="${index === watchlist.orderedItems.length - 1}"${index === watchlist.orderedItems.length - 1 ? " disabled" : ""}>Move ${escapeHtml(item.displayName)} down</button>
+              <button type="button" data-action="remove">Remove ${escapeHtml(item.displayName)}</button>
+            </div>
+          </li>`).join("");
+  return `<div id="watchlist-controls" data-version="${escapeHtml(watchlist.version)}">
+        <p id="watchlist-version">Watchlist version ${escapeHtml(watchlist.version)}</p>
+        <p id="watchlist-status" role="status" aria-live="polite"></p>
+        <form id="watchlist-form">
+          <label for="watchlist-instrument-id">Instrument ID</label>
+          <input id="watchlist-instrument-id" name="instrumentId" required>
+          <label for="watchlist-display-name">Display name</label>
+          <input id="watchlist-display-name" name="displayName" required>
+          <button type="submit">Add or update</button>
+        </form>
+        <noscript>Watchlist changes require JavaScript.</noscript>
+        <p id="watchlist-empty"${items === "" ? "" : " hidden"}>No instruments added.</p>
+        <ol id="watchlist-items">${items}
+        </ol>
+      </div>`;
+}
+
 export function renderWorkbenchDocument(
   input: WorkbenchDocumentInput,
 ): string {
@@ -80,6 +125,7 @@ export function renderWorkbenchDocument(
       </div>`
     : "";
   const jobs = renderFailedJobs(input.failedJobs ?? []);
+  const watchlist = renderWatchlist(input.watchlist);
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -158,6 +204,13 @@ export function renderWorkbenchDocument(
     section { min-width: 0; padding-block: 1.75rem; border-bottom: 1px solid var(--line); }
     section h2 { margin: 0 0 .75rem; font-size: 1.35rem; }
     section p { max-width: 72ch; margin: .4rem 0; color: var(--muted); }
+    form, .watchlist-actions { display: flex; flex-wrap: wrap; align-items: end; gap: .5rem; }
+    input, button { min-height: 2.75rem; font: inherit; }
+    input { max-width: 100%; border: 1px solid var(--line); padding: .5rem; }
+    button { border: 1px solid var(--forest); padding: .45rem .75rem; color: var(--forest); background: var(--surface); }
+    button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+    button:disabled { color: var(--muted); border-color: var(--line); }
+    #watchlist-items li { display: grid; gap: .4rem; margin-block: 1rem; }
     .warning {
       color: var(--ink);
       font-weight: 650;
@@ -196,7 +249,7 @@ export function renderWorkbenchDocument(
     <div class="workspace-grid">
       <section id="watchlist" aria-labelledby="watchlist-heading">
         <h2 id="watchlist-heading">Watchlist</h2>
-        <p>No instruments added.</p>
+        ${watchlist}
       </section>
       <section id="analytics" aria-labelledby="analytics-heading">
         <h2 id="analytics-heading">Analytics</h2>
@@ -223,6 +276,7 @@ export function renderWorkbenchDocument(
       </section>
     </div>
   </main>
+  <script type="module" src="/workbench.js"></script>
 </body>
 </html>`;
 }

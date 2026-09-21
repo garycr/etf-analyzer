@@ -31,6 +31,7 @@
 | DEC-067 | 2026-09-21 | Workbench security and performance | Accept PT-UI-010 loopback security, local performance, caching, and redaction evidence | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-068 | 2026-09-21 | Package closure | Approve WP-7 closure; make WP-8 eligible as the next sequential package without starting it | Workspace Owner | Solo Orchestrator | Approved |
 | DEC-069 | 2026-09-21 | Package activation | Activate WP-8 integration and Ring 2 evidence work under issue #84 | Agent (Fully Agentic) | Solo Orchestrator | Active |
+| DEC-070 | 2026-09-21 | Denial verification authority | Reforecast WP-8 and add a dedicated boolean-only PostgreSQL backend verifier through migration 0007 | Agent (Fully Agentic) | Solo Orchestrator | Approved plan; implementation pending |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -70,6 +71,21 @@
 
 ## Decision Records
 
+### DEC-070: Add Dedicated Denial Backend Verification Authority
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-070 |
+| **Date** | 2026-09-21 |
+| **Category** | PostgreSQL security boundary |
+| **Decision** | Reforecast WP-8 by 6.0 agent-hours and add a transactional provisioner upgrade plus migration `0007-denial-backend-verifier`, a dedicated `NOLOGIN` verifier owner with bounded inherited `pg_read_all_stats`, a deployment-only SET edge, and one boolean-only backend-correlation helper whose only non-owner grantee is `audit_writer_owner` |
+| **Policy** | DEC-069; CT-DB-001D/K; least privilege; PostgreSQL 16.15 behavior; Architect Reviewer CONDITIONAL recommendation; selected dedicated-verifier option after rejecting broad statistics grants, runtime assertions, and wrapper-only trust; evidence correction after REV-164 invalidation |
+| **Authority** | Agent under Fully Agentic mode; this is not DP-1, DP-25, or DP-26 |
+| **Accountability** | Solo Orchestrator obtains Plan review before migration edits, updates exact role/migration/manifest contracts, requires isolated pinned evidence and Code/Security/Architecture review, and keeps WP-8/Ring 2 open |
+| **Status** | Plan review PASS after authority-lifecycle remediation; implementation pending; no migration edit made |
+
+---
+
 ### DEC-069: Activate WP-8 Integration And Ring 2 Evidence
 
 | Field | Value |
@@ -81,7 +97,7 @@
 | **Policy** | DEC-023; DEC-028; DEC-030; DEC-039; DEC-068; approved sequential WBS; test-first development; architecture, code, security, and decision review |
 | **Authority** | Agent under Fully Agentic mode following the Workspace Owner directive to continue after WP-7 approval |
 | **Accountability** | Solo Orchestrator keeps one sequential stream, preserves the fixture-only/loopback/no-brokerage boundary, completes DP-33 gap review and stops for Workspace Owner disposition before Ring 3 |
-| **Status** | Active; issue #84 created; REV-157 Plan PASS; REV-158 Architecture PASS; CT-API-001M/N pass; REV-159 Code PASS; REV-160 Security PASS; CT-DB-001L passes under REV-161; complete CT-DB-001K passes under REV-164 after resolving the REV-163 reforecast condition; integrated A-J and end-to-end evidence remain pending |
+| **Status** | Active; issue #84 created; REV-157 Plan PASS; REV-158 Architecture PASS; CT-API-001M/N pass; REV-159 Code PASS; REV-160 Security PASS; CT-DB-001L passes under REV-161; REV-164 was invalidated by clean isolated role evidence and CT-DB-001K is reopened for reviewed migration/role-authority remediation; integrated A-J and end-to-end evidence remain pending |
 
 ---
 

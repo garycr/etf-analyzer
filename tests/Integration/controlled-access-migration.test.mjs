@@ -34,6 +34,7 @@ import {
 import {
   createRoleBootstrapSql,
   productRoles,
+  roleMemberships,
 } from "../../dist/Infrastructure/PostgreSQL/role-bootstrap.js";
 
 const connectionString = process.env.ETF_TEST_POSTGRES_URL;
@@ -238,13 +239,97 @@ test(
 );
 
 test(
-  "CT-DB-001L the prototype schema contains no durable handoff",
+  "CT-DB-001A/L an empty database reaches the exact candidate schema without durable handoff",
   { skip: connectionString ? false : "ETF_TEST_POSTGRES_URL is not configured" },
   async () => {
     const client = new pg.Client({ connectionString });
     await client.connect();
     try {
       await client.query(lockSql);
+      await cleanBootstrap(client);
+      await client.query(createRoleBootstrapSql());
+      const bootstrap = await client.query(
+        `SELECT
+           (SELECT owner.rolname
+              FROM pg_catalog.pg_namespace AS namespace
+              JOIN pg_catalog.pg_roles AS owner ON owner.oid = namespace.nspowner
+             WHERE namespace.nspname = 'etf') AS schema_owner,
+           (SELECT namespace.nspacl IS NULL
+              FROM pg_catalog.pg_namespace AS namespace
+             WHERE namespace.nspname = 'etf') AS schema_default_acl,
+           (SELECT count(*)::integer
+              FROM pg_catalog.pg_class AS relation
+              JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = relation.relnamespace
+             WHERE namespace.nspname = 'etf') AS relation_count,
+           (SELECT count(*)::integer
+              FROM pg_catalog.pg_proc AS routine
+              JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = routine.pronamespace
+             WHERE namespace.nspname = 'etf') AS routine_count,
+           (SELECT count(*)::integer
+              FROM pg_catalog.pg_default_acl AS defaults
+              JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = defaults.defaclnamespace
+             WHERE namespace.nspname = 'etf') AS default_acl_count`,
+      );
+      assert.deepEqual(bootstrap.rows, [{
+        schema_owner: "schema_owner",
+        schema_default_acl: true,
+        relation_count: 0,
+        routine_count: 0,
+        default_acl_count: 0,
+      }]);
+      const roleState = await client.query(
+        `SELECT role_record.rolname,
+                role_record.rolcanlogin,
+                role_record.rolsuper,
+                role_record.rolcreaterole,
+                role_record.rolcreatedb,
+                role_record.rolreplication,
+                role_record.rolbypassrls
+           FROM pg_catalog.pg_roles AS role_record
+          WHERE role_record.rolname = ANY($1::text[])
+          ORDER BY role_record.rolname`,
+        [productRoles.map(({ name }) => name)],
+      );
+      assert.deepEqual(roleState.rows, [...productRoles]
+        .sort((left, right) => left.name.localeCompare(right.name))
+        .map(({ name, login }) => ({
+          rolname: name,
+          rolcanlogin: login,
+          rolsuper: false,
+          rolcreaterole: false,
+          rolcreatedb: false,
+          rolreplication: false,
+          rolbypassrls: false,
+        })));
+      const memberships = await client.query(
+        `SELECT granted.rolname AS role, member.rolname AS member,
+                membership.admin_option,
+                membership.inherit_option,
+                membership.set_option
+           FROM pg_catalog.pg_auth_members AS membership
+           JOIN pg_catalog.pg_roles AS granted ON granted.oid = membership.roleid
+           JOIN pg_catalog.pg_roles AS member ON member.oid = membership.member
+          WHERE granted.rolname = ANY($1::text[])
+            AND member.rolname = ANY($1::text[])
+          ORDER BY granted.rolname, member.rolname`,
+        [productRoles.map(({ name }) => name)],
+      );
+      assert.deepEqual(memberships.rows, [...roleMemberships]
+        .sort((left, right) => left.role.localeCompare(right.role) || left.member.localeCompare(right.member))
+        .map(({ role, member }) => ({
+          role,
+          member,
+          admin_option: false,
+          inherit_option: false,
+          set_option: true,
+        })));
+      const extensions = await client.query(
+        "SELECT extname AS name, extversion AS version FROM pg_catalog.pg_extension ORDER BY extname",
+      );
+      assert.deepEqual(extensions.rows, [
+        { name: "pgcrypto", version: "1.3" },
+        { name: "plpgsql", version: "1.0" },
+      ]);
       await cleanBootstrap(client);
       await applyCompleteMigrationSet(client);
 
@@ -253,8 +338,10 @@ test(
 
       const auditPassword = randomBytes(24).toString("hex");
       const projectionPassword = randomBytes(24).toString("hex");
-      await client.query("ALTER ROLE audit_runtime PASSWORD $1", [auditPassword]);
-      await client.query("ALTER ROLE projection_runtime PASSWORD $1", [projectionPassword]);
+      assert.match(auditPassword, /^[0-9a-f]{48}$/u);
+      assert.match(projectionPassword, /^[0-9a-f]{48}$/u);
+      await client.query(`ALTER ROLE audit_runtime PASSWORD '${auditPassword}'`);
+      await client.query(`ALTER ROLE projection_runtime PASSWORD '${projectionPassword}'`);
       const protectedStateBefore = (await client.query(
         `SELECT
            (SELECT pg_catalog.jsonb_agg(row_record ORDER BY row_record.audit_id)

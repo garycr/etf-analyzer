@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-21
 **Decision:** DEC-069
-**Review:** REV-164 PASS
+**Review:** REV-164 INVALIDATED
 **Scope:** CT-DB-001K only
 
 ## Accepted Conditions
@@ -27,4 +27,4 @@
 
 ## Boundary
 
-This evidence accepts CT-DB-001K only. It does not accept integrated CT-DB-001A..J, PT-E2E-001, WP-8, DP-33, Ring 2 closure, release, deployment, or production use.
+This evidence is invalidated by a clean isolated PostgreSQL run. CT-DB-001K remains open because the `SECURITY DEFINER` denial collector cannot currently inspect the `audit_runtime` backend correlation fields through `pg_stat_activity`. It does not accept integrated CT-DB-001A..J, PT-E2E-001, WP-8, DP-33, Ring 2 closure, release, deployment, or production use.

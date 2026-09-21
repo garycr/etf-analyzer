@@ -274,6 +274,16 @@ export async function checkDenialAuditCapability(
       "SELECT pg_catalog.set_config('application_name', $1, true) AS application_name",
       [`etf-denial:${identifiers.denialNonce}`],
     );
+    await client.query("SELECT pg_catalog.pg_stat_clear_snapshot()");
+    const correlation = await client.query(
+      `SELECT count(*)::integer AS matching_backend_count
+         FROM pg_catalog.pg_stat_activity
+        WHERE pid = pg_catalog.pg_backend_pid()
+          AND usename = session_user
+          AND application_name = $1`,
+      [`etf-denial:${identifiers.denialNonce}`],
+    );
+    if (correlation.rows[0]?.matching_backend_count !== 1) return outcome;
     const result = await client.query(
       `SELECT etf.audit_append(
          pg_catalog.jsonb_build_object(

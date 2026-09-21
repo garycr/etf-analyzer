@@ -3112,3 +3112,42 @@
 **authorization-boundary:** CT-DB-001K only; integrated A-J, PT-E2E-001, remaining WP-8 evidence, WP-8 closure, DP-33, Ring 3, baseline activation, provider, brokerage, public ingress, release, deployment, and production remain unauthorized or incomplete
 
 ---
+
+## 2026-09-21 | WP-8 CT-DB-001K acceptance invalidated | Ring-2 | @solo-orchestrator
+
+**Type:** EVIDENCE-CORRECTION
+**Decision:** Invalidate REV-164 and reopen CT-DB-001K after a clean isolated pinned PostgreSQL run disproved the denial-audit Ready claim
+**Policy:** DEC-069 | evidence integrity | test-first implementation | no unsupported acceptance claim
+**Authority:** Agent under Fully Agentic mode; executable PostgreSQL evidence supersedes the prior mixed-run report
+**Accountability:** Solo Orchestrator obtains architecture review before changing migration or role authority, preserves the failing executable vector, and corrects issue #84 and published evidence
+**Result:** The `audit_runtime` wrapper preflight sees its live backend tuple, but `audit_append` executes as `audit_writer_owner` and cannot see the required `pg_stat_activity` fields; PostgreSQL returns `ANALYTICS_ACCESS_DENIAL_AUDIT_FAILED`; readiness units remain 19/19 but do not substitute for the failed live path
+**Artifacts:** DEC-069 | REV-164 INVALIDATED | GitHub issue #84
+**authorization-boundary:** CT-DB-001K reopened; migration/role-authority remediation requires review; A-J, PT-E2E-001, WP-8 closure, DP-33, Ring 3, release, deployment, and production remain unauthorized or incomplete
+
+---
+
+## 2026-09-21 | WP-8 denial verifier remediation proposed | Ring-2 | @solo-orchestrator
+
+**Type:** REFORECAST
+**Decision:** DEC-070 proposes additive migration 0007 with a dedicated boolean-only backend verifier owner rather than granting broad statistics authority to the audit writer
+**Policy:** DEC-069 | CT-DB-001D/K | least privilege | Architect Reviewer CONDITIONAL recommendation | Fully Agentic decision protocol
+**Authority:** Agent under Fully Agentic mode; DP-1, DP-25, and DP-26 are not implicated
+**Accountability:** Solo Orchestrator obtains Plan review before implementation, preserves the failing isolated vector, and requires full migration/manifest/security revalidation
+**Result:** Initial 2.5-hour plan failed review; revised 6.0-hour plan adds exact authority edges, transactional clean/upgrade provisioning, migration rollback/replay, all sequence-7 surfaces, and a complete security matrix; no migration, role, manifest, Domain, Application, route, dependency, or service edit made at this checkpoint
+**Artifacts:** DEC-070 | docs/Planning/tasks/wp-8-denial-verifier-remediation-plan.md | GitHub issue #84
+**authorization-boundary:** Planning and review only; CT-DB-001K, A-J, PT-E2E-001, WP-8, DP-33, Ring 3, release, deployment, and production remain open or unauthorized
+
+---
+
+## 2026-09-21 | WP-8 denial verifier remediation plan accepted | Ring-2 | @solo-orchestrator
+
+**Type:** PLAN-REVIEW
+**Decision:** Approve DEC-070's six-hour additive migration plan after resolving deployment graph, upgrade preflight, schema authority, rollback/replay, security-matrix, and helper grant ownership findings
+**Policy:** DEC-070 | test-first development | alternate-model Plan review | least privilege
+**Authority:** Agent under Fully Agentic mode; Plan Reviewer final PASS with no Critical or Major findings
+**Accountability:** Solo Orchestrator starts with failing provisioner/role tests, performs no unreviewed migration shortcut, and retains all isolated PostgreSQL and independent review gates
+**Result:** Plan PASS; implementation not started; REV-164 remains invalidated and CT-DB-001K remains open
+**Artifacts:** DEC-070 | docs/Planning/tasks/wp-8-denial-verifier-remediation-plan.md | GitHub issue #84
+**authorization-boundary:** DEC-070 implementation only; CT-DB-001K acceptance, A-J, PT-E2E-001, WP-8 closure, DP-33, Ring 3, release, deployment, and production remain open or unauthorized
+
+---

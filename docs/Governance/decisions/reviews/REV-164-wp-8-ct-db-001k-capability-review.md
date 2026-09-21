@@ -2,7 +2,9 @@
 
 **Date:** 2026-09-21
 **Reviewers:** Code Reviewer agent; Security Reviewer agent
-**Disposition:** PASS
+**Disposition:** INVALIDATED
+
+**Correction:** A later clean isolated PostgreSQL run proved the denial-audit capability returns `ANALYTICS_ACCESS_DENIAL_AUDIT_FAILED`. The earlier PASS was based on mixed-run evidence that did not isolate the role-correct path. Because `audit_append` executes as `audit_writer_owner`, PostgreSQL redacts the `audit_runtime` backend fields used by its `pg_stat_activity` correlation check. CT-DB-001K is reopened pending reviewed migration/role-authority remediation.
 
 The completed CT-DB-001K readiness slice uses injected factories for actual authenticated `audit_runtime` and `projection_runtime` connections. It does not add credentials, environment variables, migrations, runtime dependencies, routes, services, or Application contracts.
 

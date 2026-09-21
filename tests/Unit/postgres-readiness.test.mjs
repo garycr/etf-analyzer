@@ -275,6 +275,8 @@ test("CT-DB-001K denial-audit probe uses the authenticated audit role and always
     [],
     [{ session_user: "audit_runtime" }],
     [{ application_name: "etf-denial:00000000000000000000000000000000" }],
+    [],
+    [{ matching_backend_count: 1 }],
     [{ appended: true }],
     [],
   ]);
@@ -290,7 +292,8 @@ test("CT-DB-001K denial-audit probe uses the authenticated audit role and always
   );
   assert.match(runtimeClient.calls[0].sql, /^BEGIN$/u);
   assert.match(runtimeClient.calls[3].sql, /set_config\('application_name'/u);
-  assert.match(runtimeClient.calls[4].sql, /etf\.audit_append/u);
+  assert.match(runtimeClient.calls[5].sql, /pg_stat_activity/u);
+  assert.match(runtimeClient.calls[6].sql, /etf\.audit_append/u);
   assert.match(runtimeClient.calls.at(-1).sql, /^ROLLBACK$/u);
   assert.equal(runtimeClient.closed, true);
 });
@@ -317,6 +320,8 @@ test("CT-DB-001K denial-audit probe fails readiness when rollback or close fails
       [],
       [{ session_user: "audit_runtime" }],
       [{ application_name: "etf-denial:00000000000000000000000000000000" }],
+      [],
+      [{ matching_backend_count: 1 }],
       [{ appended: true }],
       failedOperation === "rollback" ? new Error("rollback failed") : [],
     ]);
@@ -345,12 +350,14 @@ test("CT-DB-001K denial-audit defaults are unique and establish bounded transact
       [],
       [{ session_user: "audit_runtime" }],
       [{ application_name: "ignored" }],
+      [],
+      [{ matching_backend_count: 1 }],
       [{ appended: true }],
       [],
     ]);
     await checkDenialAuditCapability(async () => runtimeClient);
     assert.match(runtimeClient.calls[1].sql, /lock_timeout/u);
-    parameterSets.push(runtimeClient.calls[4].parameters);
+    parameterSets.push(runtimeClient.calls[6].parameters);
   }
   assert.notDeepEqual(parameterSets[0], parameterSets[1]);
 });

@@ -2995,3 +2995,16 @@
 **authorization-boundary:** PT-UI-007 checkpoint only; no brokerage, external account, WP-7 closure, WP-8, public ingress, deployment, release, or production action
 
 ---
+
+## 2026-09-21 | WP-7 paper transition accessibility accepted | Ring-2 | @solo-orchestrator
+
+**Type:** IMPLEMENTATION-CHECKPOINT
+**Decision:** DEC-065 accepts PT-UI-008 with explicit Draft confirmation, click-time OT-02 command construction, a pre-confirmation in-flight guard, canonical owner-error announcements, authoritative reload outcomes, and bounded redacted failure handling
+**Policy:** DEC-028; DEC-042; DEC-059..064; approved WP-7 plan; closed Application API; explicit paper confirmation and Application error contracts; test-first development; independent code and security review
+**Authority:** Agent under Fully Agentic mode following the Workspace Owner directive to continue; REV-148 Code PASS and REV-149 Security PASS
+**Accountability:** Solo Orchestrator continues PT-UI-009, retains real-browser lifecycle/keyboard/axe/viewport evidence there, requires PostgreSQL zero-skip evidence before WP-7 closure, and preserves the no-brokerage boundary
+**Result:** Focused PT-UI-008 1/1 and workbench regression 26/26 PASS; aggregate 447 discovered, 392 passed, 0 failed, 55 PostgreSQL-environment skips; build, lint, diagnostics, audit, and diff integrity pass
+**Artifacts:** DEC-065 | REV-148 | REV-149 | docs/artifacts/gate-evidence/wp-7-paper-transition-accessibility.md | GitHub issue #83
+**authorization-boundary:** PT-UI-008 checkpoint only; no brokerage, external account, WP-7 closure, WP-8, public ingress, deployment, release, or production action
+
+---

@@ -243,8 +243,9 @@ function renderPaperOrder(order: WorkbenchPaperOrder | undefined): string {
             <time datetime="${escapeHtml(transition.occurredAt)}">${escapeHtml(transition.occurredAt)}</time>
           </li>`).join("")}
         </ol>`;
-  return `<div id="paper-order-details" data-order-id="${escapeHtml(order.orderId)}" data-version="${escapeHtml(order.aggregateVersion)}">
-        <p role="status">Order status: <span id="order-status" data-state="${escapeHtml(order.state)}">${escapeHtml(order.statePresentation.visibleText)}</span></p>
+    return `<div id="paper-order-details" data-order-id="${escapeHtml(order.orderId)}" data-version="${escapeHtml(order.aggregateVersion)}">
+      <p role="status">Order status: <span id="order-status" tabindex="-1" data-state="${escapeHtml(order.state)}">${escapeHtml(order.statePresentation.visibleText)}</span></p>
+      <p id="paper-order-status" role="status" aria-live="polite"></p>
         <dl>
           <dt>Instrument</dt><dd>${escapeHtml(order.instrumentId)}</dd>
           <dt>Side</dt><dd>${escapeHtml(order.side)}</dd>

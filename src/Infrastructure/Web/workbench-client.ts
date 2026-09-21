@@ -12,7 +12,7 @@ interface WatchlistState {
 
 export interface WorkbenchClientDegradedEvent {
   readonly code: "WORKBENCH_CLIENT_DEGRADED";
-  readonly stage: "Watchlist";
+  readonly stage: "Watchlist" | "PaperOrder";
   readonly reason: "TransportFailed" | "ReloadFailed";
 }
 
@@ -37,6 +37,131 @@ export interface WatchlistMutationDependencies {
   readonly reload: (message: string) => Promise<void>;
   readonly alert: (message: string) => void;
   readonly degraded?: (event: WorkbenchClientDegradedEvent) => void;
+}
+
+export interface PaperOrderTransitionRequest {
+  readonly method: "POST";
+  readonly path: string;
+  readonly body: Readonly<{
+    transitionCommandId: string;
+    expectedVersion: string;
+    transition: "OT-02";
+    transitionPayload: Readonly<{
+      confirmation: Readonly<{
+        actorId: "local-user";
+        confirmedAt: string;
+        confirmationText: "Submit paper order";
+      }>;
+    }>;
+  }>;
+}
+
+export interface PaperOrderTransitionDisposition {
+  readonly action: "Reload" | "Alert";
+  readonly message: string;
+}
+
+export interface PaperOrderTransitionDependencies {
+  readonly send: (
+    request: PaperOrderTransitionRequest,
+  ) => Promise<{
+    readonly status: number;
+    readonly result: Readonly<Record<string, unknown>>;
+  }>;
+  readonly reload: (message: string) => Promise<void>;
+  readonly alert: (message: string) => void;
+  readonly degraded?: (event: WorkbenchClientDegradedEvent) => void;
+}
+
+export function buildPaperOrderSubmission(
+  orderId: string,
+  expectedVersion: string,
+  transitionCommandId: string,
+  confirmedAt: string,
+): PaperOrderTransitionRequest {
+  return {
+    method: "POST",
+    path: `/api/v1/paper-orders/${encodeURIComponent(orderId)}/transitions`,
+    body: {
+      transitionCommandId,
+      expectedVersion,
+      transition: "OT-02",
+      transitionPayload: {
+        confirmation: {
+          actorId: "local-user",
+          confirmedAt,
+          confirmationText: "Submit paper order",
+        },
+      },
+    },
+  };
+}
+
+const authoritativePaperOrderErrors: Readonly<Record<string, string>> = Object.freeze({
+  ORDER_INVALID_TRANSITION: "The paper order transition is not allowed.",
+  ORDER_GUARD_FAILED: "The paper order transition guard failed.",
+  ORDER_TERMINAL_STATE: "The paper order is already in a terminal state.",
+  ORDER_VERSION_CONFLICT: "The paper order changed. Reload the current order before retrying.",
+});
+
+export function classifyPaperOrderTransition(
+  status: number,
+  result: Readonly<Record<string, unknown>>,
+): PaperOrderTransitionDisposition {
+  if (result.outcome === "Succeeded") {
+    return { action: "Reload", message: "Paper order submitted. Reloaded the authoritative order." };
+  }
+  const error = result.error;
+  const errorRecord = typeof error === "object" && error !== null && !Array.isArray(error)
+    ? error as Readonly<Record<string, unknown>>
+    : undefined;
+  const code = typeof errorRecord?.code === "string" ? errorRecord.code : undefined;
+  const canonicalMessage = code === undefined ? undefined : authoritativePaperOrderErrors[code];
+  return canonicalMessage !== undefined
+    ? { action: "Reload", message: `${canonicalMessage} Reloaded the authoritative order.` }
+    : { action: "Alert", message: "The paper order could not be submitted." };
+}
+
+export async function executePaperOrderTransition(
+  request: PaperOrderTransitionRequest,
+  dependencies: PaperOrderTransitionDependencies,
+): Promise<boolean> {
+  let response: {
+    readonly status: number;
+    readonly result: Readonly<Record<string, unknown>>;
+  };
+  try {
+    response = await dependencies.send(request);
+  } catch {
+    dependencies.degraded?.({
+      code: "WORKBENCH_CLIENT_DEGRADED",
+      stage: "PaperOrder",
+      reason: "TransportFailed",
+    });
+    dependencies.alert(
+      "The paper order could not be submitted. Retry the request or review local diagnostics.",
+    );
+    return false;
+  }
+  const disposition = classifyPaperOrderTransition(response.status, response.result);
+  if (disposition.action === "Reload") {
+    try {
+      await dependencies.reload(disposition.message);
+    } catch {
+      dependencies.degraded?.({
+        code: "WORKBENCH_CLIENT_DEGRADED",
+        stage: "PaperOrder",
+        reason: "ReloadFailed",
+      });
+      dependencies.alert(
+        "The paper order could not be reloaded. Retry the request or review local diagnostics.",
+      );
+      return false;
+    }
+    return response.result.outcome === "Succeeded";
+  }
+  dependencies.alert(disposition.message);
+  return false;
 }
 
 export function buildWatchlistPut(
@@ -282,6 +407,83 @@ function announce(message: string, error = false): void {
   status.textContent = message;
 }
 
+function announcePaperOrder(message: string, error = false): void {
+  const status = document.querySelector<HTMLElement>("#paper-order-status");
+  if (status === null) return;
+  status.setAttribute("role", error ? "alert" : "status");
+  status.setAttribute("aria-live", error ? "assertive" : "polite");
+  status.textContent = message;
+}
+
+const paperOrderStatusKey = "workbench:paper-order-status";
+let paperOrderSubmissionInFlight = false;
+
+async function reloadPaperOrder(message: string): Promise<void> {
+  sessionStorage.setItem(paperOrderStatusKey, message);
+  window.location.reload();
+}
+
+function restorePaperOrderOutcome(): void {
+  const message = sessionStorage.getItem(paperOrderStatusKey);
+  if (message === null) return;
+  sessionStorage.removeItem(paperOrderStatusKey);
+  announcePaperOrder(message);
+  document.querySelector<HTMLElement>("#order-status")?.focus();
+}
+
+async function submitPaperOrder(button: HTMLButtonElement): Promise<void> {
+  if (paperOrderSubmissionInFlight) return;
+  paperOrderSubmissionInFlight = true;
+  try {
+    if (!window.confirm("Submit this hypothetical paper order?")) {
+      announcePaperOrder("Paper order submission canceled.");
+      button.focus();
+      return;
+    }
+    const details = button.closest<HTMLElement>("#paper-order-details");
+    const orderId = details?.dataset.orderId;
+    const expectedVersion = details?.dataset.version;
+    if (orderId === undefined || expectedVersion === undefined) {
+      announcePaperOrder(
+        "The paper order could not be submitted. Reload the page and try again.",
+        true,
+      );
+      button.focus();
+      return;
+    }
+    const request = buildPaperOrderSubmission(
+      orderId,
+      expectedVersion,
+      crypto.randomUUID(),
+      new Date().toISOString(),
+    );
+    announcePaperOrder("Submitting paper order.");
+    button.disabled = true;
+    await executePaperOrderTransition(request, {
+      send: async (command) => {
+        const { response, result } = await applicationRequest(
+          command.method,
+          command.path,
+          command.body,
+        );
+        return { status: response.status, result };
+      },
+      reload: reloadPaperOrder,
+      alert: (message) => {
+        announcePaperOrder(message, true);
+        button.focus();
+      },
+      degraded: (event) => document.dispatchEvent(new CustomEvent(
+        "workbench:degraded",
+        { detail: event },
+      )),
+    });
+  } finally {
+    paperOrderSubmissionInFlight = false;
+    button.disabled = false;
+  }
+}
+
 async function loadWatchlist(message: string): Promise<void> {
   const { result } = await applicationRequest("GET", "/api/v1/watchlist");
   renderWatchlist(admitWatchlistState(result));
@@ -364,6 +566,8 @@ function orderedInstrumentIds(): string[] {
 }
 
 function startWorkbenchClient(): void {
+  restorePaperOrderOutcome();
+
   const form = document.querySelector<HTMLFormElement>("#watchlist-form");
   form?.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -408,6 +612,15 @@ function startWorkbenchClient(): void {
       identities,
       currentVersion(),
     ), { instrumentId, action });
+  });
+
+  document.querySelector("#paper-order-details")?.addEventListener("click", (event) => {
+    const button = event.target instanceof Element
+      ? event.target.closest<HTMLButtonElement>(
+        "button[data-operation='PaperOrderTransition'][data-requires-confirmation='true']",
+      )
+      : null;
+    if (button !== null) void submitPaperOrder(button);
   });
 }
 

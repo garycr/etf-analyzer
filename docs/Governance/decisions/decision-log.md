@@ -30,6 +30,7 @@
 | DEC-066 | 2026-09-21 | Browser accessibility | Accept PT-ANA-A11Y-001/PT-UI-009 real-browser accessibility, keyboard, focus, and reflow evidence | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-067 | 2026-09-21 | Workbench security and performance | Accept PT-UI-010 loopback security, local performance, caching, and redaction evidence | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-068 | 2026-09-21 | Package closure | Approve WP-7 closure; make WP-8 eligible as the next sequential package without starting it | Workspace Owner | Solo Orchestrator | Approved |
+| DEC-069 | 2026-09-21 | Package activation | Activate WP-8 integration and Ring 2 evidence work under issue #84 | Agent (Fully Agentic) | Solo Orchestrator | Active |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -68,6 +69,21 @@
 ---
 
 ## Decision Records
+
+### DEC-069: Activate WP-8 Integration And Ring 2 Evidence
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-069 |
+| **Date** | 2026-09-21 |
+| **Category** | Package activation |
+| **Decision** | Activate WP-8 as the only Ring 2 package; close the two carried REV-100 API hardening Minors first, then prove integrated CT-DB-001A..L and the clean fixture-to-analysis-to-confirmed-paper-ledger workflow before DP-33 and Ring 2 closure |
+| **Policy** | DEC-023; DEC-028; DEC-030; DEC-039; DEC-068; approved sequential WBS; test-first development; architecture, code, security, and decision review |
+| **Authority** | Agent under Fully Agentic mode following the Workspace Owner directive to continue after WP-7 approval |
+| **Accountability** | Solo Orchestrator keeps one sequential stream, preserves the fixture-only/loopback/no-brokerage boundary, completes DP-33 gap review and stops for Workspace Owner disposition before Ring 3 |
+| **Status** | Active; issue #84 created; REV-157 Plan PASS; REV-158 Architecture PASS; CT-API-001M/N pass; REV-159 Code PASS; REV-160 Security PASS; CT-DB-001L passes under REV-161; complete CT-DB-001K passes under REV-164 after resolving the REV-163 reforecast condition; integrated A-J and end-to-end evidence remain pending |
+
+---
 
 ### DEC-068: Approve WP-7 Local Browser Workbench
 

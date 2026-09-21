@@ -6,7 +6,7 @@
 |------|------|-------|--------|------------|-------|--------------|
 | Ring-0 | Intake | Conditional PASS approved at DP-5 | Closed | 100% | Solo Orchestrator | 2026-09-10 |
 | Ring-1 | Plan/WBS/Estimate | Workspace Owner approved simplified Tier 1 exit package; DEC-023 | Closed | 100% | Solo Orchestrator | 2026-09-11 |
-| Ring-2 | Dev/ManageDev | WP-1 through WP-7 complete; WP-8 eligible but not started | Active | 87.5% | Solo Orchestrator | 2026-09-21 |
+| Ring-2 | Dev/ManageDev | WP-1 through WP-7 complete; WP-8 active under DEC-069 | Active | 87.5% | Solo Orchestrator | 2026-09-21 |
 | Ring-3 | IV&V | — | — | — | — | — |
 | Ring-4 | Release Mgmt | — | — | — | — | — |
 | Ring-5 | Staged for Prod | — | — | — | — | — |

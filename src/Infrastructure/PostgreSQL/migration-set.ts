@@ -20,8 +20,19 @@ export interface PreparedMigration extends MigrationArtifact {
 }
 
 const productExtensionPattern = /\bCREATE\s+EXTENSION\b/iu;
-const durableHandoffObjectPattern =
-  /\bCREATE\s+(?:TABLE|FUNCTION|TRIGGER|INDEX|VIEW)\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:[a-z_][a-z0-9_]*\.)?[a-z0-9_]*(?:outbox|event|queue|schedule|(?<!re)lease|worker_inbox|notification|delayed_consumer)[a-z0-9_]*/iu;
+const durableHandoffNamePattern =
+  /(?:outbox|event|queue|schedule|(?<!re)lease|worker_?inbox|notification|delayed_?consumer)/iu;
+const createdObjectNamePattern =
+  /\bCREATE\s+(?:(?:OR\s+REPLACE)\s+)?(?:UNIQUE\s+)?(?:TABLE|FUNCTION|TRIGGER|INDEX|VIEW)\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:[a-z_][a-z0-9_]*\.)?([a-z_][a-z0-9_]*)/giu;
+
+export function isDurableHandoffObjectName(objectName: string): boolean {
+  return durableHandoffNamePattern.test(objectName);
+}
+
+function containsDurableHandoffObject(sql: string): boolean {
+  return [...sql.matchAll(createdObjectNamePattern)]
+    .some((match) => isDurableHandoffObjectName(match[1] ?? ""));
+}
 
 export function validateMigrationArtifact(artifact: MigrationArtifact): void {
   if (expectedMigrationIds[artifact.sequence - 1] !== artifact.migrationId) {
@@ -32,7 +43,7 @@ export function validateMigrationArtifact(artifact: MigrationArtifact): void {
       `CT-DB-001A prohibits product-created extensions in ${artifact.migrationId}`,
     );
   }
-  if (durableHandoffObjectPattern.test(artifact.sql)) {
+  if (containsDurableHandoffObject(artifact.sql)) {
     throw new Error(
       `CT-DB-001L prohibits durable handoff objects in ${artifact.migrationId}`,
     );

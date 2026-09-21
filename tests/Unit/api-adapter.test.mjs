@@ -153,6 +153,41 @@ test("CT-API-001K rejects protocol defects before application dispatch", () => {
   assert.equal(dispatchCount, 0);
 });
 
+test("CT-API-001N explicitly rejects non-record top-level payloads", () => {
+  let dispatchCount = 0;
+  const headers = {
+    accept: "application/json",
+    "content-type": "application/json",
+    host: "127.0.0.1:4173",
+    origin: "http://127.0.0.1:5173",
+    "x-request-id": requestId,
+    "x-correlation-id": correlationId,
+    "x-requested-at": requestedAt,
+    "idempotency-key": commandId,
+  };
+
+  for (const payload of [null, [], ["SPY"], "SPY", 1, true]) {
+    const response = adaptApiRequest({
+      method: "PUT",
+      target: "/api/v1/watchlist/order",
+      headers,
+      body: new TextEncoder().encode(JSON.stringify(payload)),
+    }, config, () => {
+      dispatchCount += 1;
+      return { operation: "WatchlistReorder", outcome: "Succeeded" };
+    });
+
+    assert.equal(response.status, 400);
+    assert.deepEqual(JSON.parse(response.body), {
+      type: "malformed-json",
+      title: "Malformed JSON",
+      status: 400,
+      detail: "The request payload is malformed or does not match its transport fields.",
+    });
+  }
+  assert.equal(dispatchCount, 0);
+});
+
 test("CT-API-001E/F closes success and public failure HTTP statuses", () => {
   const created = new Set([
     "FixtureIngestionStart",
@@ -296,6 +331,19 @@ test("CT-API-001L rejects public/wildcard configuration and exposes no forbidden
       /127\.0\.0\.1 HTTP origins/,
     );
   }
+  for (const requestTimeoutMs of [99, 30_001, 100.5, Number.NaN]) {
+    assert.throws(
+      () => startLoopbackApiServer({ ...config, requestTimeoutMs }, () => ({})),
+      /request timeout must be an integer from 100 through 30000 milliseconds/,
+    );
+  }
+  const server = await startLoopbackApiServer({ ...config, port: 0 }, () => ({}));
+  await new Promise((resolve, reject) => {
+    server.close((error) => error ? reject(error) : resolve());
+  });
+  assert.equal(server.requestTimeout, 5_000);
+  assert.equal(server.headersTimeout, 5_000);
+  assert.equal(server.timeout, 5_000);
   assert.equal(
     apiRoutes.some(({ operation }) => /batch|refresh|repair|cancel|provider|broker|event|stream|admin/i.test(operation)),
     false,

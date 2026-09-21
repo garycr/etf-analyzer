@@ -7,6 +7,7 @@ import type {
 } from "./migration-runner.js";
 import { productRoles } from "./role-bootstrap.js";
 import {
+  buildCurrentSchemaManifest,
   buildSchemaManifest,
   type ManifestGrant,
   type ManifestObjectSource,
@@ -174,6 +175,14 @@ export async function collectPostgresManifestGrants(
 export async function projectPostgresSchemaManifest(
   client: ManifestClient,
   prospectiveMigration: ManifestMigration,
+): Promise<string> {
+  return projectPostgresSchemaManifestInternal(client, prospectiveMigration, false);
+}
+
+async function projectPostgresSchemaManifestInternal(
+  client: ManifestClient,
+  prospectiveMigration: ManifestMigration,
+  currentState: boolean,
 ): Promise<string> {
   if (prospectiveMigration.sequence < 1 || prospectiveMigration.sequence > 6) {
     throw new Error("APPLICATION_MIGRATIONS_INCOMPLETE");
@@ -606,8 +615,7 @@ export async function projectPostgresSchemaManifest(
     inheritOption: requireBoolean(row.inherit_option),
     setOption: requireBoolean(row.set_option),
   }));
-  return buildSchemaManifest(
-    {
+  const source = {
       systemExtensions: extensions.rows.map((row) => ({
         name: requireString(row.name),
         version: requireString(row.version),
@@ -620,7 +628,18 @@ export async function projectPostgresSchemaManifest(
       objects,
       roleMemberships,
       grants,
-    },
-    prospectiveMigration,
-  );
+    };
+  return currentState
+    ? buildCurrentSchemaManifest(source)
+    : buildSchemaManifest(source, prospectiveMigration);
+}
+
+export async function projectCurrentPostgresSchemaManifest(
+  client: ManifestClient,
+): Promise<string> {
+  return projectPostgresSchemaManifestInternal(client, {
+    sequence: 6,
+    migrationId: "0006-controlled-access",
+    contentHash: "0".repeat(64),
+  }, true);
 }

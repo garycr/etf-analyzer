@@ -58,8 +58,16 @@ export const apiRoutes: readonly ApiRoute[] = Object.freeze([
 
 export interface ApiAdapterConfig {
   readonly allowedOrigins: readonly string[];
+  readonly audit?: (event: ApiAuditEvent) => void;
   readonly bodyLimitBytes: number;
   readonly port: number;
+  readonly requestTimeoutMs?: number;
+}
+
+export interface ApiAuditEvent {
+  readonly code: "API_REQUEST_TIMEOUT";
+  readonly stage: "RequestBody";
+  readonly reason: "DeadlineExceeded";
 }
 
 export interface ApiRequest {
@@ -119,6 +127,9 @@ const workbenchSecurityHeaders = Object.freeze({
   "referrer-policy": "no-referrer",
   "x-content-type-options": "nosniff",
 });
+const defaultRequestTimeoutMs = 5_000;
+const minimumRequestTimeoutMs = 100;
+const maximumRequestTimeoutMs = 30_000;
 
 const codesByStatus = Object.freeze({
   400: "APPLICATION_OPERATION_UNKNOWN,APPLICATION_REQUEST_INVALID,FIXTURE_MANIFEST_INVALID,FIXTURE_FILE_INTEGRITY_FAILED,FIXTURE_DATASET_HASH_MISMATCH,FIXTURE_TEMPORAL_INVALID,FIXTURE_DECIMAL_INVALID,FIXTURE_PROVENANCE_INVALID,FIXTURE_UNDECLARED_INPUT,FIXTURE_REQUIRED_MISSING,ANALYTICS_NUMERIC_CLASS_INVALID,ORDER_UNKNOWN_STATE,LEDGER_INVALID_DECIMAL,LEDGER_EXCESS_SCALE",
@@ -227,6 +238,17 @@ function validateConfig(config: ApiAdapterConfig): void {
   }
   if (!Number.isSafeInteger(config.bodyLimitBytes) || config.bodyLimitBytes <= 0) {
     throw new TypeError("API body limit must be a positive safe integer");
+  }
+  if (
+    config.requestTimeoutMs !== undefined &&
+    (!Number.isSafeInteger(config.requestTimeoutMs) ||
+      config.requestTimeoutMs < minimumRequestTimeoutMs ||
+      config.requestTimeoutMs > maximumRequestTimeoutMs)
+  ) {
+    throw new TypeError("API request timeout must be an integer from 100 through 30000 milliseconds");
+  }
+  if (config.audit !== undefined && typeof config.audit !== "function") {
+    throw new TypeError("API audit sink must be a function");
   }
   if (
     config.allowedOrigins.length === 0 ||
@@ -381,16 +403,71 @@ export function startLoopbackApiServer(
   provideWorkbenchDocument: WorkbenchDocumentProvider = () => ({ readiness: "Ready" }),
 ): Promise<Server> {
   validateConfig(config);
+  const requestTimeoutMs = config.requestTimeoutMs ?? defaultRequestTimeoutMs;
+  const effectiveConfig = Object.freeze({ ...config, requestTimeoutMs });
+  const socketDeadlines = new WeakMap<object, Readonly<{
+    expiresAt: number;
+    timer: NodeJS.Timeout;
+  }>>();
+  const clearSocketDeadline = (socket: object) => {
+    const deadline = socketDeadlines.get(socket);
+    if (deadline !== undefined) clearTimeout(deadline.timer);
+    socketDeadlines.delete(socket);
+    return deadline?.expiresAt;
+  };
+  const armSocketDeadline = (socket: import("node:net").Socket) => {
+    clearSocketDeadline(socket);
+    const deadline = setTimeout(() => socket.destroy(), requestTimeoutMs);
+    socketDeadlines.set(socket, Object.freeze({
+      expiresAt: Date.now() + requestTimeoutMs,
+      timer: deadline,
+    }));
+  };
   const server = createServer((request, response) => {
+    const expiresAt = clearSocketDeadline(request.socket) ?? Date.now() + requestTimeoutMs;
     const localAddress = request.socket.address();
     const localPort = typeof localAddress === "object" && "port" in localAddress
       ? localAddress.port
-      : config.port;
-    const requestConfig = Object.freeze({ ...config, port: localPort });
+      : effectiveConfig.port;
+    const requestConfig = Object.freeze({ ...effectiveConfig, port: localPort });
+    let terminal = false;
+    const requestDeadline = setTimeout(() => {
+      if (terminal) return;
+      terminal = true;
+      try {
+        requestConfig.audit?.(Object.freeze({
+          code: "API_REQUEST_TIMEOUT",
+          stage: "RequestBody",
+          reason: "DeadlineExceeded",
+        }));
+      } catch {
+      }
+      request.pause();
+      if (!response.headersSent && !response.writableEnded && !response.destroyed) {
+        response.shouldKeepAlive = false;
+        response.setHeader("connection", "close");
+        writeApiResponse(response, problem(
+          408,
+          "request-timeout",
+          "Request Timeout",
+          "The request body was not completed within the configured timeout.",
+          allowedOriginForHeaders(request.headers, requestConfig),
+        ));
+      } else {
+        request.socket.destroy();
+      }
+    }, Math.max(0, expiresAt - Date.now()));
+    const terminateWithoutDispatch = () => {
+      if (terminal) return false;
+      terminal = true;
+      clearTimeout(requestDeadline);
+      return true;
+    };
     if (
       request.method === "GET" &&
       parseTarget(request.url ?? "")?.pathname === "/workbench.js"
     ) {
+      terminateWithoutDispatch();
       request.resume();
       writeApiResponse(response, workbenchScriptResponse(request.headers, requestConfig));
       return;
@@ -399,6 +476,7 @@ export function startLoopbackApiServer(
       request.method === "GET" &&
       parseTarget(request.url ?? "")?.pathname === "/"
     ) {
+      terminateWithoutDispatch();
       request.resume();
       try {
         writeApiResponse(response, workbenchResponse(
@@ -412,6 +490,7 @@ export function startLoopbackApiServer(
       return;
     }
     if (request.method === "OPTIONS") {
+      terminateWithoutDispatch();
       request.resume();
       try {
         writeApiResponse(response, preflightResponse(request.headers, requestConfig));
@@ -427,10 +506,11 @@ export function startLoopbackApiServer(
     let length = 0;
     let tooLarge = false;
     request.on("error", () => {
-      if (!response.headersSent) writeApiResponse(response, internalServerError(
+      if (terminateWithoutDispatch() && !response.headersSent) writeApiResponse(response, internalServerError(
         allowedOriginForHeaders(request.headers, requestConfig),
       ));
     });
+    request.on("aborted", terminateWithoutDispatch);
     request.on("data", (chunk: Buffer) => {
       length += chunk.length;
       if (length > config.bodyLimitBytes) {
@@ -440,6 +520,7 @@ export function startLoopbackApiServer(
       chunks.push(chunk);
     });
     request.on("end", () => {
+      if (!terminateWithoutDispatch()) return;
       if (tooLarge) {
         writeApiResponse(response, problem(
           413,
@@ -468,6 +549,19 @@ export function startLoopbackApiServer(
           allowedOriginForHeaders(request.headers, requestConfig),
         ));
       }
+    });
+  });
+  server.requestTimeout = requestTimeoutMs;
+  server.headersTimeout = requestTimeoutMs;
+  server.timeout = requestTimeoutMs;
+  server.on("connection", (socket) => {
+    armSocketDeadline(socket);
+    socket.once("close", () => clearSocketDeadline(socket));
+  });
+  server.on("request", (_request, response) => {
+    response.once("finish", () => {
+      const socket = response.socket;
+      if (socket !== null && !socket.destroyed) armSocketDeadline(socket);
     });
   });
 
@@ -504,6 +598,12 @@ function mergeField(
   return true;
 }
 
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
 function buildPayload(
   routeDefinition: ApiRoute,
   target: URL,
@@ -513,7 +613,9 @@ function buildPayload(
   if (bodyOperations.has(routeDefinition.operation)) {
     try {
       const bodyText = new TextDecoder("utf-8", { fatal: true }).decode(body);
-      payload = { ...parseApplicationPayload(bodyText) };
+      const parsedPayload: unknown = parseApplicationPayload(bodyText);
+      if (!isPlainRecord(parsedPayload)) return undefined;
+      payload = { ...parsedPayload };
     } catch {
       return undefined;
     }

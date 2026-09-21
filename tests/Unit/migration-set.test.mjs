@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   expectedMigrationIds,
+  isDurableHandoffObjectName,
   prepareMigrationSet,
 } from "../../dist/Infrastructure/PostgreSQL/migration-set.js";
 
@@ -10,6 +11,23 @@ const migrationSql = expectedMigrationIds.map(
   (migrationId, index) =>
     `CREATE TABLE etf.table_${index + 1} (id bigint PRIMARY KEY);\n`,
 );
+const prohibitedObjectNames = [
+  "outbox",
+  "eventoutbox",
+  "domain_event_log",
+  "workqueue",
+  "queue_items",
+  "scheduler",
+  "nightly_schedule",
+  "lease",
+  "processing_lease_rows",
+  "workerinbox",
+  "worker_inbox_items",
+  "notificationbox",
+  "user_notifications",
+  "delayedconsumer",
+  "delayed_consumer_state",
+];
 
 test("migration preflight publishes ordered exact-byte hashes", () => {
   const prepared = prepareMigrationSet(
@@ -76,6 +94,49 @@ test("migration preflight rejects extensions and durable handoff objects", () =>
 
       assert.throws(() => prepareMigrationSet(artifacts), expectedError);
     }
+  }
+  for (const [prefix, objectName, suffix] of [
+    ["CREATE TABLE etf.", prohibitedObjectNames[0], " (id bigint);"],
+    ["CREATE OR REPLACE FUNCTION etf.", prohibitedObjectNames[1], "() RETURNS void LANGUAGE sql AS 'SELECT';"],
+    ["CREATE TRIGGER ", prohibitedObjectNames[2], " BEFORE INSERT ON etf.table_1 EXECUTE FUNCTION etf.fn();"],
+    ["CREATE UNIQUE INDEX ", prohibitedObjectNames[3], " ON etf.table_1 (id);"],
+    ["CREATE VIEW etf.", prohibitedObjectNames[4], " AS SELECT 1;"],
+  ]) {
+    assert.throws(
+      () => prepareMigrationSet(expectedMigrationIds.map((migrationId, index) => ({
+        migrationId,
+        sequence: index + 1,
+        sql: index === 0 ? `${prefix}${objectName}${suffix}\n` : migrationSql[index],
+      }))),
+      /CT-DB-001L prohibits durable handoff objects/,
+    );
+  }
+  for (const objectName of prohibitedObjectNames) {
+    assert.throws(
+      () => prepareMigrationSet(expectedMigrationIds.map((migrationId, index) => ({
+        migrationId,
+        sequence: index + 1,
+        sql: index === 0
+          ? `CREATE TABLE etf.${objectName} (id bigint);\n`
+          : migrationSql[index],
+      }))),
+      /CT-DB-001L prohibits durable handoff objects/,
+      objectName,
+    );
+  }
+});
+
+test("CT-DB-001L classifies durable handoff object names without contract confounders", () => {
+  for (const objectName of prohibitedObjectNames) {
+    assert.equal(isDurableHandoffObjectName(objectName), true, objectName);
+  }
+  for (const objectName of [
+    "analytics_lifecycle_references",
+    "ix_economic_observations__release_timestamp",
+    "order_transitions",
+    "fixture_ingestion_replays",
+  ]) {
+    assert.equal(isDurableHandoffObjectName(objectName), false, objectName);
   }
 });
 

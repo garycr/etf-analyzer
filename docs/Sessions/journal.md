@@ -3047,3 +3047,68 @@
 **authorization-boundary:** WP-7 closed; WP-8 eligible but unstarted; Ring 3, brokerage, external account, live provider, public ingress, deployment, release, and production remain unauthorized
 
 ---
+
+## 2026-09-21 | WP-8 integration and Ring 2 evidence activated | Ring-2 | @solo-orchestrator
+
+**Type:** PACKAGE-ACTIVATION
+**Decision:** DEC-069 activates WP-8 as the only Ring 2 package and fixes the first test-first slice to the two carried REV-100 API hardening Minors
+**Policy:** DEC-023; DEC-028; DEC-030; DEC-039; DEC-068; approved sequential WBS; test-first development; architecture, code, security, and decision review
+**Authority:** Agent under Fully Agentic mode following the Workspace Owner directive to continue; GitHub issue #84
+**Accountability:** Solo Orchestrator preserves one sequential stream and the fixture-only/loopback/no-brokerage boundary, completes integrated evidence, and stops at DP-33 for Workspace Owner gap disposition before Ring 3
+**Result:** WP-8 plan drafted; CT-API-001M/N selected as the first discriminating slice; product code unchanged pending plan and architecture review
+**Artifacts:** DEC-069 | docs/Planning/tasks/wp-8-implementation-plan.md | GitHub issue #84
+**authorization-boundary:** WP-8 planning and reviewed implementation only; no Ring 3, baseline activation, brokerage, external account, live provider, public ingress, deployment, release, or production action
+
+---
+
+## 2026-09-21 | WP-8 API hardening accepted | Ring-2 | @solo-orchestrator
+
+**Type:** IMPLEMENTATION-CHECKPOINT
+**Decision:** Accept CT-API-001M/N after explicit plain-record admission and one absolute TCP-acceptance request deadline close the two carried REV-100 Minors
+**Policy:** DEC-069 | REV-100 | REV-157 | REV-158 | test-first implementation | zero-skipped focused evidence
+**Authority:** Agent under Fully Agentic mode following the Workspace Owner directive to continue; REV-159 Code PASS and REV-160 Security PASS
+**Accountability:** Solo Orchestrator proceeds to integrated CT-DB-001A..L evidence, preserves the closed 16-operation loopback surface, and retains the DP-33 human stop
+**Result:** Build and adapter suites 13/13 pass with zero skips; CT-API-001M total-deadline stress passes 10/10; lint and full non-browser tests pass; dependency audit reports zero vulnerabilities
+**Artifacts:** DEC-069 | REV-159 | REV-160 | GitHub issue #84
+**authorization-boundary:** API hardening checkpoint only; WP-8 and Ring 2 remain active and incomplete; no Ring 3, baseline activation, provider, brokerage, public ingress, release, deployment, or production authority
+
+---
+
+## 2026-09-21 | WP-8 CT-DB-001L structural evidence accepted | Ring-2 | @solo-orchestrator
+
+**Type:** IMPLEMENTATION-CHECKPOINT
+**Decision:** Accept CT-DB-001L after the complete live PostgreSQL catalog and migration policy prove structural absence of durable handoff objects
+**Policy:** DEC-069 | DEC-030 | CT-DB-001L | approved Ring 2 WBS CT-DB-002 guard | zero-skipped focused evidence
+**Authority:** Agent under Fully Agentic mode following the Workspace Owner directive to continue; REV-161 Code PASS
+**Accountability:** Solo Orchestrator retains CT-DB-002 as guard-triggered until a populated-baseline compatibility claim exists and proceeds to integrated CT-DB-001A..K composition evidence
+**Result:** Shared migration policy 8/8 PASS; pinned PostgreSQL 16.15/UTF8/UTC/on/C/C CT-DB-001L 1/1 PASS; zero skipped; temporary container removed
+**Artifacts:** DEC-069 | REV-161 | specs/features/PostgreSQL-Contract-Conformance.feature | GitHub issue #84
+**authorization-boundary:** CT-DB-001L structural checkpoint only; integrated A-K, PT-E2E-001, WP-8 closure, DP-33, Ring 3, baseline activation, provider, brokerage, public ingress, release, deployment, and production remain unauthorized or incomplete
+
+---
+
+## 2026-09-21 | WP-8 CT-DB-001K readiness subset accepted | Ring-2 | @solo-orchestrator
+
+**Type:** IMPLEMENTATION-CHECKPOINT
+**Decision:** Accept exact migration identity/hash, current manifest, and PUBLIC-execute readiness binding while retaining denial-audit and ledger-integrity probes as open CT-DB-001K work
+**Policy:** DEC-069 | CT-DB-001K | REV-158 | architecture gap review | test-first implementation
+**Authority:** Agent under Fully Agentic mode following the Workspace Owner directive to continue; REV-162 Code PASS
+**Accountability:** Solo Orchestrator implements role-correct rollback-only denial-audit and read-only ledger-integrity probes before claiming CT-DB-001K closure
+**Result:** Manifest/readiness units 15/15 PASS; strengthened readiness 9/9 PASS; pinned PostgreSQL 16.15/UTF8/UTC/on/C/C real projector path 1/1 PASS; zero skipped; temporary container removed
+**Artifacts:** DEC-069 | REV-162 | GitHub issue #84
+**authorization-boundary:** Partial CT-DB-001K checkpoint only; denial-audit and ledger probes, integrated A-J, PT-E2E-001, WP-8 closure, DP-33, Ring 3, baseline activation, provider, brokerage, public ingress, release, deployment, and production remain unauthorized or incomplete
+
+---
+
+## 2026-09-21 | WP-8 CT-DB-001K readiness accepted | Ring-2 | @solo-orchestrator
+
+**Type:** IMPLEMENTATION-CHECKPOINT
+**Decision:** Accept complete CT-DB-001K after real runtime-login denial-audit and ledger-integrity probes close the REV-163 architecture gap without adding credentials, migrations, dependencies, routes, services, or Application contracts
+**Policy:** DEC-069 | CT-DB-001K | REV-158 | REV-162 | REV-163 | test-first implementation | least privilege | zero-skipped pinned evidence
+**Authority:** Agent under Fully Agentic mode following the Workspace Owner directive to continue; REV-164 Code PASS and Security PASS
+**Accountability:** Solo Orchestrator proceeds to integrated CT-DB-001A..J, preserves actual `session_user`, rollback/read-only state preservation and stable redaction, and retains the DP-33 human stop
+**Result:** Readiness units 19/19 PASS; pinned PostgreSQL 16.15/UTF8/UTC/on/C/C live role path 1/1 PASS with zero skips; host aggregate 466 discovered, 410 passed, 56 expected PostgreSQL-environment skips, 0 failed; build/lint/diff/diagnostics PASS; audit zero vulnerabilities; temporary containers removed
+**Artifacts:** DEC-069 | REV-164 | docs/artifacts/gate-evidence/wp-8-ct-db-001k-readiness.md | GitHub issue #84
+**authorization-boundary:** CT-DB-001K only; integrated A-J, PT-E2E-001, remaining WP-8 evidence, WP-8 closure, DP-33, Ring 3, baseline activation, provider, brokerage, public ingress, release, deployment, and production remain unauthorized or incomplete
+
+---

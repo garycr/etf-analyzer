@@ -93,9 +93,26 @@ function validateMigrationSequence(
   }
 }
 
-export function buildSchemaManifest(
+function validateCompleteMigrationSequence(
+  migrations: readonly ManifestMigration[],
+): void {
+  if (migrations.length !== expectedMigrationIds.length) {
+    throw new Error("APPLICATION_MIGRATIONS_INCOMPLETE");
+  }
+  for (const [index, migration] of migrations.entries()) {
+    if (
+      migration.sequence !== index + 1 ||
+      migration.migrationId !== expectedMigrationIds[index] ||
+      !/^[0-9a-f]{64}$/u.test(migration.contentHash)
+    ) {
+      throw new Error("APPLICATION_MIGRATIONS_INCOMPLETE");
+    }
+  }
+}
+
+function renderSchemaManifest(
   source: SchemaManifestSource,
-  prospectiveMigration: ManifestMigration,
+  migrationSequence: readonly ManifestMigration[],
 ): string {
   if (
     source.systemExtensions.length !== 2 ||
@@ -106,8 +123,6 @@ export function buildSchemaManifest(
   ) {
     throw new Error("APPLICATION_MIGRATIONS_INCOMPLETE");
   }
-  validateMigrationSequence(source.migrationSequence, prospectiveMigration);
-
   const objects = source.objects
     .map(({ definition, ...object }) => ({
       ...object,
@@ -140,9 +155,25 @@ export function buildSchemaManifest(
   return canonicalizeJson({
     contractVersion: "1.0.0-candidate.2",
     systemExtensions: source.systemExtensions,
-    migrationSequence: [...source.migrationSequence, prospectiveMigration],
+    migrationSequence,
     objects,
     roleMemberships,
     grants,
   });
+}
+
+export function buildSchemaManifest(
+  source: SchemaManifestSource,
+  prospectiveMigration: ManifestMigration,
+): string {
+  validateMigrationSequence(source.migrationSequence, prospectiveMigration);
+  return renderSchemaManifest(
+    source,
+    [...source.migrationSequence, prospectiveMigration],
+  );
+}
+
+export function buildCurrentSchemaManifest(source: SchemaManifestSource): string {
+  validateCompleteMigrationSequence(source.migrationSequence);
+  return renderSchemaManifest(source, source.migrationSequence);
 }

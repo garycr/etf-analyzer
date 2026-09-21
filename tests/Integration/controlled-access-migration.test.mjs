@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { randomBytes } from "node:crypto";
 import test from "node:test";
 
 import pg from "pg";
@@ -7,7 +8,14 @@ import {
   executeApplicationRequestAsync,
 } from "../../dist/Application/application-boundary.js";
 import { createPostgresApplicationReplayStore } from "../../dist/Infrastructure/PostgreSQL/application-replay-store.js";
+import { isDurableHandoffObjectName } from "../../dist/Infrastructure/PostgreSQL/migration-set.js";
 import { applyMigration } from "../../dist/Infrastructure/PostgreSQL/migration-runner.js";
+import {
+  checkDenialAuditCapability,
+  checkLedgerIntegrity,
+  checkPostgresMigrationState,
+  checkPostgresSchemaManifest,
+} from "../../dist/Infrastructure/PostgreSQL/readiness.js";
 import { applicationMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/application.js";
 import { analyticsEvidenceMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/analytics-evidence.js";
 import {
@@ -134,6 +142,20 @@ async function applyCompleteMigrationSet(client) {
   }
 }
 
+function runtimeClientFactory(role, password) {
+  return async () => {
+    const runtimeUrl = new URL(connectionString);
+    runtimeUrl.username = role;
+    runtimeUrl.password = password;
+    const client = new pg.Client({ connectionString: runtimeUrl.toString() });
+    await client.connect();
+    return {
+      query: (sql, parameters) => client.query(sql, parameters),
+      close: () => client.end(),
+    };
+  };
+}
+
 async function applyMigrationsThroughAnalytics(client) {
   await client.query(createRoleBootstrapSql());
   for (const [index, migration] of [
@@ -207,6 +229,162 @@ test(
         projection_portfolio_read: true,
       });
       assert.deepEqual(await collectPostgresManifestGrants(client), grantsBeforeFailure);
+    } finally {
+      await cleanBootstrap(client).catch(() => undefined);
+      await client.query(unlockSql).catch(() => undefined);
+      await client.end();
+    }
+  },
+);
+
+test(
+  "CT-DB-001L the prototype schema contains no durable handoff",
+  { skip: connectionString ? false : "ETF_TEST_POSTGRES_URL is not configured" },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    await client.connect();
+    try {
+      await client.query(lockSql);
+      await cleanBootstrap(client);
+      await applyCompleteMigrationSet(client);
+
+      assert.deepEqual(await checkPostgresMigrationState(client), { ready: true });
+      assert.deepEqual(await checkPostgresSchemaManifest(client), { ready: true });
+
+      const auditPassword = randomBytes(24).toString("hex");
+      const projectionPassword = randomBytes(24).toString("hex");
+      await client.query("ALTER ROLE audit_runtime PASSWORD $1", [auditPassword]);
+      await client.query("ALTER ROLE projection_runtime PASSWORD $1", [projectionPassword]);
+      const protectedStateBefore = (await client.query(
+        `SELECT
+           (SELECT pg_catalog.jsonb_agg(row_record ORDER BY row_record.audit_id)
+              FROM etf.access_denial_audit AS row_record) AS denial_audits,
+           (SELECT pg_catalog.jsonb_agg(row_record ORDER BY row_record.audit_sequence)
+              FROM etf.audit_commitments AS row_record) AS audit_commitments,
+           (SELECT pg_catalog.jsonb_agg(row_record ORDER BY row_record.audit_sequence)
+              FROM etf.audit_anchor_checkpoints AS row_record) AS audit_checkpoints,
+           (SELECT pg_catalog.jsonb_agg(row_record ORDER BY row_record.portfolio_id)
+              FROM etf.portfolio_anchor_checkpoints AS row_record) AS portfolio_checkpoints`,
+      )).rows[0];
+      assert.deepEqual(
+        await checkDenialAuditCapability(
+          runtimeClientFactory("audit_runtime", auditPassword),
+        ),
+        { ready: true },
+      );
+      assert.deepEqual(
+        await checkLedgerIntegrity(
+          client,
+          runtimeClientFactory("projection_runtime", projectionPassword),
+        ),
+        { ready: true },
+      );
+      assert.deepEqual((await client.query(
+        `SELECT
+           (SELECT pg_catalog.jsonb_agg(row_record ORDER BY row_record.audit_id)
+              FROM etf.access_denial_audit AS row_record) AS denial_audits,
+           (SELECT pg_catalog.jsonb_agg(row_record ORDER BY row_record.audit_sequence)
+              FROM etf.audit_commitments AS row_record) AS audit_commitments,
+           (SELECT pg_catalog.jsonb_agg(row_record ORDER BY row_record.audit_sequence)
+              FROM etf.audit_anchor_checkpoints AS row_record) AS audit_checkpoints,
+           (SELECT pg_catalog.jsonb_agg(row_record ORDER BY row_record.portfolio_id)
+              FROM etf.portfolio_anchor_checkpoints AS row_record) AS portfolio_checkpoints`,
+      )).rows[0], protectedStateBefore);
+
+      const driftedCheckpointControl = {
+        query: async () => ({ rows: [{
+          portfolio_id: "30000000-0000-0000-0000-000000000001",
+          portfolio_commitment: "0".repeat(64),
+        }] }),
+      };
+      assert.deepEqual(
+        await checkLedgerIntegrity(
+          driftedCheckpointControl,
+          runtimeClientFactory("projection_runtime", projectionPassword),
+        ),
+        { errorCode: "LEDGER_INTEGRITY_FAILED", ready: false },
+      );
+
+      const catalog = await client.query(
+        `SELECT object_type, object_identity, object_name
+           FROM (
+             SELECT 'table' AS object_type,
+                    relation.relname::text AS object_identity,
+                    relation.relname::text AS object_name
+               FROM pg_catalog.pg_class AS relation
+               JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = relation.relnamespace
+              WHERE namespace.nspname = 'etf'
+                AND relation.relkind = ANY(ARRAY['r','p']::"char"[])
+             UNION ALL
+             SELECT 'function',
+                    function_record.proname::text || '(' || pg_catalog.pg_get_function_identity_arguments(function_record.oid) || ')',
+                    function_record.proname::text
+               FROM pg_catalog.pg_proc AS function_record
+               JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = function_record.pronamespace
+              WHERE namespace.nspname = 'etf'
+             UNION ALL
+             SELECT 'trigger',
+                    relation.relname || '.' || trigger_record.tgname || ':' ||
+                      pg_catalog.concat_ws(',',
+                        CASE WHEN (trigger_record.tgtype & 4) <> 0 THEN 'INSERT' END,
+                        CASE WHEN (trigger_record.tgtype & 8) <> 0 THEN 'DELETE' END,
+                        CASE WHEN (trigger_record.tgtype & 16) <> 0 THEN 'UPDATE' END,
+                        CASE WHEN (trigger_record.tgtype & 32) <> 0 THEN 'TRUNCATE' END),
+                    trigger_record.tgname::text
+               FROM pg_catalog.pg_trigger AS trigger_record
+               JOIN pg_catalog.pg_class AS relation ON relation.oid = trigger_record.tgrelid
+               JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = relation.relnamespace
+              WHERE namespace.nspname = 'etf' AND NOT trigger_record.tgisinternal
+             UNION ALL
+             SELECT 'index', table_record.relname::text || '.' || index_record.relname::text, index_record.relname::text
+               FROM pg_catalog.pg_index AS index_metadata
+               JOIN pg_catalog.pg_class AS index_record ON index_record.oid = index_metadata.indexrelid
+               JOIN pg_catalog.pg_class AS table_record ON table_record.oid = index_metadata.indrelid
+               JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = table_record.relnamespace
+              WHERE namespace.nspname = 'etf'
+           ) AS manifested_object
+          ORDER BY object_type, object_identity`,
+      );
+      assert.ok(catalog.rows.length > 0);
+      assert.ok(catalog.rows.every(({ object_type, object_identity, object_name }) =>
+        ["table", "function", "trigger", "index"].includes(object_type) &&
+        typeof object_identity === "string" && typeof object_name === "string"));
+      const identityCounts = new Map();
+      for (const { object_type, object_identity } of catalog.rows) {
+        const identity = `${object_type}:${object_identity}`;
+        identityCounts.set(identity, (identityCounts.get(identity) ?? 0) + 1);
+      }
+      assert.deepEqual(
+        [...identityCounts].filter(([, count]) => count !== 1),
+        [],
+      );
+      assert.deepEqual(
+        Object.fromEntries(["table", "function", "trigger", "index"].map((objectType) => [
+          objectType,
+          catalog.rows.filter(({ object_type }) => object_type === objectType).length,
+        ])),
+        { table: 43, function: 21, trigger: 102, index: 69 },
+      );
+
+      assert.deepEqual(
+        catalog.rows.filter(({ object_name }) => isDurableHandoffObjectName(object_name)),
+        [],
+      );
+      const migrations = await client.query(
+        "SELECT migration_id, schema_manifest_hash FROM etf.schema_migrations ORDER BY sequence",
+      );
+      assert.deepEqual(
+        migrations.rows.map(({ migration_id }) => migration_id),
+        [
+          "0001-foundation",
+          "0002-application",
+          "0003-domain-ledger",
+          "0004-fixtures",
+          "0005-analytics-evidence",
+          "0006-controlled-access",
+        ],
+      );
+      assert.equal(migrations.rows.at(-1).schema_manifest_hash, controlledAccessManifestHash);
     } finally {
       await cleanBootstrap(client).catch(() => undefined);
       await client.query(unlockSql).catch(() => undefined);

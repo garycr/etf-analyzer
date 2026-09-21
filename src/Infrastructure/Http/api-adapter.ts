@@ -113,6 +113,12 @@ const workbenchClientScript = readFileSync(
   new URL("../Web/workbench-client.js", import.meta.url),
   "utf8",
 );
+const workbenchSecurityHeaders = Object.freeze({
+  "cache-control": "no-store",
+  "permissions-policy": "camera=(), geolocation=(), microphone=(), payment=(), usb=()",
+  "referrer-policy": "no-referrer",
+  "x-content-type-options": "nosniff",
+});
 
 const codesByStatus = Object.freeze({
   400: "APPLICATION_OPERATION_UNKNOWN,APPLICATION_REQUEST_INVALID,FIXTURE_MANIFEST_INVALID,FIXTURE_FILE_INTEGRITY_FAILED,FIXTURE_DATASET_HASH_MISMATCH,FIXTURE_TEMPORAL_INVALID,FIXTURE_DECIMAL_INVALID,FIXTURE_PROVENANCE_INVALID,FIXTURE_UNDECLARED_INPUT,FIXTURE_REQUIRED_MISSING,ANALYTICS_NUMERIC_CLASS_INVALID,ORDER_UNKNOWN_STATE,LEDGER_INVALID_DECIMAL,LEDGER_EXCESS_SCALE",
@@ -172,7 +178,11 @@ function problem(
   detail: string,
   allowedOrigin?: string,
 ): ApiResponse {
-  const headers: Record<string, string> = { "content-type": "application/json" };
+  const headers: Record<string, string> = {
+    "cache-control": "no-store",
+    "content-type": "application/json",
+    "x-content-type-options": "nosniff",
+  };
   if (allowedOrigin !== undefined) {
     headers["access-control-allow-origin"] = allowedOrigin;
     headers.vary = "Origin";
@@ -243,6 +253,11 @@ function isAllowedRequestOrigin(origin: string, config: ApiAdapterConfig): boole
     config.allowedOrigins.includes(origin);
 }
 
+function hasDisallowedOrigin(headers: IncomingHttpHeaders, config: ApiAdapterConfig): boolean {
+  const origin = header(headers, "origin");
+  return origin !== undefined && !isAllowedRequestOrigin(origin, config);
+}
+
 function writeApiResponse(response: ServerResponse, apiResponse: ApiResponse): void {
   response.statusCode = apiResponse.status;
   for (const [name, value] of Object.entries(apiResponse.headers)) {
@@ -277,6 +292,9 @@ function workbenchResponse(
   if (header(headers, "host") !== `127.0.0.1:${config.port}`) {
     return problem(400, "invalid-host", "Invalid Host", "The request Host is not the configured loopback API.");
   }
+  if (hasDisallowedOrigin(headers, config)) {
+    return problem(403, "disallowed-origin", "Disallowed Origin", "The request Origin is not an allowed local workbench origin.");
+  }
   const accept = header(headers, "accept");
   if (!acceptsMediaType(accept, "text/html")) {
     return problem(406, "unacceptable-response-type", "Not Acceptable", "The workbench returns only text/html.");
@@ -286,10 +304,9 @@ function workbenchResponse(
     statusText: "OK",
     detail: "",
     headers: Object.freeze({
+      ...workbenchSecurityHeaders,
       "content-type": "text/html; charset=utf-8",
       "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; script-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
-      "referrer-policy": "no-referrer",
-      "x-content-type-options": "nosniff",
       "x-frame-options": "DENY",
     }),
     body: renderWorkbenchDocument(provideDocument()),
@@ -303,15 +320,17 @@ function workbenchScriptResponse(
   if (header(headers, "host") !== `127.0.0.1:${config.port}`) {
     return problem(400, "invalid-host", "Invalid Host", "The request Host is not the configured loopback API.");
   }
+  if (hasDisallowedOrigin(headers, config)) {
+    return problem(403, "disallowed-origin", "Disallowed Origin", "The request Origin is not an allowed local workbench origin.");
+  }
   return Object.freeze({
     status: 200,
     statusText: "OK",
     detail: "",
     headers: Object.freeze({
+      ...workbenchSecurityHeaders,
       "content-type": "application/javascript; charset=utf-8",
       "content-security-policy": "default-src 'none'",
-      "referrer-policy": "no-referrer",
-      "x-content-type-options": "nosniff",
     }),
     body: workbenchClientScript,
   });
@@ -598,7 +617,11 @@ export function adaptApiRequest(
   const result = execute(JSON.stringify(envelope));
   const status = applicationStatusForResult(routeDefinition.operation, result);
   if (status === undefined) return internalServerError(allowedOrigin);
-  const responseHeaders: Record<string, string> = { "content-type": "application/json" };
+  const responseHeaders: Record<string, string> = {
+    "cache-control": "no-store",
+    "content-type": "application/json",
+    "x-content-type-options": "nosniff",
+  };
   if (origin !== undefined) {
     responseHeaders["access-control-allow-origin"] = origin;
     responseHeaders.vary = "Origin";

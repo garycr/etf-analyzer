@@ -2,10 +2,10 @@
 
 **Plan:** `v1.0.0-prototype.1`
 **Source strategy:** Workspace Owner-selected MAI-ST, constrained to one sequential Tier 1 delivery stream
-**Status:** Approved by Workspace Owner on 2026-09-11; WP-1 through WP-6 complete; WP-7 active
+**Status:** Approved by Workspace Owner on 2026-09-11; WP-1 through WP-6 complete; WP-7 functional acceptance complete with closure evidence pending
 **Owner:** Solo Orchestrator
 
-This approved artifact governs one sequential Ring 2 stream. WP-1 completed on 2026-09-15 with REV-044 PASS. WP-2 completed on 2026-09-15 with REV-059 conditional PASS and issue #70 closed. WP-3 completed on 2026-09-16 with REV-094/095/096/097 PASS and #71 satisfied. WP-4 completed on 2026-09-17 with REV-098/099 PASS and REV-100 conditional PASS. WP-5 completed on 2026-09-17 with REV-101/102/103/104 PASS and DEC-041. WP-6 completed on 2026-09-18 with REV-106..132 PASS, REV-134 PASS, and DEC-058. WP-7 activated on 2026-09-19 under DEC-059; its first shell slice passed REV-135. WP-8 remains blocked by its declared dependency.
+This approved artifact governs one sequential Ring 2 stream. WP-1 completed on 2026-09-15 with REV-044 PASS. WP-2 completed on 2026-09-15 with REV-059 conditional PASS and issue #70 closed. WP-3 completed on 2026-09-16 with REV-094/095/096/097 PASS and #71 satisfied. WP-4 completed on 2026-09-17 with REV-098/099 PASS and REV-100 conditional PASS. WP-5 completed on 2026-09-17 with REV-101/102/103/104 PASS and DEC-041. WP-6 completed on 2026-09-18 with REV-106..132 PASS, REV-134 PASS, and DEC-058. WP-7 activated on 2026-09-19 under DEC-059; PT-UI-001..010 and PT-ANA-A11Y-001 are accepted through DEC-067, with PostgreSQL zero-skip and closure evidence pending. WP-8 remains blocked by its declared dependency.
 
 ## Delivery Rule
 

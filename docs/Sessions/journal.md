@@ -3021,3 +3021,16 @@
 **authorization-boundary:** PT-ANA-A11Y-001/PT-UI-009 checkpoint only; no WP-7 closure, WP-8, brokerage, external account, public ingress, deployment, release, or production action
 
 ---
+
+## 2026-09-22 | WP-7 security performance and redaction accepted | Ring-2 | @solo-orchestrator
+
+**Type:** IMPLEMENTATION-CHECKPOINT
+**Decision:** DEC-067 accepts PT-UI-010 with hostile Host/Origin rejection, exact browser and JSON security headers, bounded redaction, representative full-composition dashboard p95 below 2 seconds, and successful readiness p95 below 1 second
+**Policy:** DEC-028; DEC-038; DEC-059..066; approved WP-7 plan; canonical latency/redaction gates; test-first development; independent code and security review
+**Authority:** Agent under Fully Agentic mode following the Workspace Owner directive to continue; REV-153 Code PASS and REV-154 Security PASS
+**Accountability:** Solo Orchestrator runs PostgreSQL 16 with zero skips and completes WP-7 closure evidence before starting WP-8; local timing remains acceptance evidence rather than a production load claim
+**Result:** PT-UI-010 focused 1/1 PASS; adapter/Application/workbench 17/17 PASS with zero skips; diagnostics clean; npm audit zero vulnerabilities; no open review findings
+**Artifacts:** DEC-067 | REV-153 | REV-154 | docs/artifacts/gate-evidence/wp-7-security-performance-redaction.md | GitHub issue #83
+**authorization-boundary:** PT-UI-010 checkpoint only; no WP-7 closure, WP-8, brokerage, external account, public ingress, deployment, release, or production action
+
+---

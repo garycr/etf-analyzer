@@ -7,7 +7,7 @@ import { startLoopbackApiServer } from "../../dist/Infrastructure/Http/api-adapt
 import { createWorkbenchModelProvider } from "../../dist/Infrastructure/Web/workbench-runtime.js";
 import { renderWorkbenchDocument } from "../../dist/Infrastructure/Web/workbench.js";
 
-function send(port, path = "/") {
+function send(port, path = "/", headers = {}) {
   return new Promise((resolve, reject) => {
     const request = http.request({
       host: "127.0.0.1",
@@ -17,6 +17,7 @@ function send(port, path = "/") {
       headers: {
         host: `127.0.0.1:${port}`,
         accept: "text/html",
+        ...headers,
       },
     }, (response) => {
       const chunks = [];
@@ -1026,6 +1027,204 @@ test("PT-UI-003B fails closed when known-job validation fails", async (context) 
     stage: "Jobs",
     reason: "ResultInvalid",
   }]);
+});
+
+test("PT-UI-010 meets local security performance and redaction gates", async (context) => {
+  const secret = "postgresql://admin:private-password@127.0.0.1/etf";
+  const checkedAt = "2026-09-22T12:00:00.000Z";
+  const readinessModel = evaluateReadiness({
+    checkedAt,
+    liveness: "Live",
+    dependencies: Object.fromEntries([
+      "PostgreSQL",
+      "Migrations",
+      "FixturePolicy",
+      "LocalDependency",
+      "DenialAudit",
+      "LedgerIntegrity",
+    ].map((dependency) => [dependency, { ready: true, checkedAt }])),
+  });
+  const performanceJobId = "56000000-0000-4000-8000-000000000090";
+  const performanceOrderId = "56000000-0000-4000-8000-000000000091";
+  const performancePortfolioId = "56000000-0000-4000-8000-000000000092";
+  const performanceAnalytics = analyticsResult();
+  const execute = (requestJson) => {
+    const request = JSON.parse(requestJson);
+    if (request.operation === "ReadinessGet") {
+      return { operation: "ReadinessGet", outcome: "Succeeded", data: { readiness: readinessModel } };
+    }
+    if (request.operation === "WatchlistGet") {
+      return {
+        operation: request.operation,
+        outcome: "Succeeded",
+        data: {
+          orderedItems: [{
+            instrumentId: "ETF-PERF",
+            displayName: "Performance ETF",
+            validationState: "Valid",
+            position: "0",
+          }],
+          version: "1",
+        },
+      };
+    }
+    if (request.operation === "AnalyticsResultGet") {
+      return { operation: request.operation, outcome: "Succeeded", data: { result: performanceAnalytics } };
+    }
+    if (request.operation === "EvidenceGet") {
+      return {
+        operation: request.operation,
+        outcome: "Succeeded",
+        data: { evidence: evidence(performanceAnalytics) },
+      };
+    }
+    if (request.operation === "PaperOrderGet") {
+      return { operation: request.operation, outcome: "Succeeded", data: { order: paperOrder("Draft") } };
+    }
+    if (request.operation === "PortfolioGet") {
+      return { operation: request.operation, outcome: "Succeeded", data: { portfolio: portfolio("Reconciled") } };
+    }
+    if (request.operation === "JobGet") {
+      return { operation: request.operation, outcome: "Succeeded", data: { job: job(performanceJobId, "Running") } };
+    }
+    assert.fail(`Unexpected operation ${request.operation}`);
+  };
+  let id = 0;
+  const provideWorkbenchModel = createWorkbenchModelProvider({
+    execute,
+    now: () => checkedAt,
+    createId: () => `56000000-0000-4000-8000-${String(id++).padStart(12, "0")}`,
+    knownJobIds: [performanceJobId],
+    selectedAnalytics: {
+      publicationTargetId: "56000000-0000-4000-8000-000000000093",
+      evidenceId: "evidence-performance-1",
+    },
+    selectedPaperOrderId: performanceOrderId,
+    selectedPortfolio: { portfolioId: performancePortfolioId, asOf: "2026-01-31T00:00:00.000Z" },
+    onDegraded: assert.fail,
+  });
+  const server = await startLoopbackApiServer(
+    { allowedOrigins: ["http://127.0.0.1:5173"], bodyLimitBytes: 1_048_576, port: 0 },
+    execute,
+    provideWorkbenchModel,
+  );
+  context.after(() => new Promise((resolve, reject) => {
+    server.close((error) => error ? reject(error) : resolve());
+  }));
+  const address = server.address();
+  assert.notEqual(address, null);
+  assert.equal(typeof address, "object");
+
+  for (let index = 0; index < 5; index += 1) {
+    const warmup = await send(address.port);
+    assert.equal(warmup.status, 200);
+  }
+  const durations = [];
+  let response;
+  for (let index = 0; index < 25; index += 1) {
+    const startedAt = performance.now();
+    response = await send(address.port);
+    durations.push(performance.now() - startedAt);
+    assert.equal(response.status, 200);
+  }
+  const sortedDurations = durations.toSorted((left, right) => left - right);
+  const p95 = sortedDurations[Math.ceil(sortedDurations.length * 0.95) - 1];
+  assert.ok(p95 < 2_000, `dashboard p95 ${p95.toFixed(2)}ms must remain below 2000ms`);
+  assert.match(response.body, /<span>Status: <\/span>Ready/);
+  assert.match(response.body, /Performance ETF[\s\S]+ETF-PERF[\s\S]+Valid/);
+  assert.match(response.body, new RegExp(`data-job-id="${performanceJobId}"`));
+  assert.match(response.body, /ETF-A[\s\S]+Buy[\s\S]+0\.125000000000/);
+  assert.match(response.body, /evidence-fixture-1[\s\S]+Complete/);
+  assert.match(response.body, /data-state="DraftAwaitingConfirmation"/);
+  assert.match(response.body, /data-reconciliation-state="Reconciled"/);
+  assert.doesNotMatch(response.body, /WORKBENCH_MODEL_DEGRADED|Retry the request or review local diagnostics/);
+  assert.equal(
+    response.headers["content-security-policy"],
+    "default-src 'none'; style-src 'unsafe-inline'; script-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
+  );
+  assert.equal(response.headers["cache-control"], "no-store");
+  assert.equal(
+    response.headers["permissions-policy"],
+    "camera=(), geolocation=(), microphone=(), payment=(), usb=()",
+  );
+  assert.equal(response.headers["referrer-policy"], "no-referrer");
+  assert.equal(response.headers["x-content-type-options"], "nosniff");
+  assert.equal(response.headers["x-frame-options"], "DENY");
+  assert.doesNotMatch(response.body, /https?:\/\/|password|secret|token/iu);
+
+  const script = await send(address.port, "/workbench.js");
+  assert.equal(script.status, 200);
+  assert.equal(script.headers["content-security-policy"], "default-src 'none'");
+  assert.equal(script.headers["cache-control"], "no-store");
+  assert.equal(script.headers["permissions-policy"], "camera=(), geolocation=(), microphone=(), payment=(), usb=()");
+  assert.equal(script.headers["referrer-policy"], "no-referrer");
+  assert.equal(script.headers["x-content-type-options"], "nosniff");
+
+  const apiDurations = [];
+  for (let index = 0; index < 25; index += 1) {
+    const startedAt = performance.now();
+    const readiness = await send(address.port, "/api/v1/readiness", {
+      accept: "application/json",
+      origin: `http://127.0.0.1:${address.port}`,
+      "x-request-id": `57000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+      "x-correlation-id": `58000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+      "x-requested-at": "2026-09-22T12:00:00.000Z",
+    });
+    apiDurations.push(performance.now() - startedAt);
+    assert.equal(readiness.status, 200);
+    assert.equal(readiness.headers["cache-control"], "no-store");
+    assert.equal(readiness.headers["x-content-type-options"], "nosniff");
+    assert.doesNotMatch(readiness.body, /password|secret|token/iu);
+  }
+  const sortedApiDurations = apiDurations.toSorted((left, right) => left - right);
+  const apiP95 = sortedApiDurations[Math.ceil(sortedApiDurations.length * 0.95) - 1];
+  assert.ok(apiP95 < 1_000, `non-analytical API p95 ${apiP95.toFixed(2)}ms must remain below 1000ms`);
+
+  const invalidHost = await send(address.port, "/", { host: `localhost:${address.port}` });
+  assert.equal(invalidHost.status, 400);
+  for (const path of ["/", "/workbench.js", "/api/v1/readiness"]) {
+    const invalidOrigin = await send(address.port, path, {
+      accept: path.startsWith("/api/") ? "application/json" : "text/html",
+      origin: "https://attacker.example",
+      "x-request-id": "59000000-0000-4000-8000-000000000001",
+      "x-correlation-id": "59000000-0000-4000-8000-000000000002",
+      "x-requested-at": checkedAt,
+    });
+    assert.equal(invalidOrigin.status, 403, path);
+  }
+
+  const failingExecute = () => { throw new Error(secret); };
+  const failingServer = await startLoopbackApiServer(
+    { allowedOrigins: ["http://127.0.0.1:5173"], bodyLimitBytes: 1_048_576, port: 0 },
+    failingExecute,
+    () => { throw new Error(secret); },
+  );
+  context.after(() => new Promise((resolve, reject) => {
+    failingServer.close((error) => error ? reject(error) : resolve());
+  }));
+  const failingAddress = failingServer.address();
+  assert.notEqual(failingAddress, null);
+  assert.equal(typeof failingAddress, "object");
+  const failedApi = await send(failingAddress.port, "/api/v1/readiness", {
+    accept: "application/json",
+    origin: `http://127.0.0.1:${failingAddress.port}`,
+    "x-request-id": "59000000-0000-4000-8000-000000000001",
+    "x-correlation-id": "59000000-0000-4000-8000-000000000002",
+    "x-requested-at": checkedAt,
+  });
+  assert.equal(failedApi.status, 500);
+  assert.equal(failedApi.headers["cache-control"], "no-store");
+  assert.equal(failedApi.headers["x-content-type-options"], "nosniff");
+  assert.doesNotMatch(failedApi.body, /admin|private-password|postgresql|secret/iu);
+  const failed = await send(failingAddress.port);
+  assert.equal(failed.status, 500);
+  assert.deepEqual(JSON.parse(failed.body), {
+    type: "internal-server-error",
+    title: "Internal Server Error",
+    status: 500,
+    detail: "The request could not be completed.",
+  });
+  assert.doesNotMatch(failed.body, /admin|private-password|postgresql|secret/iu);
 });
 
 test("PT-UI-004 fails closed when watchlist canonical values are invalid", () => {

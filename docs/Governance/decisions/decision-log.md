@@ -28,6 +28,7 @@
 | DEC-064 | 2026-09-21 | Portfolio UI | Accept PT-UI-007 canonical portfolio and integrity-blocked presentation | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-065 | 2026-09-21 | Paper-order accessibility | Accept PT-UI-008 explicit transition confirmation and bounded recovery announcements | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-066 | 2026-09-21 | Browser accessibility | Accept PT-ANA-A11Y-001/PT-UI-009 real-browser accessibility, keyboard, focus, and reflow evidence | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
+| DEC-067 | 2026-09-22 | Workbench security and performance | Accept PT-UI-010 loopback security, local performance, caching, and redaction evidence | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -66,6 +67,21 @@
 ---
 
 ## Decision Records
+
+### DEC-067: Accept Workbench Security Performance And Redaction Evidence
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-067 |
+| **Date** | 2026-09-22 |
+| **Category** | Workbench security and performance |
+| **Decision** | Accept PT-UI-010 with exact loopback Host/Origin mediation, restrictive browser policy, no-store and MIME protection across HTML/script/JSON, bounded exception and owner-result redaction, representative full-composition dashboard p95 below 2 seconds, and successful non-analytical API p95 below 1 second |
+| **Policy** | DEC-028; DEC-038; DEC-059..066; approved WP-7 plan; canonical latency and redaction gates; test-first development; code and security review |
+| **Authority** | Agent under Fully Agentic mode following the Workspace Owner directive to continue |
+| **Accountability** | Solo Orchestrator preserves exact loopback/no-public-ingress and Application redaction ownership, treats local timing as acceptance rather than production load evidence, requires PostgreSQL 16 zero-skip and closure review before WP-7 closure, and does not start WP-8 |
+| **Status** | Reviewed; PT-UI-010 PASS; REV-153 Code PASS; REV-154 Security PASS; focused 1/1 and combined 17/17; zero audit vulnerabilities |
+
+---
 
 ### DEC-066: Accept Real-Browser Accessibility And Responsive Workflow Evidence
 

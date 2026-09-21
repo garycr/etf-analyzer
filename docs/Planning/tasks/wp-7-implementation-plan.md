@@ -1,7 +1,7 @@
 # WP-7 Local Browser Workbench Implementation Plan
 
 **Date:** 2026-09-19
-**Status:** Active under DEC-059; PT-UI-001..009 and PT-ANA-A11Y-001 accepted; implementation plan REV-136 PASS
+**Status:** Active under DEC-059; PT-UI-001..010 and PT-ANA-A11Y-001 accepted; PostgreSQL zero-skip closure evidence pending
 **Estimate:** XL / 24 agent-hours
 **Tracking:** GitHub issue #83
 
@@ -52,7 +52,7 @@ Hypothesis: a semantic browser shell can be served from the existing loopback pr
 | PT-UI-007 | `PT-UI-007 presents canonical reconciled portfolio values and integrity blocking` | `tests/Integration/workbench.test.mjs` | PASS |
 | PT-UI-008 | `PT-UI-008 announces invalid transitions conflicts and recovery outcomes` | `tests/Integration/workbench-accessibility.test.mjs` | PASS |
 | PT-UI-009 | `PT-UI-009 completes keyboard workflows without overflow at required viewports` | `tests/Integration/workbench-accessibility.test.mjs` | PASS |
-| PT-UI-010 | `PT-UI-010 meets local security performance and redaction gates` | `tests/Integration/workbench.test.mjs` | PENDING |
+| PT-UI-010 | `PT-UI-010 meets local security performance and redaction gates` | `tests/Integration/workbench.test.mjs` | PASS |
 
 ## Effort Allocation
 
@@ -80,10 +80,9 @@ Hypothesis: a semantic browser shell can be served from the existing loopback pr
 
 ## Open Work
 
-- Implement the interactive operation workflows and their loading, empty, success, blocked, conflict, and recovery states.
-- Execute `PT-ANA-A11Y-001` for blocked, denied, quarantined, and no-signal analytics states.
-- Complete Playwright plus `@axe-core/playwright` automated WCAG 2.1 AA checks after OSS review, covering semantic relationships, keyboard/focus order, names/roles/values, contrast, status announcements, reflow, and error identification; Ring 3 retains independent accessibility verification.
-- Run the PostgreSQL-gated suite with zero skips before WP-7 closure.
+- Run the PostgreSQL 16 suite with zero skips and refresh aggregate host/browser evidence.
+- Complete independent WP-7 closure review and package-exit evidence before WP-8 becomes eligible.
+- Ring 3 retains independent accessibility and load-oriented performance verification.
 
 ## WP-7 Exit Criteria
 

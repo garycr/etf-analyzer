@@ -1,7 +1,7 @@
 # WP-7 Local Browser Workbench Implementation Plan
 
 **Date:** 2026-09-19
-**Status:** Active under DEC-059; PT-UI-001..010 and PT-ANA-A11Y-001 accepted; PostgreSQL zero-skip closure evidence pending
+**Status:** Closure approved under DEC-068; publication pending; WP-8 remains blocked
 **Estimate:** XL / 24 agent-hours
 **Tracking:** GitHub issue #83
 
@@ -80,8 +80,7 @@ Hypothesis: a semantic browser shell can be served from the existing loopback pr
 
 ## Open Work
 
-- Run the PostgreSQL 16 suite with zero skips and refresh aggregate host/browser evidence.
-- Complete independent WP-7 closure review and package-exit evidence before WP-8 becomes eligible.
+- Publish DEC-068, REV-155/156, and WP-7 exit evidence before WP-8 starts.
 - Ring 3 retains independent accessibility and load-oriented performance verification.
 
 ## WP-7 Exit Criteria
@@ -92,6 +91,8 @@ Hypothesis: a semantic browser shell can be served from the existing loopback pr
 - Build, lint, zero-skip PostgreSQL suite, dependency/license audit, security headers, redaction, and performance checks pass.
 - Independent code, security, accessibility, and closure-plan reviews have no open Critical or Major findings.
 - WP-7 exit evidence is committed and pushed before WP-8 becomes eligible.
+
+The 80% changed-business-logic criterion is not applicable to WP-7: the package changed Infrastructure/Web presentation, native browser interaction, HTTP transport hardening, tests, and governance, but no Domain or Application business logic. Behavioral coverage is provided by PT-UI-001..010 and PT-ANA-A11Y-001.
 
 ## Boundaries
 

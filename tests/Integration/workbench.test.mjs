@@ -1085,7 +1085,7 @@ test("PT-UI-010 meets local security performance and redaction gates", async (co
       return { operation: request.operation, outcome: "Succeeded", data: { portfolio: portfolio("Reconciled") } };
     }
     if (request.operation === "JobGet") {
-      return { operation: request.operation, outcome: "Succeeded", data: { job: job(performanceJobId, "Running") } };
+      return { operation: request.operation, outcome: "Succeeded", data: { job: job(performanceJobId, "Failed") } };
     }
     assert.fail(`Unexpected operation ${request.operation}`);
   };

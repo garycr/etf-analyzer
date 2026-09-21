@@ -28,7 +28,8 @@
 | DEC-064 | 2026-09-21 | Portfolio UI | Accept PT-UI-007 canonical portfolio and integrity-blocked presentation | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-065 | 2026-09-21 | Paper-order accessibility | Accept PT-UI-008 explicit transition confirmation and bounded recovery announcements | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-066 | 2026-09-21 | Browser accessibility | Accept PT-ANA-A11Y-001/PT-UI-009 real-browser accessibility, keyboard, focus, and reflow evidence | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
-| DEC-067 | 2026-09-22 | Workbench security and performance | Accept PT-UI-010 loopback security, local performance, caching, and redaction evidence | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
+| DEC-067 | 2026-09-21 | Workbench security and performance | Accept PT-UI-010 loopback security, local performance, caching, and redaction evidence | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
+| DEC-068 | 2026-09-21 | Package closure | Approve WP-7 closure pending publication; WP-8 remains blocked until the closure bundle is pushed | Workspace Owner | Solo Orchestrator | Approved; publication pending |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -68,12 +69,27 @@
 
 ## Decision Records
 
+### DEC-068: Approve WP-7 Local Browser Workbench
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-068 |
+| **Date** | 2026-09-21 |
+| **Category** | Package closure |
+| **Decision** | Approve WP-7 closure after accepting PT-UI-001..010 and PT-ANA-A11Y-001, digest-pinned browser evidence, exact PostgreSQL 16.15 zero-skip aggregate evidence, and independent closure review; WP-8 remains blocked until the complete closure bundle is pushed |
+| **Policy** | Workspace Owner approval; DEC-023; DEC-028; DEC-059..067; approved WP-7 plan and exit criteria; test-first development; accessibility, code, security, and closure-plan review |
+| **Authority** | Workspace Owner explicit approval in the governed session |
+| **Accountability** | Solo Orchestrator publishes selective closure evidence before making WP-8 eligible, keeps WP-8 unstarted pending a separate action, preserves the closed loopback/research-only/no-brokerage boundary, and does not advance Ring 2 to Ring 3 |
+| **Status** | Approved; publication pending; PostgreSQL 448/448 zero skips; browser 2/2 zero skips; REV-155 Code PASS; REV-156 Plan PASS |
+
+---
+
 ### DEC-067: Accept Workbench Security Performance And Redaction Evidence
 
 | Field | Value |
 |-------|-------|
 | **ID** | DEC-067 |
-| **Date** | 2026-09-22 |
+| **Date** | 2026-09-21 |
 | **Category** | Workbench security and performance |
 | **Decision** | Accept PT-UI-010 with exact loopback Host/Origin mediation, restrictive browser policy, no-store and MIME protection across HTML/script/JSON, bounded exception and owner-result redaction, representative full-composition dashboard p95 below 2 seconds, and successful non-analytical API p95 below 1 second |
 | **Policy** | DEC-028; DEC-038; DEC-059..066; approved WP-7 plan; canonical latency and redaction gates; test-first development; code and security review |

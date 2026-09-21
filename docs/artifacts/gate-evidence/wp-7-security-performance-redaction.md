@@ -1,6 +1,6 @@
 # WP-7 Security Performance And Redaction Evidence
 
-**Date:** 2026-09-22
+**Date:** 2026-09-21
 **Scope:** PT-UI-010
 **Result:** PASS; WP-7 remains active
 
@@ -26,8 +26,8 @@ The workbench remains bound to exact IPv4 loopback and the closed 16-operation A
 
 ## Performance Boundary
 
-The dashboard measurement includes successful readiness, watchlist, running job, analytics, evidence, draft paper order, and reconciled portfolio presentation after warm-up. The API measurement uses successful readiness responses. Both checks are deterministic local acceptance gates rather than production load claims.
+The dashboard measurement includes successful readiness, watchlist, failed-job recovery, analytics, evidence, draft paper order, and reconciled portfolio presentation after warm-up. The API measurement uses successful readiness responses. Both checks are deterministic local acceptance gates rather than production load claims.
 
 ## Residual Boundary
 
-PT-UI-001..010 and PT-ANA-A11Y-001 now pass. WP-7 does not close on this evidence: the PostgreSQL 16 suite must run with zero skips, aggregate host/browser evidence must be refreshed, and the closure review must pass before WP-8 becomes eligible.
+PT-UI-001..010 and PT-ANA-A11Y-001 pass. The later WP-7 exit record captures the PostgreSQL 16 zero-skip aggregate and package closure disposition.

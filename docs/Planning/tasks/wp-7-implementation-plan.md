@@ -1,7 +1,7 @@
 # WP-7 Local Browser Workbench Implementation Plan
 
 **Date:** 2026-09-19
-**Status:** Closure approved under DEC-068; publication pending; WP-8 remains blocked
+**Status:** Complete under DEC-068; closure published in `0bc77d1`; WP-8 eligible but not started
 **Estimate:** XL / 24 agent-hours
 **Tracking:** GitHub issue #83
 
@@ -80,7 +80,6 @@ Hypothesis: a semantic browser shell can be served from the existing loopback pr
 
 ## Open Work
 
-- Publish DEC-068, REV-155/156, and WP-7 exit evidence before WP-8 starts.
 - Ring 3 retains independent accessibility and load-oriented performance verification.
 
 ## WP-7 Exit Criteria

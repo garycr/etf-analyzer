@@ -3038,12 +3038,12 @@
 ## 2026-09-21 | WP-7 local browser workbench approved | Ring-2 | @solo-orchestrator
 
 **Type:** PACKAGE-CLOSURE
-**Decision:** DEC-068 approves WP-7 closure after all PT-UI-001..010 and PT-ANA-A11Y-001 acceptance, browser, security, performance, redaction, and PostgreSQL aggregate gates pass; publication remains pending and WP-8 remains blocked
+**Decision:** DEC-068 closes WP-7 after all PT-UI-001..010 and PT-ANA-A11Y-001 acceptance, browser, security, performance, redaction, and PostgreSQL aggregate gates pass; WP-8 becomes eligible but does not start
 **Policy:** Workspace Owner approval; DEC-023; DEC-028; DEC-059..067; approved WP-7 plan and exit criteria; independent code and closure-plan review
 **Authority:** Workspace Owner explicitly said `approve`; REV-155 Code PASS; REV-156 Plan PASS
-**Accountability:** Solo Orchestrator publishes the bounded closure package before making WP-8 eligible, keeps WP-8 unstarted pending separate action, preserves the research-only/no-brokerage/loopback boundary, and does not advance Ring 2
+**Accountability:** Solo Orchestrator published the bounded closure package in `0bc77d1`, keeps WP-8 unstarted pending separate action, preserves the research-only/no-brokerage/loopback boundary, and does not advance Ring 2
 **Result:** PostgreSQL 16.15 C/UTF8/UTC/on repository suite 448/448 PASS with zero skips; digest-pinned Chromium 2/2 PASS with zero skips; audit zero vulnerabilities; all acceptance IDs PASS
 **Artifacts:** DEC-068 | REV-155 | REV-156 | docs/artifacts/gate-evidence/wp-7-exit.md | GitHub issue #83
-**authorization-boundary:** WP-7 closure publication pending; WP-8 remains blocked; Ring 3, brokerage, external account, live provider, public ingress, deployment, release, and production remain unauthorized
+**authorization-boundary:** WP-7 closed; WP-8 eligible but unstarted; Ring 3, brokerage, external account, live provider, public ingress, deployment, release, and production remain unauthorized
 
 ---

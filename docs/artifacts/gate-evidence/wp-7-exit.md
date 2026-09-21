@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-21
 **Scope:** WP-7 accessible local browser workbench
-**Result:** PASS; closure approved by DEC-068; publication pending
+**Result:** PASS; approved by DEC-068 and published in `0bc77d1`
 
 ## Exit Criteria
 
@@ -38,4 +38,4 @@ WP-7 retained the approved 24 agent-hour point estimate and XL risk label. Provi
 
 ## Boundary
 
-This evidence supports only WP-7 closure. WP-8 remains blocked until the complete closure bundle is committed and pushed, and remains unstarted afterward. Ring 2 remains Active. No WP-8 implementation, Ring 3 transition, baseline activation, brokerage, external account, live provider, public ingress, release, deployment, or production action is authorized.
+This evidence closes only WP-7 and makes WP-8 eligible as the next sequential package without starting it. Ring 2 remains Active at seven of eight packages. No WP-8 implementation, Ring 3 transition, baseline activation, brokerage, external account, live provider, public ingress, release, deployment, or production action is authorized.

@@ -1,5 +1,6 @@
 import {
   presentBlockedState,
+  presentCanonicalValue,
   presentFailedJob,
   validateApplicationSuccessData,
   type BlockedStatePresentation,
@@ -12,13 +13,15 @@ import type {
   WorkbenchDocumentInput,
   WorkbenchAnalytics,
   WorkbenchEvidence,
+  WorkbenchOrderState,
+  WorkbenchPaperOrder,
   WorkbenchWatchlist,
   WorkbenchWatchlistItem,
 } from "./workbench.js";
 
 export interface WorkbenchDegradedEvent {
   readonly code: "WORKBENCH_MODEL_DEGRADED";
-  readonly stage: "Readiness" | "Watchlist" | "Jobs" | "Analytics" | "Evidence";
+  readonly stage: "Readiness" | "Watchlist" | "Jobs" | "Analytics" | "Evidence" | "PaperOrder";
   readonly reason:
     | "EnvelopeConstructionFailed"
     | "ExecutionFailed"
@@ -36,6 +39,7 @@ export interface WorkbenchModelProviderDependencies {
     publicationTargetId: string;
     evidenceId: string;
   }>;
+  readonly selectedPaperOrderId?: string;
   readonly onDegraded: (event: WorkbenchDegradedEvent) => void;
 }
 
@@ -54,7 +58,8 @@ type WorkbenchQueryOperation =
   | "WatchlistGet"
   | "JobGet"
   | "AnalyticsResultGet"
-  | "EvidenceGet";
+  | "EvidenceGet"
+  | "PaperOrderGet";
 
 function queryEnvelope(
   operation: WorkbenchQueryOperation,
@@ -273,6 +278,64 @@ function toEvidence(data: Readonly<Record<string, unknown>>): WorkbenchEvidence 
   });
 }
 
+const paperOrderStates = new Set<WorkbenchOrderState>([
+  "Draft", "Submitted", "Accepted", "Partial", "Filled", "Rejected", "Canceled", "Expired",
+]);
+
+function toPaperOrder(
+  data: Readonly<Record<string, unknown>>,
+  now: string,
+): WorkbenchPaperOrder {
+  if (!isRecord(data.order)) throw new WorkbenchModelError("ResultInvalid");
+  const order = data.order;
+  const state = requiredString(order, "state");
+  if (!paperOrderStates.has(state as WorkbenchOrderState) || !Array.isArray(order.transitionHistory)) {
+    throw new WorkbenchModelError("ResultInvalid");
+  }
+  const transitionHistory = order.transitionHistory.map((value) => {
+    if (!isRecord(value)) throw new WorkbenchModelError("ResultInvalid");
+    return Object.freeze({
+      transition: requiredString(value, "transition"),
+      sourceState: requiredString(value, "sourceState"),
+      targetState: requiredString(value, "targetState"),
+      occurredAt: requiredString(value, "occurredAt"),
+    });
+  });
+  const orderId = requiredString(order, "orderId");
+  const aggregateVersion = requiredString(order, "aggregateVersion");
+  const confirmationRequired = state === "Draft"
+    ? presentBlockedState({
+      state: "DraftAwaitingConfirmation",
+      context: {
+        orderId,
+        aggregateVersion,
+        confirmation: {
+          actorId: "local-user",
+          confirmedAt: now,
+          confirmationText: "Submit paper order",
+        },
+      },
+    }, null)
+    : null;
+  const side = requiredString(order, "side");
+  if (side !== "Buy" && side !== "Sell") throw new WorkbenchModelError("ResultInvalid");
+  return Object.freeze({
+    orderId,
+    instrumentId: requiredString(order, "instrumentId"),
+    state: state as WorkbenchOrderState,
+    statePresentation: presentCanonicalValue("OrderStatus", state),
+    aggregateVersion,
+    side,
+    requestedQuantity: requiredString(order, "requestedQuantity"),
+    filledQuantity: requiredString(order, "filledQuantity"),
+    openQuantity: requiredString(order, "openQuantity"),
+    unitPrice: requiredString(order, "unitPrice"),
+    tradeDate: requiredString(order, "tradeDate"),
+    confirmationRequired,
+    transitionHistory: Object.freeze(transitionHistory),
+  });
+}
+
 export function createWorkbenchModelProvider(
   dependencies: WorkbenchModelProviderDependencies,
 ): WorkbenchModelProvider {
@@ -315,6 +378,18 @@ export function createWorkbenchModelProvider(
           : toEvidence(evidenceData.data);
       }
 
+      let paperOrder: WorkbenchPaperOrder | undefined;
+      if (dependencies.selectedPaperOrderId !== undefined) {
+        stage = "PaperOrder";
+        const paperOrderData = executeQuery(
+          "PaperOrderGet",
+          { orderId: dependencies.selectedPaperOrderId },
+          dependencies,
+        );
+        if (paperOrderData === null) throw new WorkbenchModelError("QueryFailed");
+        paperOrder = toPaperOrder(paperOrderData, dependencies.now());
+      }
+
       stage = "Jobs";
       for (const jobId of dependencies.knownJobIds) {
         const data = executeQuery("JobGet", { jobId }, dependencies);
@@ -333,6 +408,7 @@ export function createWorkbenchModelProvider(
         watchlist,
         analytics,
         evidence,
+        paperOrder,
         failedJobs: Object.freeze(failedJobs),
       });
     } catch (error) {

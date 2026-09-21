@@ -1,6 +1,7 @@
 import {
   researchWarningText,
   type BlockedStatePresentation,
+  type CanonicalValuePresentation,
   type FailedJobForPresentation,
   type FailedJobPresentation,
   type ReadinessSnapshot,
@@ -48,12 +49,44 @@ export interface WorkbenchEvidenceResult {
 export type WorkbenchAnalytics = WorkbenchAnalyticsResult | BlockedStatePresentation;
 export type WorkbenchEvidence = WorkbenchEvidenceResult | BlockedStatePresentation;
 
+export type WorkbenchOrderState =
+  | "Draft"
+  | "Submitted"
+  | "Accepted"
+  | "Partial"
+  | "Filled"
+  | "Rejected"
+  | "Canceled"
+  | "Expired";
+
+export interface WorkbenchPaperOrder {
+  readonly orderId: string;
+  readonly instrumentId: string;
+  readonly state: WorkbenchOrderState;
+  readonly statePresentation: CanonicalValuePresentation;
+  readonly aggregateVersion: string;
+  readonly side: "Buy" | "Sell";
+  readonly requestedQuantity: string;
+  readonly filledQuantity: string;
+  readonly openQuantity: string;
+  readonly unitPrice: string;
+  readonly tradeDate: string;
+  readonly confirmationRequired: BlockedStatePresentation | null;
+  readonly transitionHistory: readonly Readonly<{
+    transition: string;
+    sourceState: string;
+    targetState: string;
+    occurredAt: string;
+  }>[];
+}
+
 export interface WorkbenchDocumentInput {
   readonly readiness: WorkbenchReadiness | ReadinessSnapshot;
   readonly failedJobs?: readonly FailedJobPresentation<FailedJobForPresentation>[];
   readonly watchlist?: WorkbenchWatchlist;
   readonly analytics?: WorkbenchAnalytics;
   readonly evidence?: WorkbenchEvidence;
+  readonly paperOrder?: WorkbenchPaperOrder;
 }
 
 function escapeHtml(value: string | number): string {
@@ -134,8 +167,8 @@ function renderWatchlist(watchlist: WorkbenchWatchlist | undefined): string {
 function renderBlockedState(presentation: BlockedStatePresentation): string {
   const recovery = presentation.recovery === null
     ? ""
-    : `<button type="button" data-operation="${escapeHtml(presentation.recovery.targetOperation)}">${escapeHtml(presentation.recovery.label)}</button>`;
-  return `<div class="blocked-state" role="${presentation.programmaticRole}" data-state="${escapeHtml(presentation.state)}">
+    : `<button type="button" data-operation="${escapeHtml(presentation.recovery.targetOperation)}" data-requires-confirmation="${presentation.recovery.requiresConfirmation}">${escapeHtml(presentation.recovery.label)}</button>`;
+  return `<div class="blocked-state" role="${escapeHtml(presentation.programmaticRole)}" data-state="${escapeHtml(presentation.state)}">
         <strong>${escapeHtml(presentation.statusText)}</strong>
         <p>${escapeHtml(presentation.causeText)}</p>
         ${recovery}
@@ -172,6 +205,32 @@ function renderEvidence(evidence: WorkbenchEvidence | undefined): string {
       </dl>`;
 }
 
+function renderPaperOrder(order: WorkbenchPaperOrder | undefined): string {
+  if (order === undefined) return "<p>No hypothetical orders.</p>";
+  const transitions = order.transitionHistory.length === 0
+    ? "<p>No recorded transitions.</p>"
+    : `<ol id="order-transition-history">${order.transitionHistory.map((transition) => `
+          <li data-transition="${escapeHtml(transition.transition)}">
+            <span>${escapeHtml(transition.sourceState)} to ${escapeHtml(transition.targetState)}</span>
+            <time datetime="${escapeHtml(transition.occurredAt)}">${escapeHtml(transition.occurredAt)}</time>
+          </li>`).join("")}
+        </ol>`;
+  return `<div id="paper-order-details" data-order-id="${escapeHtml(order.orderId)}" data-version="${escapeHtml(order.aggregateVersion)}">
+        <p role="status">Order status: <span id="order-status" data-state="${escapeHtml(order.state)}">${escapeHtml(order.statePresentation.visibleText)}</span></p>
+        <dl>
+          <dt>Instrument</dt><dd>${escapeHtml(order.instrumentId)}</dd>
+          <dt>Side</dt><dd>${escapeHtml(order.side)}</dd>
+          <dt>Requested quantity</dt><dd>${escapeHtml(order.requestedQuantity)}</dd>
+          <dt>Filled quantity</dt><dd>${escapeHtml(order.filledQuantity)}</dd>
+          <dt>Open quantity</dt><dd>${escapeHtml(order.openQuantity)}</dd>
+          <dt>Unit price</dt><dd>${escapeHtml(order.unitPrice)}</dd>
+          <dt>Trade date</dt><dd>${escapeHtml(order.tradeDate)}</dd>
+        </dl>
+        ${order.confirmationRequired === null ? "" : renderBlockedState(order.confirmationRequired)}
+        ${transitions}
+      </div>`;
+}
+
 export function renderWorkbenchDocument(
   input: WorkbenchDocumentInput,
 ): string {
@@ -198,6 +257,7 @@ export function renderWorkbenchDocument(
   const watchlist = renderWatchlist(input.watchlist);
   const analytics = renderAnalytics(input.analytics);
   const evidence = renderEvidence(input.evidence);
+  const paperOrder = renderPaperOrder(input.paperOrder);
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -336,7 +396,7 @@ export function renderWorkbenchDocument(
       <section id="paper" aria-labelledby="paper-heading">
         <h2 id="paper-heading">Paper orders</h2>
         <p class="warning">${researchWarning}</p>
-        <p>No hypothetical orders.</p>
+        ${paperOrder}
       </section>
       <section id="portfolio" aria-labelledby="portfolio-heading">
         <h2 id="portfolio-heading">Portfolio</h2>

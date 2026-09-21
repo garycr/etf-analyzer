@@ -24,6 +24,7 @@
 | DEC-026 | 2026-09-14 | Architecture | Persist watchlist aggregate version in an explicit singleton table | Workspace Owner | Solo Orchestrator | Active |
 | DEC-027 | 2026-09-14 | Architecture | Close domain-ledger cryptography, owner calls, and instrument identity | Workspace Owner | Solo Orchestrator | Active |
 | DEC-062 | 2026-09-21 | Analytics and evidence UI | Accept fixture-only PT-UI-005 and defer real-provider evidence states | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
+| DEC-063 | 2026-09-21 | Paper-order UI | Accept PT-UI-006 authoritative state and confirmation presentation | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -62,6 +63,21 @@
 ---
 
 ## Decision Records
+
+### DEC-063: Accept Authoritative Paper-Order State And Confirmation Presentation
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-063 |
+| **Date** | 2026-09-21 |
+| **Category** | Paper-order UI |
+| **Decision** | Accept PT-UI-006 with optional selected `PaperOrderGet` composition, explicit presentation of all eight owner states, reviewed `Partial` display mapping, Draft-only `DraftAwaitingConfirmation`, canonical escaped values and transition history, and no automatic mutation; retain click-time confirmation construction and mutation behavior under PT-UI-008/009 |
+| **Policy** | DEC-028; DEC-042; DEC-059..062; approved WP-7 plan; closed 16-operation Application API; explicit paper confirmation contract; test-first development; WCAG 2.1 AA expectations; code and security review |
+| **Authority** | Agent under Fully Agentic mode following the Workspace Owner directive to continue |
+| **Accountability** | Solo Orchestrator preserves read-only presentation and no-brokerage boundaries, builds confirmation timestamps only when the user acts in a later authorized slice, completes PT-UI-008/009 interaction evidence before WP-7 closure, requires PostgreSQL zero-skip evidence, and continues PT-UI-007 next |
+| **Status** | Reviewed; PT-UI-006 PASS; REV-144 Code PASS; REV-145 Security PASS; 443 discovered, 388 passed, 0 failed, 55 PostgreSQL-environment skips |
+
+---
 
 ### DEC-062: Accept Fixture-Only Analytics And Evidence Presentation
 

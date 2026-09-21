@@ -48,7 +48,7 @@ Hypothesis: a semantic browser shell can be served from the existing loopback pr
 | PT-UI-004 | `PT-UI-004 performs watchlist workflows with keyboard and version safety` | `tests/Unit/workbench-client.test.mjs`; `tests/Integration/workbench.test.mjs` | PASS |
 | PT-UI-005 | `PT-UI-005 preserves analytical and evidence warnings values and blocked states` | `tests/Integration/workbench.test.mjs` | PASS |
 | PT-ANA-A11Y-001 | `PT-ANA-A11Y-001 exposes blocked denied quarantined and no-signal analytics accessibly` | `tests/Integration/workbench-accessibility.test.mjs` | PENDING |
-| PT-UI-006 | `PT-UI-006 requires explicit paper confirmation and presents all eight order states` | `tests/Integration/workbench.test.mjs` | PENDING |
+| PT-UI-006 | `PT-UI-006 requires explicit paper confirmation and presents all eight order states` | `tests/Integration/workbench.test.mjs` | PASS |
 | PT-UI-007 | `PT-UI-007 presents canonical reconciled portfolio values and integrity blocking` | `tests/Integration/workbench.test.mjs` | PENDING |
 | PT-UI-008 | `PT-UI-008 announces invalid transitions conflicts and recovery outcomes` | `tests/Integration/workbench-accessibility.test.mjs` | PENDING |
 | PT-UI-009 | `PT-UI-009 completes keyboard workflows without overflow at required viewports` | `tests/Integration/workbench-accessibility.test.mjs` | PENDING |

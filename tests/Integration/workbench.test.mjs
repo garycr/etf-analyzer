@@ -5,6 +5,7 @@ import test from "node:test";
 import { evaluateReadiness } from "../../dist/Application/application-boundary.js";
 import { startLoopbackApiServer } from "../../dist/Infrastructure/Http/api-adapter.js";
 import { createWorkbenchModelProvider } from "../../dist/Infrastructure/Web/workbench-runtime.js";
+import { renderWorkbenchDocument } from "../../dist/Infrastructure/Web/workbench.js";
 
 function send(port, path = "/") {
   return new Promise((resolve, reject) => {
@@ -116,6 +117,241 @@ function evidence(result) {
     retentionEpoch: "2026-01-31T00:00:00.000Z",
   });
 }
+
+function paperOrder(state) {
+  return {
+    orderId: "57000000-0000-4000-8000-000000000001",
+    instrumentId: "ETF-<A>",
+    state,
+    aggregateVersion: "2",
+    researchEvidenceId: "57000000-0000-4000-8000-000000000002",
+    side: "Buy",
+    requestedQuantity: "1.0000000000",
+    filledQuantity: state === "Filled" ? "1.0000000000" : "0.0000000000",
+    openQuantity: state === "Filled" ? "0.0000000000" : "1.0000000000",
+    unitPrice: "100.0000000000",
+    tradeDate: "2026-01-30",
+    confirmation: state === "Draft"
+      ? null
+      : {
+        actorId: "local-user",
+        confirmedAt: "2026-01-30T12:00:00.000Z",
+        confirmationText: "Submit paper order",
+      },
+    transitionHistory: [],
+  };
+}
+
+function readySnapshot(checkedAt = "2026-09-21T13:00:00.000Z") {
+  return evaluateReadiness({
+    checkedAt,
+    liveness: "Live",
+    dependencies: Object.fromEntries([
+      "PostgreSQL",
+      "Migrations",
+      "FixturePolicy",
+      "LocalDependency",
+      "DenialAudit",
+      "LedgerIntegrity",
+    ].map((dependency) => [dependency, { ready: true, checkedAt }])),
+  });
+}
+
+test("PT-UI-006 renders authoritative paper transition history and an empty unselected state", async (context) => {
+  const order = paperOrder("Draft");
+  order.transitionHistory = [{
+    transitionCommandId: "57000000-0000-4000-8000-000000000003",
+    transition: "OT-01",
+    sourceState: "Initial",
+    targetState: "Draft",
+    trigger: "UserCreatedFromResearch",
+    occurredAt: "2026-01-30T11:00:00.000Z",
+    actorId: "local-user",
+    correlationId: "57000000-0000-4000-8000-000000000004",
+    priorVersion: "0",
+    resultingVersion: "1",
+    baselineVersion: "v1.0.0",
+  }];
+  const readiness = readySnapshot();
+  const provider = createWorkbenchModelProvider({
+    execute: (requestJson) => {
+      const request = JSON.parse(requestJson);
+      if (request.operation === "ReadinessGet") {
+        return { operation: request.operation, outcome: "Succeeded", data: { readiness } };
+      }
+      if (request.operation === "WatchlistGet") {
+        return { operation: request.operation, outcome: "Succeeded", data: { orderedItems: [], version: "0" } };
+      }
+      return { operation: request.operation, outcome: "Succeeded", data: { order } };
+    },
+    now: () => "2026-09-21T13:00:00.000Z",
+    createId: () => "57000000-0000-4000-8000-000000000099",
+    knownJobIds: [],
+    selectedPaperOrderId: order.orderId,
+    onDegraded: assert.fail,
+  });
+  const server = await startLoopbackApiServer(
+    { allowedOrigins: ["http://127.0.0.1:5173"], bodyLimitBytes: 1_048_576, port: 0 },
+    () => assert.fail("HTTP application dispatch is not expected"),
+    provider,
+  );
+  context.after(() => new Promise((resolve, reject) => {
+    server.close((error) => error ? reject(error) : resolve());
+  }));
+  const address = server.address();
+  assert.notEqual(address, null);
+  assert.equal(typeof address, "object");
+
+  const response = await send(address.port);
+  assert.match(response.body, /data-transition="OT-01"/);
+  assert.match(response.body, /Initial to Draft/);
+  assert.match(response.body, /datetime="2026-01-30T11:00:00\.000Z"/);
+
+  const unselected = createWorkbenchModelProvider({
+    execute: (requestJson) => {
+      const request = JSON.parse(requestJson);
+      if (request.operation === "ReadinessGet") {
+        return { operation: request.operation, outcome: "Succeeded", data: { readiness } };
+      }
+      return { operation: request.operation, outcome: "Succeeded", data: { orderedItems: [], version: "0" } };
+    },
+    now: () => "2026-09-21T13:00:00.000Z",
+    createId: () => "57000000-0000-4000-8000-000000000098",
+    knownJobIds: [],
+    onDegraded: assert.fail,
+  })();
+  assert.equal(unselected.paperOrder, undefined);
+  assert.match(renderWorkbenchDocument(unselected), /No hypothetical orders\./);
+});
+
+test("PT-UI-006 fails closed for paper-order query and projection failures", () => {
+  for (const scenario of [
+    {
+      name: "query failure",
+      paperResult: { operation: "PaperOrderGet", outcome: "Failed", error: { code: "ORDER_NOT_FOUND" } },
+      reason: "QueryFailed",
+    },
+    {
+      name: "malformed success",
+      paperResult: { operation: "PaperOrderGet", outcome: "Succeeded", data: { order: { state: "Unknown" } } },
+      reason: "ResultInvalid",
+    },
+  ]) {
+    const degraded = [];
+    const provider = createWorkbenchModelProvider({
+      execute: (requestJson) => {
+        const request = JSON.parse(requestJson);
+        if (request.operation === "ReadinessGet") {
+          return { operation: request.operation, outcome: "Succeeded", data: { readiness: readySnapshot() } };
+        }
+        if (request.operation === "WatchlistGet") {
+          return { operation: request.operation, outcome: "Succeeded", data: { orderedItems: [], version: "0" } };
+        }
+        return scenario.paperResult;
+      },
+      now: () => "2026-09-21T13:00:00.000Z",
+      createId: () => "57000000-0000-4000-8000-000000000097",
+      knownJobIds: [],
+      selectedPaperOrderId: "57000000-0000-4000-8000-000000000001",
+      onDegraded: (event) => degraded.push(event),
+    });
+
+    assert.deepEqual(provider(), { readiness: "NotReady" }, scenario.name);
+    assert.deepEqual(degraded, [{
+      code: "WORKBENCH_MODEL_DEGRADED",
+      stage: "PaperOrder",
+      reason: scenario.reason,
+    }], scenario.name);
+  }
+});
+
+test("PT-UI-006 requires explicit paper confirmation and presents all eight order states", async (context) => {
+  const checkedAt = "2026-09-21T13:00:00.000Z";
+  const readiness = evaluateReadiness({
+    checkedAt,
+    liveness: "Live",
+    dependencies: Object.fromEntries([
+      "PostgreSQL",
+      "Migrations",
+      "FixturePolicy",
+      "LocalDependency",
+      "DenialAudit",
+      "LedgerIntegrity",
+    ].map((dependency) => [dependency, { ready: true, checkedAt }])),
+  });
+  const orderId = "57000000-0000-4000-8000-000000000001";
+  let currentState = "Draft";
+  const requests = [];
+  const provideWorkbenchModel = createWorkbenchModelProvider({
+    execute: (requestJson) => {
+      const request = JSON.parse(requestJson);
+      requests.push(request);
+      if (request.operation === "ReadinessGet") {
+        return { operation: request.operation, outcome: "Succeeded", data: { readiness } };
+      }
+      if (request.operation === "WatchlistGet") {
+        return { operation: request.operation, outcome: "Succeeded", data: { orderedItems: [], version: "0" } };
+      }
+      if (request.operation === "PaperOrderGet") {
+        return {
+          operation: request.operation,
+          outcome: "Succeeded",
+          data: { order: paperOrder(currentState) },
+        };
+      }
+      assert.fail(`Unexpected operation ${request.operation}`);
+    },
+    now: () => checkedAt,
+    createId: () => "57000000-0000-4000-8000-000000000099",
+    knownJobIds: [],
+    selectedPaperOrderId: orderId,
+    onDegraded: assert.fail,
+  });
+  const server = await startLoopbackApiServer(
+    { allowedOrigins: ["http://127.0.0.1:5173"], bodyLimitBytes: 1_048_576, port: 0 },
+    () => assert.fail("HTTP application dispatch is not expected"),
+    provideWorkbenchModel,
+  );
+  context.after(() => new Promise((resolve, reject) => {
+    server.close((error) => error ? reject(error) : resolve());
+  }));
+  const address = server.address();
+  assert.notEqual(address, null);
+  assert.equal(typeof address, "object");
+
+  for (const [state, label] of [
+    ["Draft", "Draft"],
+    ["Submitted", "Submitted"],
+    ["Accepted", "Accepted"],
+    ["Partial", "Partially Filled"],
+    ["Filled", "Filled"],
+    ["Rejected", "Rejected"],
+    ["Canceled", "Canceled"],
+    ["Expired", "Expired"],
+  ]) {
+    currentState = state;
+    const response = await send(address.port);
+    assert.equal(response.status, 200, state);
+    assert.match(response.body, new RegExp(`<span id="order-status"[^>]*>${label}<\\/span>`), state);
+    assert.match(response.body, /ETF-&lt;A&gt;[\s\S]+1\.0000000000[\s\S]+100\.0000000000/, state);
+    assert.doesNotMatch(response.body, /ETF-<A>/, state);
+    assert.match(response.body, /No recorded transitions\./, state);
+    assert.match(response.body, /<section id="paper"[\s\S]+Research only — hypothetical — user makes all investment decisions\.[\s\S]+<\/section>/, state);
+    if (state === "Draft") {
+      assert.match(response.body, /data-state="DraftAwaitingConfirmation"/);
+      assert.match(response.body, /Confirmation required/);
+      assert.match(response.body, /data-operation="PaperOrderTransition"[^>]*data-requires-confirmation="true"[^>]*>Submit paper order<\/button>/);
+    } else {
+      assert.doesNotMatch(response.body, /DraftAwaitingConfirmation|Submit paper order/);
+    }
+  }
+
+  assert.deepEqual(
+    requests.filter(({ operation }) => operation === "PaperOrderGet").map(({ payload }) => payload),
+    Array.from({ length: 8 }, () => ({ orderId })),
+  );
+  assert.equal(requests.some(({ operation }) => operation === "PaperOrderTransition"), false);
+});
 
 test("PT-UI-005 preserves analytical and evidence warnings values and blocked states", async (context) => {
   const checkedAt = "2026-09-21T12:10:00.000Z";

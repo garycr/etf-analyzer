@@ -807,6 +807,10 @@ function isScale8(value: unknown): value is string {
   return typeof value === "string" && /^(?:0|[1-9][0-9]*)\.[0-9]{8}$/u.test(value);
 }
 
+function isSignedScale8(value: unknown): value is string {
+  return typeof value === "string" && /^-?(?:0|[1-9][0-9]*)\.[0-9]{8}$/u.test(value);
+}
+
 function requireStringArray(
   value: unknown,
   options: Readonly<{ nonEmpty?: boolean; unique?: boolean; uuid?: boolean }> = {},
@@ -1953,7 +1957,7 @@ function validatePortfolioLot(value: unknown): Readonly<Record<string, unknown>>
   ]);
   if (
     !isUuid(lot.lotId) || !isString(lot.instrumentId) || !isUtcInstant(lot.acquiredAt) ||
-    !isUInt(lot.ledgerSequence) || !isScale10(lot.openQuantity) || !isScale8(lot.openBasis)
+    !isUInt(lot.ledgerSequence) || !isScale10(lot.openQuantity) || !isSignedScale8(lot.openBasis)
   ) invalidApplicationResult();
   return Object.freeze({ ...lot });
 }
@@ -1964,8 +1968,8 @@ function validatePortfolioPosition(value: unknown): Readonly<Record<string, unkn
   ]);
   if (
     !isString(position.instrumentId) || !isScale10(position.quantity) ||
-    !isScale8(position.basis) || !isScale8(position.valuation) ||
-    !isScale8(position.unrealizedPnL)
+    !isSignedScale8(position.basis) || !isSignedScale8(position.valuation) ||
+    !isSignedScale8(position.unrealizedPnL)
   ) invalidApplicationResult();
   return Object.freeze({ ...position });
 }
@@ -1980,8 +1984,8 @@ function validatePortfolio(value: unknown): Readonly<Record<string, unknown>> {
     !isUuid(portfolio.portfolioId) || !isUInt(portfolio.portfolioVersion) ||
     !isUtcInstant(portfolio.asOf) || !isUuid(portfolio.valuationSnapshotId) ||
     portfolio.precisionPolicyVersion !== "DEC-014" || portfolio.baselineVersion !== "v1.0.0" ||
-    !isScale8(portfolio.cash) || !isScale8(portfolio.realizedPnL) ||
-    !isScale8(portfolio.totalEquity) ||
+    !isSignedScale8(portfolio.cash) || !isSignedScale8(portfolio.realizedPnL) ||
+    !isSignedScale8(portfolio.totalEquity) ||
     (portfolio.reconciliationState !== "Reconciled" && portfolio.reconciliationState !== "IntegrityBlocked")
   ) invalidApplicationResult();
   const lots = requireDenseResultArray(portfolio.lots).map(validatePortfolioLot).sort((left, right) =>
@@ -1993,6 +1997,8 @@ function validatePortfolio(value: unknown): Readonly<Record<string, unknown>> {
     compareCodePoints(left.instrumentId as string, right.instrumentId as string)
   );
   if (
+    new Set(lots.map((lot) => lot.lotId)).size !== lots.length ||
+    new Set(positions.map((position) => position.instrumentId)).size !== positions.length ||
     portfolio.reconciliationState === "IntegrityBlocked" &&
     (lots.length !== 0 ||
       positions.length !== 0 ||

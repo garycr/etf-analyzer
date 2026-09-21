@@ -2982,3 +2982,16 @@
 **authorization-boundary:** PT-UI-006 read-only checkpoint; no actual paper mutation wiring, brokerage, external account, WP-7 closure, WP-8, public ingress, deployment, release, or production action
 
 ---
+
+## 2026-09-21 | WP-7 portfolio presentation accepted | Ring-2 | @solo-orchestrator
+
+**Type:** IMPLEMENTATION-CHECKPOINT
+**Decision:** DEC-064 accepts PT-UI-007 with authoritative PortfolioGet composition, exact signed canonical values, owner ordering, explicit empty states, and non-disclosing integrity blocking; it also aligns Application Money validation with OpenAPI and rejects duplicate projection identities
+**Policy:** DEC-014; DEC-028; DEC-042; DEC-059..063; approved WP-7 plan; Application/OpenAPI contracts; ledger integrity boundary; test-first development; independent code and security review
+**Authority:** Agent under Fully Agentic mode following the Workspace Owner directive to continue; REV-146 Code PASS and REV-147 Security PASS
+**Accountability:** Solo Orchestrator continues PT-UI-008, retains viewport/axe evidence under PT-UI-009, requires PostgreSQL zero-skip evidence before WP-7 closure, and preserves the closed 16-operation API
+**Result:** Focused PT-UI-007 3/3, portfolio contract plus UI 4/4, and Application/workbench regression 46/46 PASS; aggregate 446 discovered, 391 passed, 0 failed, 55 PostgreSQL-environment skips; build, lint, diagnostics, audit, and diff integrity pass
+**Artifacts:** DEC-064 | REV-146 | REV-147 | docs/artifacts/gate-evidence/wp-7-portfolio-presentation.md | GitHub issue #83
+**authorization-boundary:** PT-UI-007 checkpoint only; no brokerage, external account, WP-7 closure, WP-8, public ingress, deployment, release, or production action
+
+---

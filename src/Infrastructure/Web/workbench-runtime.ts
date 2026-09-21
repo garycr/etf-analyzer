@@ -15,13 +15,14 @@ import type {
   WorkbenchEvidence,
   WorkbenchOrderState,
   WorkbenchPaperOrder,
+  WorkbenchPortfolio,
   WorkbenchWatchlist,
   WorkbenchWatchlistItem,
 } from "./workbench.js";
 
 export interface WorkbenchDegradedEvent {
   readonly code: "WORKBENCH_MODEL_DEGRADED";
-  readonly stage: "Readiness" | "Watchlist" | "Jobs" | "Analytics" | "Evidence" | "PaperOrder";
+  readonly stage: "Readiness" | "Watchlist" | "Jobs" | "Analytics" | "Evidence" | "PaperOrder" | "Portfolio";
   readonly reason:
     | "EnvelopeConstructionFailed"
     | "ExecutionFailed"
@@ -40,6 +41,10 @@ export interface WorkbenchModelProviderDependencies {
     evidenceId: string;
   }>;
   readonly selectedPaperOrderId?: string;
+  readonly selectedPortfolio?: Readonly<{
+    portfolioId: string;
+    asOf: string;
+  }>;
   readonly onDegraded: (event: WorkbenchDegradedEvent) => void;
 }
 
@@ -59,7 +64,8 @@ type WorkbenchQueryOperation =
   | "JobGet"
   | "AnalyticsResultGet"
   | "EvidenceGet"
-  | "PaperOrderGet";
+  | "PaperOrderGet"
+  | "PortfolioGet";
 
 function queryEnvelope(
   operation: WorkbenchQueryOperation,
@@ -336,6 +342,51 @@ function toPaperOrder(
   });
 }
 
+function toPortfolio(data: Readonly<Record<string, unknown>>): WorkbenchPortfolio {
+  if (!isRecord(data.portfolio)) throw new WorkbenchModelError("ResultInvalid");
+  const portfolio = data.portfolio;
+  if (portfolio.reconciliationState === "IntegrityBlocked") {
+    return presentBlockedState({ state: "IntegrityBlocked", context: {} }, null);
+  }
+  if (
+    portfolio.reconciliationState !== "Reconciled" ||
+    !Array.isArray(portfolio.lots) ||
+    !Array.isArray(portfolio.positions)
+  ) throw new WorkbenchModelError("ResultInvalid");
+  const lots = portfolio.lots.map((value) => {
+    if (!isRecord(value)) throw new WorkbenchModelError("ResultInvalid");
+    return Object.freeze({
+      lotId: requiredString(value, "lotId"),
+      instrumentId: requiredString(value, "instrumentId"),
+      acquiredAt: requiredString(value, "acquiredAt"),
+      ledgerSequence: requiredString(value, "ledgerSequence"),
+      openQuantity: requiredString(value, "openQuantity"),
+      openBasis: requiredString(value, "openBasis"),
+    });
+  });
+  const positions = portfolio.positions.map((value) => {
+    if (!isRecord(value)) throw new WorkbenchModelError("ResultInvalid");
+    return Object.freeze({
+      instrumentId: requiredString(value, "instrumentId"),
+      quantity: requiredString(value, "quantity"),
+      basis: requiredString(value, "basis"),
+      valuation: requiredString(value, "valuation"),
+      unrealizedPnL: requiredString(value, "unrealizedPnL"),
+    });
+  });
+  return Object.freeze({
+    reconciliationState: "Reconciled",
+    portfolioId: requiredString(portfolio, "portfolioId"),
+    portfolioVersion: requiredString(portfolio, "portfolioVersion"),
+    asOf: requiredString(portfolio, "asOf"),
+    cash: requiredString(portfolio, "cash"),
+    realizedPnL: requiredString(portfolio, "realizedPnL"),
+    totalEquity: requiredString(portfolio, "totalEquity"),
+    lots: Object.freeze(lots),
+    positions: Object.freeze(positions),
+  });
+}
+
 export function createWorkbenchModelProvider(
   dependencies: WorkbenchModelProviderDependencies,
 ): WorkbenchModelProvider {
@@ -390,6 +441,18 @@ export function createWorkbenchModelProvider(
         paperOrder = toPaperOrder(paperOrderData, dependencies.now());
       }
 
+      let portfolio: WorkbenchPortfolio | undefined;
+      if (dependencies.selectedPortfolio !== undefined) {
+        stage = "Portfolio";
+        const portfolioData = executeQuery(
+          "PortfolioGet",
+          dependencies.selectedPortfolio,
+          dependencies,
+        );
+        if (portfolioData === null) throw new WorkbenchModelError("QueryFailed");
+        portfolio = toPortfolio(portfolioData);
+      }
+
       stage = "Jobs";
       for (const jobId of dependencies.knownJobIds) {
         const data = executeQuery("JobGet", { jobId }, dependencies);
@@ -409,6 +472,7 @@ export function createWorkbenchModelProvider(
         analytics,
         evidence,
         paperOrder,
+        portfolio,
         failedJobs: Object.freeze(failedJobs),
       });
     } catch (error) {

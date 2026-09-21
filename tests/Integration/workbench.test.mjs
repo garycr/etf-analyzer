@@ -157,6 +157,209 @@ function readySnapshot(checkedAt = "2026-09-21T13:00:00.000Z") {
   });
 }
 
+function portfolio(reconciliationState = "Reconciled") {
+  const blocked = reconciliationState === "IntegrityBlocked";
+  return {
+    portfolioId: "58000000-0000-4000-8000-000000000001",
+    portfolioVersion: "7",
+    asOf: "2026-01-31T00:00:00.000Z",
+    valuationSnapshotId: "58000000-0000-4000-8000-000000000002",
+    precisionPolicyVersion: "DEC-014",
+    baselineVersion: "v1.0.0",
+    cash: blocked ? "0.00000000" : "1000.00000000",
+    lots: blocked ? [] : [
+      {
+        lotId: "58000000-0000-4000-8000-000000000004",
+        instrumentId: "ETF-<B>",
+        acquiredAt: "2026-01-30T12:00:00.000Z",
+        ledgerSequence: "2",
+        openQuantity: "1.0000000000",
+        openBasis: "100.00000000",
+      },
+      {
+        lotId: "58000000-0000-4000-8000-000000000003",
+        instrumentId: "ETF-A",
+        acquiredAt: "2026-01-30T11:00:00.000Z",
+        ledgerSequence: "1",
+        openQuantity: "2.0000000000",
+        openBasis: "200.00000000",
+      },
+    ],
+    positions: blocked ? [] : [
+      { instrumentId: "ETF-<B>", quantity: "1.0000000000", basis: "100.00000000", valuation: "90.00000000", unrealizedPnL: "-10.00000000" },
+      { instrumentId: "ETF-A", quantity: "2.0000000000", basis: "200.00000000", valuation: "220.00000000", unrealizedPnL: "20.00000000" },
+    ],
+    realizedPnL: blocked ? "0.00000000" : "-30.00000000",
+    totalEquity: blocked ? "0.00000000" : "1310.00000000",
+    reconciliationState,
+  };
+}
+
+test("PT-UI-007 renders unselected and reconciled-empty portfolio states", () => {
+  const readiness = readySnapshot();
+  const unselected = createWorkbenchModelProvider({
+    execute: (requestJson) => {
+      const request = JSON.parse(requestJson);
+      if (request.operation === "ReadinessGet") {
+        return { operation: request.operation, outcome: "Succeeded", data: { readiness } };
+      }
+      return { operation: request.operation, outcome: "Succeeded", data: { orderedItems: [], version: "0" } };
+    },
+    now: () => "2026-09-21T14:00:00.000Z",
+    createId: () => "58000000-0000-4000-8000-000000000098",
+    knownJobIds: [],
+    onDegraded: assert.fail,
+  })();
+  assert.match(renderWorkbenchDocument(unselected), /No reconciled portfolio selected\./);
+
+  const emptyPortfolio = { ...portfolio(), lots: [], positions: [] };
+  const empty = createWorkbenchModelProvider({
+    execute: (requestJson) => {
+      const request = JSON.parse(requestJson);
+      if (request.operation === "ReadinessGet") {
+        return { operation: request.operation, outcome: "Succeeded", data: { readiness } };
+      }
+      if (request.operation === "WatchlistGet") {
+        return { operation: request.operation, outcome: "Succeeded", data: { orderedItems: [], version: "0" } };
+      }
+      return { operation: request.operation, outcome: "Succeeded", data: { portfolio: emptyPortfolio } };
+    },
+    now: () => "2026-09-21T14:00:00.000Z",
+    createId: () => "58000000-0000-4000-8000-000000000097",
+    knownJobIds: [],
+    selectedPortfolio: {
+      portfolioId: emptyPortfolio.portfolioId,
+      asOf: emptyPortfolio.asOf,
+    },
+    onDegraded: assert.fail,
+  })();
+  const document = renderWorkbenchDocument(empty);
+  assert.match(document, /No positions\./);
+  assert.match(document, /No open lots\./);
+});
+
+test("PT-UI-007 fails closed for portfolio query and projection failures", () => {
+  for (const scenario of [
+    {
+      name: "query failure",
+      portfolioResult: { operation: "PortfolioGet", outcome: "Failed", error: { code: "LEDGER_INTEGRITY_FAILED" } },
+      reason: "QueryFailed",
+    },
+    {
+      name: "malformed success",
+      portfolioResult: {
+        operation: "PortfolioGet",
+        outcome: "Succeeded",
+        data: { portfolio: { ...portfolio(), cash: "1" } },
+      },
+      reason: "ResultInvalid",
+    },
+  ]) {
+    const degraded = [];
+    const provider = createWorkbenchModelProvider({
+      execute: (requestJson) => {
+        const request = JSON.parse(requestJson);
+        if (request.operation === "ReadinessGet") {
+          return { operation: request.operation, outcome: "Succeeded", data: { readiness: readySnapshot() } };
+        }
+        if (request.operation === "WatchlistGet") {
+          return { operation: request.operation, outcome: "Succeeded", data: { orderedItems: [], version: "0" } };
+        }
+        return scenario.portfolioResult;
+      },
+      now: () => "2026-09-21T14:00:00.000Z",
+      createId: () => "58000000-0000-4000-8000-000000000096",
+      knownJobIds: [],
+      selectedPortfolio: {
+        portfolioId: "58000000-0000-4000-8000-000000000001",
+        asOf: "2026-01-31T00:00:00.000Z",
+      },
+      onDegraded: (event) => degraded.push(event),
+    });
+    assert.deepEqual(provider(), { readiness: "NotReady" }, scenario.name);
+    assert.deepEqual(degraded, [{
+      code: "WORKBENCH_MODEL_DEGRADED",
+      stage: "Portfolio",
+      reason: scenario.reason,
+    }], scenario.name);
+  }
+});
+
+test("PT-UI-007 presents canonical reconciled portfolio values and integrity blocking", async (context) => {
+  const portfolioId = "58000000-0000-4000-8000-000000000001";
+  const asOf = "2026-01-31T00:00:00.000Z";
+  let reconciliationState = "Reconciled";
+  const requests = [];
+  const provider = createWorkbenchModelProvider({
+    execute: (requestJson) => {
+      const request = JSON.parse(requestJson);
+      requests.push(request);
+      if (request.operation === "ReadinessGet") {
+        return { operation: request.operation, outcome: "Succeeded", data: { readiness: readySnapshot() } };
+      }
+      if (request.operation === "WatchlistGet") {
+        return { operation: request.operation, outcome: "Succeeded", data: { orderedItems: [], version: "0" } };
+      }
+      if (request.operation === "PortfolioGet") {
+        return {
+          operation: request.operation,
+          outcome: "Succeeded",
+          data: { portfolio: portfolio(reconciliationState) },
+        };
+      }
+      assert.fail(`Unexpected operation ${request.operation}`);
+    },
+    now: () => "2026-09-21T14:00:00.000Z",
+    createId: () => "58000000-0000-4000-8000-000000000099",
+    knownJobIds: [],
+    selectedPortfolio: { portfolioId, asOf },
+    onDegraded: assert.fail,
+  });
+  const server = await startLoopbackApiServer(
+    { allowedOrigins: ["http://127.0.0.1:5173"], bodyLimitBytes: 1_048_576, port: 0 },
+    () => assert.fail("HTTP application dispatch is not expected"),
+    provider,
+  );
+  context.after(() => new Promise((resolve, reject) => {
+    server.close((error) => error ? reject(error) : resolve());
+  }));
+  const address = server.address();
+  assert.notEqual(address, null);
+  assert.equal(typeof address, "object");
+
+  const reconciled = await send(address.port);
+  assert.equal(reconciled.status, 200);
+  assert.match(reconciled.body, /data-reconciliation-state="Reconciled"/);
+  assert.match(reconciled.body, /Cash[\s\S]+1000\.00000000/);
+  assert.match(reconciled.body, /Realized P&amp;L<\/dt><dd>-30\.00000000/);
+  assert.match(reconciled.body, /Total equity<\/dt><dd>1310\.00000000/);
+  assert.match(reconciled.body, /ETF-A[\s\S]+2\.0000000000[\s\S]+200\.00000000[\s\S]+220\.00000000[\s\S]+20\.00000000/);
+  assert.match(reconciled.body, /ETF-&lt;B&gt;[\s\S]+1\.0000000000[\s\S]+100\.00000000[\s\S]+90\.00000000[\s\S]+-10\.00000000/);
+  assert.doesNotMatch(reconciled.body, /ETF-<B>/);
+  const positionsTable = reconciled.body.match(/<table id="portfolio-positions">[\s\S]+?<\/table>/)?.[0];
+  const lotsTable = reconciled.body.match(/<table id="portfolio-lots">[\s\S]+?<\/table>/)?.[0];
+  assert.notEqual(positionsTable, undefined);
+  assert.notEqual(lotsTable, undefined);
+  assert.ok(positionsTable.indexOf("ETF-&lt;B&gt;") < positionsTable.indexOf("ETF-A"));
+  assert.ok(lotsTable.indexOf("ETF-A") < lotsTable.indexOf("ETF-&lt;B&gt;"));
+  const portfolioSection = reconciled.body.match(/<section id="portfolio"[\s\S]+?<\/section>/)?.[0];
+  assert.notEqual(portfolioSection, undefined);
+  assert.doesNotMatch(portfolioSection, /Research only/);
+
+  reconciliationState = "IntegrityBlocked";
+  const blocked = await send(address.port);
+  assert.equal(blocked.status, 200);
+  assert.match(blocked.body, /data-state="IntegrityBlocked"/);
+  assert.match(blocked.body, /role="alert"[\s\S]+Integrity blocked/);
+  assert.match(blocked.body, /data-operation="ReadinessGet"[^>]*>Review integrity status<\/button>/);
+  assert.doesNotMatch(blocked.body, /1000\.00000000|1310\.00000000|-30\.00000000|ETF-A|ETF-&lt;B&gt;/);
+
+  assert.deepEqual(
+    requests.filter(({ operation }) => operation === "PortfolioGet").map(({ payload }) => payload),
+    [{ portfolioId, asOf }, { portfolioId, asOf }],
+  );
+});
+
 test("PT-UI-006 renders authoritative paper transition history and an empty unselected state", async (context) => {
   const order = paperOrder("Draft");
   order.transitionHistory = [{

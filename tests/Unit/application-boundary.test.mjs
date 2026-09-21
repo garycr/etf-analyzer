@@ -1477,6 +1477,49 @@ test("PT-APP-001M validates exact success data and canonical collection order", 
     }),
     (error) => error instanceof ApplicationResultInvalidError,
   );
+  assert.doesNotThrow(() => validateApplicationSuccessData("PortfolioGet", {
+    portfolio: {
+      ...portfolio,
+      cash: "-10.00000000",
+      lots: portfolio.lots.map((lot, index) => ({
+        ...lot,
+        openBasis: index === 0 ? "-100.00000000" : lot.openBasis,
+      })),
+      positions: portfolio.positions.map((position, index) => ({
+        ...position,
+        basis: index === 0 ? "-100.00000000" : position.basis,
+        valuation: index === 0 ? "-110.00000000" : position.valuation,
+        unrealizedPnL: index === 0 ? "-10.00000000" : position.unrealizedPnL,
+      })),
+      realizedPnL: "-30.00000000",
+      totalEquity: "-40.00000000",
+    },
+  }), "signed portfolio Money fields");
+  for (const [label, duplicatePortfolio] of [
+    ["duplicate lot ID", { ...portfolio, lots: [portfolio.lots[0], { ...portfolio.lots[1], lotId: portfolio.lots[0].lotId }] }],
+    ["duplicate position instrument ID", { ...portfolio, positions: [portfolio.positions[0], { ...portfolio.positions[1], instrumentId: portfolio.positions[0].instrumentId }] }],
+  ]) {
+    assert.throws(
+      () => validateApplicationSuccessData("PortfolioGet", { portfolio: duplicatePortfolio }),
+      (error) => error instanceof ApplicationResultInvalidError,
+      label,
+    );
+  }
+  for (const [label, malformedPortfolio] of [
+    ["cash", { ...portfolio, cash: "1" }],
+    ["realized P&L", { ...portfolio, realizedPnL: "-1.0" }],
+    ["total equity", { ...portfolio, totalEquity: "01.00000000" }],
+    ["lot open basis", { ...portfolio, lots: [{ ...portfolio.lots[0], openBasis: "-1" }, portfolio.lots[1]] }],
+    ["position basis", { ...portfolio, positions: [{ ...portfolio.positions[0], basis: "+1.00000000" }, portfolio.positions[1]] }],
+    ["position valuation", { ...portfolio, positions: [{ ...portfolio.positions[0], valuation: "1.0000000" }, portfolio.positions[1]] }],
+    ["position unrealized P&L", { ...portfolio, positions: [{ ...portfolio.positions[0], unrealizedPnL: "--1.00000000" }, portfolio.positions[1]] }],
+  ]) {
+    assert.throws(
+      () => validateApplicationSuccessData("PortfolioGet", { portfolio: malformedPortfolio }),
+      (error) => error instanceof ApplicationResultInvalidError,
+      label,
+    );
+  }
   assert.throws(
     () => validateApplicationSuccessData("PortfolioGet", {
       portfolio: { ...portfolio, reconciliationState: "IntegrityBlocked" },

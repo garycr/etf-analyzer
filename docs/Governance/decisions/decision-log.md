@@ -25,6 +25,7 @@
 | DEC-027 | 2026-09-14 | Architecture | Close domain-ledger cryptography, owner calls, and instrument identity | Workspace Owner | Solo Orchestrator | Active |
 | DEC-062 | 2026-09-21 | Analytics and evidence UI | Accept fixture-only PT-UI-005 and defer real-provider evidence states | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-063 | 2026-09-21 | Paper-order UI | Accept PT-UI-006 authoritative state and confirmation presentation | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
+| DEC-064 | 2026-09-21 | Portfolio UI | Accept PT-UI-007 canonical portfolio and integrity-blocked presentation | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -63,6 +64,21 @@
 ---
 
 ## Decision Records
+
+### DEC-064: Accept Canonical Portfolio And Integrity-Blocked Presentation
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-064 |
+| **Date** | 2026-09-21 |
+| **Category** | Portfolio UI |
+| **Decision** | Accept PT-UI-007 with optional selected `PortfolioGet` composition, exact signed Money and quantity strings, owner-defined lot/position ordering, explicit unselected and empty states, and non-disclosing `IntegrityBlocked` presentation; correct the pre-existing Application portfolio validator to match signed OpenAPI Money and reject duplicate lot/position identities |
+| **Policy** | DEC-014; DEC-028; DEC-042; DEC-059..063; approved WP-7 plan; Application and OpenAPI contracts; ledger integrity boundary; test-first development; WCAG 2.1 AA expectations; code and security review |
+| **Authority** | Agent under Fully Agentic mode following the Workspace Owner directive to continue |
+| **Accountability** | Solo Orchestrator preserves exact financial strings and integrity non-disclosure, retains viewport/axe evidence under PT-UI-009, requires PostgreSQL zero-skip evidence before WP-7 closure, and continues PT-UI-008 next |
+| **Status** | Reviewed; PT-UI-007 PASS; REV-146 Code PASS; REV-147 Security PASS; 446 discovered, 391 passed, 0 failed, 55 PostgreSQL-environment skips |
+
+---
 
 ### DEC-063: Accept Authoritative Paper-Order State And Confirmation Presentation
 

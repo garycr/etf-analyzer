@@ -80,6 +80,33 @@ export interface WorkbenchPaperOrder {
   }>[];
 }
 
+export interface WorkbenchPortfolioResult {
+  readonly reconciliationState: "Reconciled";
+  readonly portfolioId: string;
+  readonly portfolioVersion: string;
+  readonly asOf: string;
+  readonly cash: string;
+  readonly realizedPnL: string;
+  readonly totalEquity: string;
+  readonly lots: readonly Readonly<{
+    lotId: string;
+    instrumentId: string;
+    acquiredAt: string;
+    ledgerSequence: string;
+    openQuantity: string;
+    openBasis: string;
+  }>[];
+  readonly positions: readonly Readonly<{
+    instrumentId: string;
+    quantity: string;
+    basis: string;
+    valuation: string;
+    unrealizedPnL: string;
+  }>[];
+}
+
+export type WorkbenchPortfolio = WorkbenchPortfolioResult | BlockedStatePresentation;
+
 export interface WorkbenchDocumentInput {
   readonly readiness: WorkbenchReadiness | ReadinessSnapshot;
   readonly failedJobs?: readonly FailedJobPresentation<FailedJobForPresentation>[];
@@ -87,6 +114,7 @@ export interface WorkbenchDocumentInput {
   readonly analytics?: WorkbenchAnalytics;
   readonly evidence?: WorkbenchEvidence;
   readonly paperOrder?: WorkbenchPaperOrder;
+  readonly portfolio?: WorkbenchPortfolio;
 }
 
 function escapeHtml(value: string | number): string {
@@ -231,6 +259,47 @@ function renderPaperOrder(order: WorkbenchPaperOrder | undefined): string {
       </div>`;
 }
 
+function renderPortfolio(portfolio: WorkbenchPortfolio | undefined): string {
+  if (portfolio === undefined) return "<p>No reconciled portfolio selected.</p>";
+  if ("statusText" in portfolio) return renderBlockedState(portfolio);
+  const positions = portfolio.positions.length === 0
+    ? "<p>No positions.</p>"
+    : `<table id="portfolio-positions">
+        <caption>Positions</caption>
+        <thead><tr><th>Instrument</th><th>Quantity</th><th>Basis</th><th>Valuation</th><th>Unrealized P&amp;L</th></tr></thead>
+        <tbody>${portfolio.positions.map((position) => `<tr>
+          <th scope="row">${escapeHtml(position.instrumentId)}</th>
+          <td>${escapeHtml(position.quantity)}</td>
+          <td>${escapeHtml(position.basis)}</td>
+          <td>${escapeHtml(position.valuation)}</td>
+          <td>${escapeHtml(position.unrealizedPnL)}</td>
+        </tr>`).join("")}</tbody>
+      </table>`;
+  const lots = portfolio.lots.length === 0
+    ? "<p>No open lots.</p>"
+    : `<table id="portfolio-lots">
+        <caption>Open lots</caption>
+        <thead><tr><th>Instrument</th><th>Acquired</th><th>Ledger sequence</th><th>Open quantity</th><th>Open basis</th></tr></thead>
+        <tbody>${portfolio.lots.map((lot) => `<tr data-lot-id="${escapeHtml(lot.lotId)}">
+          <th scope="row">${escapeHtml(lot.instrumentId)}</th>
+          <td>${escapeHtml(lot.acquiredAt)}</td>
+          <td>${escapeHtml(lot.ledgerSequence)}</td>
+          <td>${escapeHtml(lot.openQuantity)}</td>
+          <td>${escapeHtml(lot.openBasis)}</td>
+        </tr>`).join("")}</tbody>
+      </table>`;
+  return `<div id="portfolio-details" data-portfolio-id="${escapeHtml(portfolio.portfolioId)}" data-version="${escapeHtml(portfolio.portfolioVersion)}" data-reconciliation-state="${escapeHtml(portfolio.reconciliationState)}">
+        <p>As of ${escapeHtml(portfolio.asOf)}</p>
+        <dl>
+          <dt>Cash</dt><dd>${escapeHtml(portfolio.cash)}</dd>
+          <dt>Realized P&amp;L</dt><dd>${escapeHtml(portfolio.realizedPnL)}</dd>
+          <dt>Total equity</dt><dd>${escapeHtml(portfolio.totalEquity)}</dd>
+        </dl>
+        ${positions}
+        ${lots}
+      </div>`;
+}
+
 export function renderWorkbenchDocument(
   input: WorkbenchDocumentInput,
 ): string {
@@ -258,6 +327,7 @@ export function renderWorkbenchDocument(
   const analytics = renderAnalytics(input.analytics);
   const evidence = renderEvidence(input.evidence);
   const paperOrder = renderPaperOrder(input.paperOrder);
+  const portfolio = renderPortfolio(input.portfolio);
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -400,7 +470,7 @@ export function renderWorkbenchDocument(
       </section>
       <section id="portfolio" aria-labelledby="portfolio-heading">
         <h2 id="portfolio-heading">Portfolio</h2>
-        <p>No reconciled portfolio selected.</p>
+        ${portfolio}
       </section>
       <section id="operations" aria-labelledby="operations-heading">
         <h2 id="operations-heading">Operations</h2>

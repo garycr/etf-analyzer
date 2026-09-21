@@ -23,6 +23,7 @@
 | DEC-025 | 2026-09-14 | Architecture | Retain schema USAGE without CREATE for controlled-function owner roles | Workspace Owner | Solo Orchestrator | Active |
 | DEC-026 | 2026-09-14 | Architecture | Persist watchlist aggregate version in an explicit singleton table | Workspace Owner | Solo Orchestrator | Active |
 | DEC-027 | 2026-09-14 | Architecture | Close domain-ledger cryptography, owner calls, and instrument identity | Workspace Owner | Solo Orchestrator | Active |
+| DEC-062 | 2026-09-21 | Analytics and evidence UI | Accept fixture-only PT-UI-005 and defer real-provider evidence states | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -61,6 +62,21 @@
 ---
 
 ## Decision Records
+
+### DEC-062: Accept Fixture-Only Analytics And Evidence Presentation
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-062 |
+| **Date** | 2026-09-21 |
+| **Category** | Analytics and evidence UI |
+| **Decision** | Accept PT-UI-005 with optional selected `AnalyticsResultGet` and `EvidenceGet` composition, exact escaped canonical string presentation, explicit verified no-signal state, and bounded quarantined, denied, and generic blocked states; retain PT-ANA-A11Y-001 for DOM accessibility proof and defer degraded/rights-restricted browser presentation until a future real-provider evidence-contract change |
+| **Policy** | DEC-020; DEC-028; DEC-059; DEC-060; DEC-061; approved WP-7 plan; closed 16-operation Application API; test-first development; WCAG 2.1 AA expectations; decision and code review |
+| **Authority** | Agent under Fully Agentic mode following the Workspace Owner directive to continue |
+| **Accountability** | Solo Orchestrator preserves fixture-only and fail-closed boundaries, does not claim live-provider or degraded-evidence support, completes PT-ANA-A11Y-001 before WP-7 closure, requires PostgreSQL zero-skip evidence, and continues PT-UI-006 next |
+| **Status** | Reviewed; PT-UI-005 PASS; REV-143 CONDITIONAL PASS for delivered fixture-only scope; 440 discovered, 385 passed, 0 failed, 55 PostgreSQL-environment skips |
+
+---
 
 ### DEC-061: Accept Version-Safe Watchlist Workflows
 

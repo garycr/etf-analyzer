@@ -68,6 +68,214 @@ function job(jobId, status) {
   };
 }
 
+function analyticsResult(signals = [{ instrumentId: "ETF-A", label: "Buy", score: "0.125000000000" }]) {
+  return Object.freeze({
+    domain: "etf.analytics.result.v1",
+    resultSchemaVersion: "1.0.0",
+    configurationHash: "b".repeat(64),
+    signals: Object.freeze(signals.map((signal) => Object.freeze(signal))),
+    trades: Object.freeze([]),
+    metrics: Object.freeze([Object.freeze({
+      metricId: "totalReturn",
+      numericClass: "Rate",
+      value: "0.031250000000",
+    })]),
+    warnings: Object.freeze(["Fixture data only"]),
+  });
+}
+
+function evidence(result) {
+  return Object.freeze({
+    domain: "etf.analytics.bundle.v1",
+    evidenceSchemaVersion: "1.0.0",
+    evidenceId: "evidence-fixture-1",
+    baselineVersion: "v1.0.0",
+    inputSetId: "input-fixture-1",
+    evaluationAt: "2026-01-31T00:00:00.000Z",
+    ruleId: "p0-rule",
+    ruleVersion: "1.0.0",
+    parameters: Object.freeze({ lookbackSessions: "20" }),
+    codeHash: "1".repeat(64),
+    seed: "42",
+    benchmark: Object.freeze({ instrumentId: "BENCH-1", version: "1" }),
+    providerPolicyReferences: Object.freeze(["fixture-policy-1"]),
+    environment: Object.freeze({ dependencyLockHash: "2".repeat(64), runtime: "node-20" }),
+    assumptions: Object.freeze({
+      costRate: "0.001000000000",
+      fillTiming: "next-session-open",
+      slippageRate: "0.000500000000",
+    }),
+    result,
+    inputHash: "3".repeat(64),
+    configurationHash: "b".repeat(64),
+    resultHash: "4".repeat(64),
+    bundleHash: "5".repeat(64),
+    reproducibilityStatus: "Complete",
+    reproducibilityReason: null,
+    retentionPolicyVersion: "RET-A-1.0",
+    retentionEpoch: "2026-01-31T00:00:00.000Z",
+  });
+}
+
+test("PT-UI-005 preserves analytical and evidence warnings values and blocked states", async (context) => {
+  const checkedAt = "2026-09-21T12:10:00.000Z";
+  const readiness = evaluateReadiness({
+    checkedAt,
+    liveness: "Live",
+    dependencies: Object.fromEntries([
+      "PostgreSQL",
+      "Migrations",
+      "FixturePolicy",
+      "LocalDependency",
+      "DenialAudit",
+      "LedgerIntegrity",
+    ].map((dependency) => [dependency, { ready: true, checkedAt }])),
+  });
+  const publicationTargetId = "56000000-0000-4000-8000-000000000001";
+  const successfulResult = analyticsResult();
+  const requests = [];
+  const provideWorkbenchModel = createWorkbenchModelProvider({
+    execute: (requestJson) => {
+      const request = JSON.parse(requestJson);
+      requests.push(request);
+      if (request.operation === "ReadinessGet") {
+        return { operation: request.operation, outcome: "Succeeded", data: { readiness } };
+      }
+      if (request.operation === "WatchlistGet") {
+        return {
+          operation: request.operation,
+          outcome: "Succeeded",
+          data: { orderedItems: [], version: "0" },
+        };
+      }
+      if (request.operation === "AnalyticsResultGet") {
+        return { operation: request.operation, outcome: "Succeeded", data: { result: successfulResult } };
+      }
+      if (request.operation === "EvidenceGet") {
+        return {
+          operation: request.operation,
+          outcome: "Succeeded",
+          data: { evidence: evidence(successfulResult) },
+        };
+      }
+      assert.fail(`Unexpected operation ${request.operation}`);
+    },
+    now: () => checkedAt,
+    createId: () => "56000000-0000-4000-8000-000000000099",
+    knownJobIds: [],
+    selectedAnalytics: { publicationTargetId, evidenceId: "evidence-fixture-1" },
+    onDegraded: assert.fail,
+  });
+  const server = await startLoopbackApiServer(
+    { allowedOrigins: ["http://127.0.0.1:5173"], bodyLimitBytes: 1_048_576, port: 0 },
+    () => assert.fail("HTTP application dispatch is not expected"),
+    provideWorkbenchModel,
+  );
+  context.after(() => new Promise((resolve, reject) => {
+    server.close((error) => error ? reject(error) : resolve());
+  }));
+
+  const address = server.address();
+  assert.notEqual(address, null);
+  assert.equal(typeof address, "object");
+  const response = await send(address.port);
+
+  assert.equal(response.status, 200);
+  assert.match(response.body, /ETF-A[\s\S]+Buy[\s\S]+0\.125000000000/);
+  assert.match(response.body, /totalReturn[\s\S]+0\.031250000000/);
+  assert.match(response.body, /Fixture data only/);
+  assert.match(response.body, /evidence-fixture-1[\s\S]+Complete[\s\S]+2026-01-31T00:00:00\.000Z/);
+  assert.match(response.body, /<section id="analytics"[\s\S]+Research only — hypothetical — user makes all investment decisions\.[\s\S]+<\/section>/);
+  assert.match(response.body, /<section id="evidence"[\s\S]+Research only — hypothetical — user makes all investment decisions\.[\s\S]+<\/section>/);
+  assert.deepEqual(requests.map(({ operation, payload }) => ({ operation, payload })), [
+    { operation: "ReadinessGet", payload: {} },
+    { operation: "WatchlistGet", payload: {} },
+    { operation: "AnalyticsResultGet", payload: { publicationTargetId } },
+    { operation: "EvidenceGet", payload: { evidenceId: "evidence-fixture-1" } },
+  ]);
+
+  const noSignalModel = createWorkbenchModelProvider({
+    execute: (requestJson) => {
+      const request = JSON.parse(requestJson);
+      if (request.operation === "ReadinessGet") {
+        return { operation: request.operation, outcome: "Succeeded", data: { readiness } };
+      }
+      if (request.operation === "WatchlistGet") {
+        return { operation: request.operation, outcome: "Succeeded", data: { orderedItems: [], version: "0" } };
+      }
+      if (request.operation === "AnalyticsResultGet") {
+        return { operation: request.operation, outcome: "Succeeded", data: { result: analyticsResult([]) } };
+      }
+      return {
+        operation: request.operation,
+        outcome: "Failed",
+        error: { code: "ANALYTICS_EVIDENCE_ACCESS_DENIED", message: "secret owner detail" },
+      };
+    },
+    now: () => checkedAt,
+    createId: () => "56000000-0000-4000-8000-000000000098",
+    knownJobIds: [],
+    selectedAnalytics: { publicationTargetId, evidenceId: "evidence-denied" },
+    onDegraded: assert.fail,
+  });
+  const noSignalDocument = noSignalModel();
+  assert.equal(noSignalDocument.analytics?.state, "NoSignal");
+  assert.equal(noSignalDocument.evidence?.state, "AccessDenied");
+  assert.doesNotMatch(JSON.stringify(noSignalDocument), /secret owner detail/);
+
+  const quarantinedModel = createWorkbenchModelProvider({
+    execute: (requestJson) => {
+      const request = JSON.parse(requestJson);
+      if (request.operation === "ReadinessGet") {
+        return { operation: request.operation, outcome: "Succeeded", data: { readiness } };
+      }
+      if (request.operation === "WatchlistGet") {
+        return { operation: request.operation, outcome: "Succeeded", data: { orderedItems: [], version: "0" } };
+      }
+      return {
+        operation: request.operation,
+        outcome: "Failed",
+        error: { code: "ANALYTICS_INPUT_QUARANTINED", message: "secret quarantine detail" },
+      };
+    },
+    now: () => checkedAt,
+    createId: () => "56000000-0000-4000-8000-000000000097",
+    knownJobIds: [],
+    selectedAnalytics: { publicationTargetId, evidenceId: "evidence-quarantined" },
+    onDegraded: assert.fail,
+  });
+  const quarantinedDocument = quarantinedModel();
+  assert.equal(quarantinedDocument.analytics?.state, "InputQuarantined");
+  assert.equal(quarantinedDocument.evidence?.state, "InputQuarantined");
+  assert.doesNotMatch(JSON.stringify(quarantinedDocument), /secret quarantine detail/);
+
+  const publicationBlockedModel = createWorkbenchModelProvider({
+    execute: (requestJson) => {
+      const request = JSON.parse(requestJson);
+      if (request.operation === "ReadinessGet") {
+        return { operation: request.operation, outcome: "Succeeded", data: { readiness } };
+      }
+      if (request.operation === "WatchlistGet") {
+        return { operation: request.operation, outcome: "Succeeded", data: { orderedItems: [], version: "0" } };
+      }
+      return {
+        operation: request.operation,
+        outcome: "Failed",
+        error: { code: "ANALYTICS_PUBLICATION_BLOCKED", message: "secret publication detail" },
+      };
+    },
+    now: () => checkedAt,
+    createId: () => "56000000-0000-4000-8000-000000000096",
+    knownJobIds: [],
+    selectedAnalytics: { publicationTargetId, evidenceId: "evidence-blocked" },
+    onDegraded: assert.fail,
+  });
+  const publicationBlockedDocument = publicationBlockedModel();
+  assert.equal(publicationBlockedDocument.analytics?.state, "NoSafeOperation");
+  assert.equal(publicationBlockedDocument.evidence?.state, "NoSafeOperation");
+  assert.doesNotMatch(JSON.stringify(publicationBlockedDocument), /secret publication detail/);
+});
+
 test("PT-UI-003B and PT-UI-004 compose authoritative readiness jobs and watchlist", async (context) => {
   const checkedAt = "2026-09-19T12:10:00.000Z";
   const readiness = evaluateReadiness({

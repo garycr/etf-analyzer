@@ -1,5 +1,6 @@
 import {
   researchWarningText,
+  type BlockedStatePresentation,
   type FailedJobForPresentation,
   type FailedJobPresentation,
   type ReadinessSnapshot,
@@ -21,10 +22,38 @@ export interface WorkbenchWatchlist {
   readonly version: string;
 }
 
+export interface WorkbenchAnalyticsResult {
+  readonly state: "Result" | "NoSignal";
+  readonly signals: readonly Readonly<{
+    instrumentId: string;
+    label: string;
+    score: string;
+  }>[];
+  readonly metrics: readonly Readonly<{
+    metricId: string;
+    value: string;
+  }>[];
+  readonly warnings: readonly string[];
+}
+
+export interface WorkbenchEvidenceResult {
+  readonly state: "Available";
+  readonly evidenceId: string;
+  readonly reproducibilityStatus: "Complete";
+  readonly evaluationAt: string;
+  readonly ruleId: string;
+  readonly ruleVersion: string;
+}
+
+export type WorkbenchAnalytics = WorkbenchAnalyticsResult | BlockedStatePresentation;
+export type WorkbenchEvidence = WorkbenchEvidenceResult | BlockedStatePresentation;
+
 export interface WorkbenchDocumentInput {
   readonly readiness: WorkbenchReadiness | ReadinessSnapshot;
   readonly failedJobs?: readonly FailedJobPresentation<FailedJobForPresentation>[];
   readonly watchlist?: WorkbenchWatchlist;
+  readonly analytics?: WorkbenchAnalytics;
+  readonly evidence?: WorkbenchEvidence;
 }
 
 function escapeHtml(value: string | number): string {
@@ -102,6 +131,47 @@ function renderWatchlist(watchlist: WorkbenchWatchlist | undefined): string {
       </div>`;
 }
 
+function renderBlockedState(presentation: BlockedStatePresentation): string {
+  const recovery = presentation.recovery === null
+    ? ""
+    : `<button type="button" data-operation="${escapeHtml(presentation.recovery.targetOperation)}">${escapeHtml(presentation.recovery.label)}</button>`;
+  return `<div class="blocked-state" role="${presentation.programmaticRole}" data-state="${escapeHtml(presentation.state)}">
+        <strong>${escapeHtml(presentation.statusText)}</strong>
+        <p>${escapeHtml(presentation.causeText)}</p>
+        ${recovery}
+      </div>`;
+}
+
+function renderAnalytics(analytics: WorkbenchAnalytics | undefined): string {
+  if (analytics === undefined) return "<p>No published result.</p>";
+  if ("statusText" in analytics) {
+    return renderBlockedState(analytics);
+  }
+  const signals = analytics.state === "NoSignal"
+    ? '<p role="status" data-state="NoSignal">No signal. Evaluation completed with no publishable signal.</p>'
+    : `<ul class="analytics-signals">${analytics.signals.map((signal) => `
+          <li><strong>${escapeHtml(signal.instrumentId)}</strong> <span>${escapeHtml(signal.label)}</span> <data value="${escapeHtml(signal.score)}">${escapeHtml(signal.score)}</data></li>`).join("")}
+        </ul>`;
+  const metrics = analytics.metrics.length === 0
+    ? ""
+    : `<dl>${analytics.metrics.map((metric) => `<dt>${escapeHtml(metric.metricId)}</dt><dd>${escapeHtml(metric.value)}</dd>`).join("")}</dl>`;
+  const warnings = analytics.warnings.length === 0
+    ? ""
+    : `<ul class="analytics-warnings">${analytics.warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")}</ul>`;
+  return `${signals}${metrics}${warnings}`;
+}
+
+function renderEvidence(evidence: WorkbenchEvidence | undefined): string {
+  if (evidence === undefined) return "<p>No authorized evidence selected.</p>";
+  if (evidence.state !== "Available") return renderBlockedState(evidence);
+  return `<dl id="evidence-details">
+        <dt>Evidence ID</dt><dd>${escapeHtml(evidence.evidenceId)}</dd>
+        <dt>Reproducibility</dt><dd>${escapeHtml(evidence.reproducibilityStatus)}</dd>
+        <dt>Evaluation time</dt><dd>${escapeHtml(evidence.evaluationAt)}</dd>
+        <dt>Rule</dt><dd>${escapeHtml(evidence.ruleId)} ${escapeHtml(evidence.ruleVersion)}</dd>
+      </dl>`;
+}
+
 export function renderWorkbenchDocument(
   input: WorkbenchDocumentInput,
 ): string {
@@ -126,6 +196,8 @@ export function renderWorkbenchDocument(
     : "";
   const jobs = renderFailedJobs(input.failedJobs ?? []);
   const watchlist = renderWatchlist(input.watchlist);
+  const analytics = renderAnalytics(input.analytics);
+  const evidence = renderEvidence(input.evidence);
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -254,12 +326,12 @@ export function renderWorkbenchDocument(
       <section id="analytics" aria-labelledby="analytics-heading">
         <h2 id="analytics-heading">Analytics</h2>
         <p class="warning">${researchWarning}</p>
-        <p>No published result.</p>
+        ${analytics}
       </section>
       <section id="evidence" aria-labelledby="evidence-heading">
         <h2 id="evidence-heading">Evidence</h2>
         <p class="warning">${researchWarning}</p>
-        <p>No authorized evidence selected.</p>
+        ${evidence}
       </section>
       <section id="paper" aria-labelledby="paper-heading">
         <h2 id="paper-heading">Paper orders</h2>

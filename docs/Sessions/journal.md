@@ -2946,3 +2946,26 @@
 **authorization-boundary:** PT-UI-004 checkpoint only; no WP-7 closure, WP-8, brokerage, live provider, public ingress, deployment, release, or production action
 
 ---
+
+## 2026-09-21T13:07:56 | WORK-022 | Ring-0 | @extension
+
+**Type:** WORK
+**action:** extension-activated
+**version:** 13.2.0
+**workspace:** etf-analyzer [WSL: Ubuntu]
+**duration-ms:** 16
+
+---
+
+## 2026-09-21 | WP-7 analytics and evidence presentation accepted | Ring-2 | @solo-orchestrator
+
+**Type:** IMPLEMENTATION-CHECKPOINT
+**Decision:** DEC-062 accepts fixture-only PT-UI-005 with owner-authoritative analytics/evidence queries, canonical string rendering, explicit verified no-signal, and bounded quarantined, denied, and generic blocked states
+**Policy:** DEC-020; DEC-028; DEC-059..061; approved WP-7 plan; closed Application API; WCAG 2.1 AA expectations; test-first development; independent code review
+**Authority:** Agent under Fully Agentic mode following the Workspace Owner directive to continue; REV-143 CONDITIONAL PASS for delivered scope
+**Accountability:** Solo Orchestrator continues PT-UI-006, retains DOM accessibility evidence under PT-ANA-A11Y-001, defers degraded/rights-restricted browser presentation until a real-provider evidence-contract change, requires PostgreSQL zero-skip evidence before WP-7 closure, and preserves the closed 16-operation API
+**Result:** Focused PT-UI-005 1/1 and workbench regression 11/11 PASS; aggregate 440 discovered, 385 passed, 0 failed, 55 PostgreSQL-environment skips; build and diagnostics pass; dependency audit zero vulnerabilities; diff integrity pass
+**Artifacts:** DEC-062 | REV-143 | docs/artifacts/gate-evidence/wp-7-analytics-evidence.md | GitHub issue #83
+**authorization-boundary:** PT-UI-005 fixture-only checkpoint; no live provider, degraded/right-restricted evidence workflow, WP-7 closure, WP-8, brokerage, public ingress, deployment, release, or production action
+
+---

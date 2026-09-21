@@ -1,6 +1,8 @@
 import {
+  presentBlockedState,
   presentFailedJob,
   validateApplicationSuccessData,
+  type BlockedStatePresentation,
   type FailedJobForPresentation,
   type FailedJobPresentation,
   type ReadinessSnapshot,
@@ -8,13 +10,15 @@ import {
 import type { ApiApplicationExecutor } from "../Http/api-adapter.js";
 import type {
   WorkbenchDocumentInput,
+  WorkbenchAnalytics,
+  WorkbenchEvidence,
   WorkbenchWatchlist,
   WorkbenchWatchlistItem,
 } from "./workbench.js";
 
 export interface WorkbenchDegradedEvent {
   readonly code: "WORKBENCH_MODEL_DEGRADED";
-  readonly stage: "Readiness" | "Watchlist" | "Jobs";
+  readonly stage: "Readiness" | "Watchlist" | "Jobs" | "Analytics" | "Evidence";
   readonly reason:
     | "EnvelopeConstructionFailed"
     | "ExecutionFailed"
@@ -28,6 +32,10 @@ export interface WorkbenchModelProviderDependencies {
   readonly now: () => string;
   readonly createId: () => string;
   readonly knownJobIds: readonly string[];
+  readonly selectedAnalytics?: Readonly<{
+    publicationTargetId: string;
+    evidenceId: string;
+  }>;
   readonly onDegraded: (event: WorkbenchDegradedEvent) => void;
 }
 
@@ -41,8 +49,15 @@ class WorkbenchModelError extends Error {
   }
 }
 
+type WorkbenchQueryOperation =
+  | "ReadinessGet"
+  | "WatchlistGet"
+  | "JobGet"
+  | "AnalyticsResultGet"
+  | "EvidenceGet";
+
 function queryEnvelope(
-  operation: "ReadinessGet" | "WatchlistGet" | "JobGet",
+  operation: WorkbenchQueryOperation,
   payload: Readonly<Record<string, unknown>>,
   dependencies: WorkbenchModelProviderDependencies,
 ): string {
@@ -59,7 +74,7 @@ function queryEnvelope(
 }
 
 function successfulData(
-  operation: "ReadinessGet" | "WatchlistGet" | "JobGet",
+  operation: WorkbenchQueryOperation,
   result: Readonly<Record<string, unknown>>,
 ): Readonly<Record<string, unknown>> | null {
   if (result.operation !== operation) throw new TypeError("Unexpected application result operation");
@@ -79,7 +94,7 @@ function successfulData(
 }
 
 function executeQuery(
-  operation: "ReadinessGet" | "WatchlistGet" | "JobGet",
+  operation: WorkbenchQueryOperation,
   payload: Readonly<Record<string, unknown>>,
   dependencies: WorkbenchModelProviderDependencies,
 ): Readonly<Record<string, unknown>> | null {
@@ -144,6 +159,120 @@ function toWatchlist(data: Readonly<Record<string, unknown>>): WorkbenchWatchlis
   });
 }
 
+function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function ownerFailureState(
+  code: unknown,
+  evidenceId: string,
+): BlockedStatePresentation {
+  if (code === "ANALYTICS_INPUT_QUARANTINED") {
+    return presentBlockedState({ state: "InputQuarantined", context: { evidenceId } }, null);
+  }
+  if (code === "ANALYTICS_EVIDENCE_ACCESS_DENIED") {
+    return presentBlockedState({ state: "AccessDenied", context: { orderId: evidenceId } }, null);
+  }
+  return presentBlockedState({ state: "NoSafeOperation", context: { code: String(code) } }, null);
+}
+
+function executeSelectedQuery(
+  operation: "AnalyticsResultGet" | "EvidenceGet",
+  payload: Readonly<Record<string, unknown>>,
+  evidenceId: string,
+  dependencies: WorkbenchModelProviderDependencies,
+): Readonly<
+  | { kind: "Data"; data: Readonly<Record<string, unknown>> }
+  | { kind: "Blocked"; presentation: BlockedStatePresentation }
+> {
+  let requestJson: string;
+  try {
+    requestJson = queryEnvelope(operation, payload, dependencies);
+  } catch {
+    throw new WorkbenchModelError("EnvelopeConstructionFailed");
+  }
+  let result: Readonly<Record<string, unknown>>;
+  try {
+    result = dependencies.execute(requestJson);
+  } catch {
+    throw new WorkbenchModelError("ExecutionFailed");
+  }
+  if (result.operation !== operation) throw new WorkbenchModelError("ResultInvalid");
+  if (result.outcome === "Failed") {
+    const error = result.error;
+    if (!isRecord(error) || typeof error.code !== "string") {
+      throw new WorkbenchModelError("ResultInvalid");
+    }
+    return Object.freeze({
+      kind: "Blocked",
+      presentation: ownerFailureState(error.code, evidenceId),
+    });
+  }
+  if (result.outcome !== "Succeeded") throw new WorkbenchModelError("ResultInvalid");
+  try {
+    return Object.freeze({
+      kind: "Data",
+      data: validateApplicationSuccessData(operation, result.data),
+    });
+  } catch {
+    throw new WorkbenchModelError("ResultInvalid");
+  }
+}
+
+function requiredString(record: Readonly<Record<string, unknown>>, field: string): string {
+  const value = record[field];
+  if (typeof value !== "string") throw new WorkbenchModelError("ResultInvalid");
+  return value;
+}
+
+function toAnalytics(data: Readonly<Record<string, unknown>>): WorkbenchAnalytics {
+  if (!isRecord(data.result)) throw new WorkbenchModelError("ResultInvalid");
+  const result = data.result;
+  if (!Array.isArray(result.signals) || !Array.isArray(result.metrics) || !Array.isArray(result.warnings)) {
+    throw new WorkbenchModelError("ResultInvalid");
+  }
+  const signals = result.signals.map((value) => {
+    if (!isRecord(value)) throw new WorkbenchModelError("ResultInvalid");
+    return Object.freeze({
+      instrumentId: requiredString(value, "instrumentId"),
+      label: requiredString(value, "label"),
+      score: requiredString(value, "score"),
+    });
+  });
+  const metrics = result.metrics.map((value) => {
+    if (!isRecord(value)) throw new WorkbenchModelError("ResultInvalid");
+    return Object.freeze({
+      metricId: requiredString(value, "metricId"),
+      value: requiredString(value, "value"),
+    });
+  });
+  if (!result.warnings.every((warning) => typeof warning === "string")) {
+    throw new WorkbenchModelError("ResultInvalid");
+  }
+  return Object.freeze({
+    state: signals.length === 0 ? "NoSignal" as const : "Result" as const,
+    signals: Object.freeze(signals),
+    metrics: Object.freeze(metrics),
+    warnings: Object.freeze([...result.warnings] as string[]),
+  });
+}
+
+function toEvidence(data: Readonly<Record<string, unknown>>): WorkbenchEvidence {
+  if (!isRecord(data.evidence)) throw new WorkbenchModelError("ResultInvalid");
+  const evidence = data.evidence;
+  if (evidence.reproducibilityStatus !== "Complete") {
+    throw new WorkbenchModelError("ResultInvalid");
+  }
+  return Object.freeze({
+    state: "Available",
+    evidenceId: requiredString(evidence, "evidenceId"),
+    reproducibilityStatus: "Complete",
+    evaluationAt: requiredString(evidence, "evaluationAt"),
+    ruleId: requiredString(evidence, "ruleId"),
+    ruleVersion: requiredString(evidence, "ruleVersion"),
+  });
+}
+
 export function createWorkbenchModelProvider(
   dependencies: WorkbenchModelProviderDependencies,
 ): WorkbenchModelProvider {
@@ -159,6 +288,32 @@ export function createWorkbenchModelProvider(
       const watchlistData = executeQuery("WatchlistGet", {}, dependencies);
       if (watchlistData === null) throw new WorkbenchModelError("QueryFailed");
       const watchlist = toWatchlist(watchlistData);
+
+      let analytics: WorkbenchAnalytics | undefined;
+      let evidence: WorkbenchEvidence | undefined;
+      if (dependencies.selectedAnalytics !== undefined) {
+        stage = "Analytics";
+        const analyticsData = executeSelectedQuery(
+          "AnalyticsResultGet",
+          { publicationTargetId: dependencies.selectedAnalytics.publicationTargetId },
+          dependencies.selectedAnalytics.evidenceId,
+          dependencies,
+        );
+        analytics = analyticsData.kind === "Blocked"
+          ? analyticsData.presentation
+          : toAnalytics(analyticsData.data);
+
+        stage = "Evidence";
+        const evidenceData = executeSelectedQuery(
+          "EvidenceGet",
+          { evidenceId: dependencies.selectedAnalytics.evidenceId },
+          dependencies.selectedAnalytics.evidenceId,
+          dependencies,
+        );
+        evidence = evidenceData.kind === "Blocked"
+          ? evidenceData.presentation
+          : toEvidence(evidenceData.data);
+      }
 
       stage = "Jobs";
       for (const jobId of dependencies.knownJobIds) {
@@ -176,6 +331,8 @@ export function createWorkbenchModelProvider(
       return Object.freeze({
         readiness,
         watchlist,
+        analytics,
+        evidence,
         failedJobs: Object.freeze(failedJobs),
       });
     } catch (error) {

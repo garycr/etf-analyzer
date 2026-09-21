@@ -27,6 +27,7 @@
 | DEC-063 | 2026-09-21 | Paper-order UI | Accept PT-UI-006 authoritative state and confirmation presentation | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-064 | 2026-09-21 | Portfolio UI | Accept PT-UI-007 canonical portfolio and integrity-blocked presentation | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-065 | 2026-09-21 | Paper-order accessibility | Accept PT-UI-008 explicit transition confirmation and bounded recovery announcements | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
+| DEC-066 | 2026-09-21 | Browser accessibility | Accept PT-ANA-A11Y-001/PT-UI-009 real-browser accessibility, keyboard, focus, and reflow evidence | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -65,6 +66,21 @@
 ---
 
 ## Decision Records
+
+### DEC-066: Accept Real-Browser Accessibility And Responsive Workflow Evidence
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-066 |
+| **Date** | 2026-09-21 |
+| **Category** | Browser accessibility |
+| **Decision** | Accept PT-ANA-A11Y-001 and PT-UI-009 with digest-pinned Chromium and axe evidence for analytical blocked states, keyboard-only watchlist and paper workflows, skip-link activation, deterministic live-region/focus restoration, and desktop/tablet/mobile no-overflow behavior; approve exact Playwright/axe dev dependencies including unmodified test-only MPL-2.0 use under Fully Agentic weak-copyleft review |
+| **Policy** | DEC-028; DEC-059..065; approved WP-7 plan; WCAG 2.1 AA expectations; OSS review policy; test-first development; accessibility, code, and security review |
+| **Authority** | Agent under Fully Agentic mode following the Workspace Owner directive to continue; weak-copyleft use evaluated under the Fully Agentic OSS override |
+| **Accountability** | Solo Orchestrator keeps Playwright/axe test-only and exact-pinned, maintains the immutable CI image digest and closed loopback/no-brokerage boundary, requires PostgreSQL zero-skip evidence before WP-7 closure, and continues PT-UI-010 next |
+| **Status** | Reviewed; PT-ANA-A11Y-001 PASS; PT-UI-009 PASS; REV-150 Accessibility PASS; REV-151 Code PASS; REV-152 Security/OSS PASS; browser 2/2 and repeated 6/6; host 447 discovered, 392 passed, 0 failed, 55 PostgreSQL-environment skips |
+
+---
 
 ### DEC-065: Accept Explicit Paper Transition And Bounded Recovery Announcements
 

@@ -3008,3 +3008,16 @@
 **authorization-boundary:** PT-UI-008 checkpoint only; no brokerage, external account, WP-7 closure, WP-8, public ingress, deployment, release, or production action
 
 ---
+
+## 2026-09-21 | WP-7 browser accessibility accepted | Ring-2 | @solo-orchestrator
+
+**Type:** IMPLEMENTATION-CHECKPOINT
+**Decision:** DEC-066 accepts PT-ANA-A11Y-001/PT-UI-009 with digest-pinned Chromium/axe, analytical blocked-state semantics, keyboard add/reorder/remove and paper confirmation, skip-link activation, deterministic reload focus, and required viewport reflow evidence; exact Playwright and test-only MPL axe dependencies are approved
+**Policy:** DEC-028; DEC-059..065; approved WP-7 plan; WCAG 2.1 AA expectations; OSS review policy; test-first development; independent accessibility, code, and security review
+**Authority:** Agent under Fully Agentic mode following the Workspace Owner directive to continue; REV-150 Accessibility PASS, REV-151 Code PASS, and REV-152 Security/OSS PASS
+**Accountability:** Solo Orchestrator continues PT-UI-010, keeps browser tooling dev-only and pinned, requires PostgreSQL zero-skip evidence before WP-7 closure, and preserves the closed loopback/no-brokerage boundary
+**Result:** Browser 2/2 and repeated stability 6/6 PASS with zero skips; workbench regression 26/26 PASS; host aggregate 447 discovered, 392 passed, 0 failed, 55 PostgreSQL-environment skips; build, lint, diagnostics, audit, and diff integrity pass
+**Artifacts:** DEC-066 | REV-150 | REV-151 | REV-152 | docs/artifacts/gate-evidence/wp-7-browser-accessibility.md | GitHub issue #83
+**authorization-boundary:** PT-ANA-A11Y-001/PT-UI-009 checkpoint only; no WP-7 closure, WP-8, brokerage, external account, public ingress, deployment, release, or production action
+
+---

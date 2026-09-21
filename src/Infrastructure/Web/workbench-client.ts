@@ -428,7 +428,12 @@ function restorePaperOrderOutcome(): void {
   if (message === null) return;
   sessionStorage.removeItem(paperOrderStatusKey);
   announcePaperOrder(message);
-  document.querySelector<HTMLElement>("#order-status")?.focus();
+  const restoreFocus = () => document.querySelector<HTMLElement>("#order-status")?.focus();
+  if (document.readyState === "complete") {
+    restoreFocus();
+  } else {
+    window.addEventListener("load", restoreFocus, { once: true });
+  }
 }
 
 async function submitPaperOrder(button: HTMLButtonElement): Promise<void> {

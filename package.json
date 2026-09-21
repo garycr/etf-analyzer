@@ -9,14 +9,17 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "lint": "tsc -p tsconfig.json --noEmit",
-    "test": "npm run build && node --test tests/Unit/*.test.mjs tests/Integration/*.test.mjs"
+    "test": "npm run build && node --test --test-skip-pattern='PT-ANA-A11Y-001|PT-UI-009' tests/Unit/*.test.mjs tests/Integration/*.test.mjs",
+    "test:browser": "npm run build && node --test --test-name-pattern='PT-ANA-A11Y-001|PT-UI-009' tests/Integration/workbench-accessibility.test.mjs"
   },
   "dependencies": {
     "pg": "8.16.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
     "@types/node": "20.19.14",
     "@types/pg": "8.11.6",
+    "playwright": "1.63.0",
     "typescript": "5.9.2"
   }
 }

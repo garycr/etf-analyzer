@@ -1,7 +1,7 @@
 # WP-7 Local Browser Workbench Implementation Plan
 
 **Date:** 2026-09-19
-**Status:** Active under DEC-059; PT-UI-001..008 accepted except aggregate PT-ANA-A11Y-001; implementation plan REV-136 PASS
+**Status:** Active under DEC-059; PT-UI-001..009 and PT-ANA-A11Y-001 accepted; implementation plan REV-136 PASS
 **Estimate:** XL / 24 agent-hours
 **Tracking:** GitHub issue #83
 
@@ -47,11 +47,11 @@ Hypothesis: a semantic browser shell can be served from the existing loopback pr
 | PT-UI-003B | `PT-UI-003B wires authoritative readiness and jobs through the browser composition root` | `tests/Integration/workbench.test.mjs` | PASS |
 | PT-UI-004 | `PT-UI-004 performs watchlist workflows with keyboard and version safety` | `tests/Unit/workbench-client.test.mjs`; `tests/Integration/workbench.test.mjs` | PASS |
 | PT-UI-005 | `PT-UI-005 preserves analytical and evidence warnings values and blocked states` | `tests/Integration/workbench.test.mjs` | PASS |
-| PT-ANA-A11Y-001 | `PT-ANA-A11Y-001 exposes blocked denied quarantined and no-signal analytics accessibly` | `tests/Integration/workbench-accessibility.test.mjs` | PENDING |
+| PT-ANA-A11Y-001 | `PT-ANA-A11Y-001 exposes blocked denied quarantined and no-signal analytics accessibly` | `tests/Integration/workbench-accessibility.test.mjs` | PASS |
 | PT-UI-006 | `PT-UI-006 requires explicit paper confirmation and presents all eight order states` | `tests/Integration/workbench.test.mjs` | PASS |
 | PT-UI-007 | `PT-UI-007 presents canonical reconciled portfolio values and integrity blocking` | `tests/Integration/workbench.test.mjs` | PASS |
 | PT-UI-008 | `PT-UI-008 announces invalid transitions conflicts and recovery outcomes` | `tests/Integration/workbench-accessibility.test.mjs` | PASS |
-| PT-UI-009 | `PT-UI-009 completes keyboard workflows without overflow at required viewports` | `tests/Integration/workbench-accessibility.test.mjs` | PENDING |
+| PT-UI-009 | `PT-UI-009 completes keyboard workflows without overflow at required viewports` | `tests/Integration/workbench-accessibility.test.mjs` | PASS |
 | PT-UI-010 | `PT-UI-010 meets local security performance and redaction gates` | `tests/Integration/workbench.test.mjs` | PENDING |
 
 ## Effort Allocation

@@ -222,6 +222,9 @@ async function snapshotLedger(client, portfolioId) {
             (SELECT count(*)::integer FROM etf.ledger_audit WHERE portfolio_id = $1::uuid) AS audits,
             (SELECT count(*)::integer FROM etf.ledger_commitments WHERE portfolio_id = $1::uuid) AS commitments,
             (SELECT count(*)::integer FROM etf.ledger_anchors WHERE portfolio_id = $1::uuid) AS anchors,
+            (SELECT count(*)::integer FROM etf.audit_commitments) AS audit_commitments,
+            (SELECT count(*)::integer FROM etf.audit_anchor_checkpoints) AS audit_checkpoints,
+            (SELECT count(*)::integer FROM etf.portfolio_anchor_checkpoints WHERE portfolio_id = $1::uuid) AS portfolio_checkpoints,
             (SELECT jsonb_agg(transaction_record.evidence_hash ORDER BY transaction_record.ledger_sequence)
                FROM etf.ledger_transactions AS transaction_record
               WHERE transaction_record.portfolio_id = $1::uuid) AS transaction_hashes,
@@ -785,6 +788,34 @@ test(
         anchors: 1,
         checkpoints: 1,
       }]);
+      for (const statement of [
+        "INSERT INTO etf.ledger_transactions DEFAULT VALUES",
+        "UPDATE etf.ledger_transactions SET evidence_hash = evidence_hash",
+        "DELETE FROM etf.ledger_transactions",
+        "TRUNCATE etf.ledger_transactions",
+      ]) {
+        await client.query("SET SESSION AUTHORIZATION app_runtime");
+        try {
+          await assert.rejects(() => client.query(statement), (error) => error.code === "42501");
+        } finally {
+          await client.query("RESET SESSION AUTHORIZATION");
+        }
+        assert.deepEqual((await client.query(
+          `SELECT (SELECT count(*)::integer FROM etf.ledger_transactions) AS transactions,
+                  (SELECT count(*)::integer FROM etf.ledger_audit) AS audits,
+                  (SELECT count(*)::integer FROM etf.audit_commitments) AS audit_commitments,
+                  (SELECT count(*)::integer FROM etf.ledger_commitments) AS commitments,
+                  (SELECT count(*)::integer FROM etf.ledger_anchors) AS anchors,
+                  (SELECT count(*)::integer FROM etf.portfolio_anchor_checkpoints) AS checkpoints`,
+        )).rows, [{
+          transactions: 1,
+          audits: 1,
+          audit_commitments: 1,
+          commitments: 1,
+          anchors: 1,
+          checkpoints: 1,
+        }]);
+      }
     } finally {
       try {
         await cleanBootstrap(client);
@@ -1825,6 +1856,141 @@ test(
 );
 
 test(
+  "CT-ORD-016 paper-order failures preserve the complete transition boundary",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    const group = "55900000";
+    const orderId = deterministicUuid(group, 1);
+    const portfolioId = deterministicUuid(group, 2);
+    const commands = [
+      {
+        correlationId: deterministicUuid(group, 101),
+        occurredAt: "2026-09-22T12:00:00.000Z",
+        operation: "DraftCreate",
+        orderId,
+        transitionCommandId: deterministicUuid(group, 201),
+        expectedVersion: 0,
+        transition: "OT-01",
+        transitionPayload: {
+          instrumentId: "CONFORMANCE-F-ETF",
+          researchEvidenceId: deterministicUuid(group, 3),
+          side: "Buy",
+          quantity: "2.0000000000",
+          unitPrice: "10.0000000000",
+          tradeDate: "2026-09-22",
+        },
+      },
+      {
+        correlationId: deterministicUuid(group, 102),
+        occurredAt: "2026-09-22T12:01:00.000Z",
+        operation: "Transition",
+        orderId,
+        transitionCommandId: deterministicUuid(group, 202),
+        expectedVersion: 1,
+        transition: "OT-02",
+        transitionPayload: {
+          confirmation: {
+            actorId: "local-user",
+            confirmedAt: "2026-09-22T12:01:00.000Z",
+            confirmationText: "Confirm hypothetical paper order",
+          },
+        },
+      },
+      {
+        correlationId: deterministicUuid(group, 103),
+        occurredAt: "2026-09-22T12:02:00.000Z",
+        operation: "Transition",
+        orderId,
+        transitionCommandId: deterministicUuid(group, 203),
+        expectedVersion: 2,
+        transition: "OT-03",
+        transitionPayload: {
+          portfolioId,
+          validationSnapshotId: deterministicUuid(group, 4),
+          expectedPortfolioVersion: 1,
+        },
+      },
+    ];
+    const snapshot = async () => (await client.query(
+      `SELECT row_to_json(order_record)::jsonb AS order_record,
+              (SELECT jsonb_agg(transition_record ORDER BY resulting_version)
+                 FROM etf.order_transitions AS transition_record
+                WHERE transition_record.order_id = $1::uuid) AS transitions,
+              (SELECT jsonb_agg(replay_record ORDER BY transition_command_id)
+                 FROM etf.order_command_replays AS replay_record
+                WHERE replay_record.order_id = $1::uuid) AS order_replays,
+                (SELECT jsonb_agg(audit_record ORDER BY recorded_at, audit_id)
+                 FROM etf.order_audit AS audit_record
+                WHERE audit_record.order_id = $1::uuid) AS order_audits,
+                (SELECT jsonb_agg(replay_record ORDER BY operation, command_id)
+                  FROM etf.application_replays AS replay_record) AS application_replays
+         FROM etf.paper_orders AS order_record
+        WHERE order_record.order_id = $1::uuid`,
+      [orderId],
+    )).rows;
+
+    await client.connect();
+    await client.query(fixtureLockSql);
+    try {
+      await cleanBootstrap(client);
+      await applyPrerequisites(client);
+      await prepareLedgerBoundary(client);
+      await client.query("GRANT EXECUTE ON FUNCTION etf.paper_order_transition(jsonb) TO app_runtime");
+      await appendLedger(client, cashDeposit({
+        portfolioId,
+        transactionId: deterministicUuid(group, 301),
+        correlationId: deterministicUuid(group, 401),
+        version: 0,
+        effectiveAt: "2026-09-22T11:59:00.000Z",
+      }));
+      for (const command of commands) await transitionPaperOrder(client, command);
+
+      const baseline = await snapshot();
+      assert.equal(baseline[0].order_record.state, "Accepted");
+      assert.equal(baseline[0].order_record.aggregate_version, 3);
+      const failures = [
+        [{ ...commands[2], transitionCommandId: deterministicUuid(group, 204), expectedVersion: 2 }, "40001", "ORDER_VERSION_CONFLICT"],
+        [{ ...commands[2], transitionPayload: { ...commands[2].transitionPayload, validationSnapshotId: deterministicUuid(group, 5) } }, "P0001", "ORDER_IDEMPOTENCY_CONFLICT"],
+        [{
+          correlationId: deterministicUuid(group, 104),
+          occurredAt: "2026-09-22T12:03:00.000Z",
+          operation: "Transition",
+          orderId,
+          transitionCommandId: deterministicUuid(group, 205),
+          expectedVersion: 3,
+          transition: "OT-05",
+          transitionPayload: {
+            portfolioId,
+            transactionId: deterministicUuid(group, 302),
+            fillId: deterministicUuid(group, 303),
+            expectedPortfolioVersion: 1,
+            quantity: "2.0000000000",
+            unitPrice: "10.0000000000",
+            fee: "0.00000000",
+          },
+        }, "P0001", "ORDER_GUARD_FAILED"],
+      ];
+      for (const [command, code, message] of failures) {
+        await assert.rejects(
+          () => transitionPaperOrder(client, command),
+          (error) => error.code === code && error.message === message,
+          message,
+        );
+        assert.deepEqual(await snapshot(), baseline, message);
+      }
+    } finally {
+      try {
+        await cleanBootstrap(client);
+      } finally {
+        await client.query(fixtureUnlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
   "0003 executes a canonical paper fill through the complete nested owner path",
   { skip: !connectionString },
   async () => {
@@ -2562,6 +2728,9 @@ test(
     await client.connect();
     try {
       const vectors = [
+        { source: "1.0000000000", numericClass: "Quantity", postgresType: "numeric(28,10)", expected: "1.0000000000" },
+        { source: "100.00000000", numericClass: "Money", postgresType: "numeric(28,8)", expected: "100.00000000" },
+        { source: "-0.00000000", numericClass: "Money", postgresType: "numeric(28,8)", expected: "0.00000000" },
         { source: "1.000000005", numericClass: "Money", postgresType: "numeric(28,8)", expected: "1.00000000" },
         { source: "1.000000015", numericClass: "Money", postgresType: "numeric(28,8)", expected: "1.00000002" },
         { source: "-1.000000005", numericClass: "Money", postgresType: "numeric(28,8)", expected: "-1.00000000" },
@@ -2599,7 +2768,7 @@ test(
 
       const vectors = [
         { amount: "1.000000001", error: /LEDGER_EXCESS_SCALE/ },
-        { amount: "1e0", error: /LEDGER_INVALID_DECIMAL/ },
+        { amount: "1e2", error: /LEDGER_INVALID_DECIMAL/ },
         { amount: "+1.00000000", error: /LEDGER_INVALID_DECIMAL/ },
         { amount: " 1.00000000", error: /LEDGER_INVALID_DECIMAL/ },
         { amount: "NaN", error: /LEDGER_INVALID_DECIMAL/ },
@@ -4631,6 +4800,14 @@ test(
       unitPrice: "12.0000000000",
       effectiveAt: "2026-09-14T05:02:00.000Z",
     });
+    const insufficientSell = fillFixture({
+      group,
+      index: 5,
+      side: "Sell",
+      quantity: "1.0000000000",
+      unitPrice: "12.0000000000",
+      effectiveAt: "2026-09-14T05:03:00.000Z",
+    });
     await admin.connect();
     await admin.query(fixtureLockSql);
     try {
@@ -4641,6 +4818,7 @@ test(
       await seedFillOrder(admin, { ...buyB, instrumentId });
       await seedFillOrder(admin, { ...sellA, instrumentId });
       await seedFillOrder(admin, { ...sellB, instrumentId });
+      await seedFillOrder(admin, { ...insufficientSell, instrumentId });
       await appendLedger(admin, cashDeposit({
         portfolioId,
         transactionId: deterministicUuid(group, 1),
@@ -4689,6 +4867,9 @@ test(
         audits: beforeRace.audits + 1,
         commitments: beforeRace.commitments + 1,
         anchors: beforeRace.anchors + 1,
+        audit_commitments: beforeRace.audit_commitments + 1,
+        audit_checkpoints: beforeRace.audit_checkpoints + 1,
+        portfolio_checkpoints: beforeRace.portfolio_checkpoints,
         transaction_hashes: [
           ...beforeRace.transaction_hashes,
           committed[0].value.transactionEvidenceHash,
@@ -4749,6 +4930,9 @@ test(
         audits: beforeSellRace.audits + 1,
         commitments: beforeSellRace.commitments + 1,
         anchors: beforeSellRace.anchors + 1,
+        audit_commitments: beforeSellRace.audit_commitments + 1,
+        audit_checkpoints: beforeSellRace.audit_checkpoints + 1,
+        portfolio_checkpoints: beforeSellRace.portfolio_checkpoints,
         transaction_hashes: [
           ...beforeSellRace.transaction_hashes,
           committedSell.transactionEvidenceHash,
@@ -4779,6 +4963,17 @@ test(
           correlationId: deterministicUuid(group, 999),
         }),
         /LEDGER_IDEMPOTENCY_CONFLICT/,
+      );
+      assert.deepEqual(await snapshotLedger(admin, portfolioId), afterSellRace);
+
+      await assert.rejects(
+        () => appendLedger(contenderA, fillCommand({
+          ...insufficientSell,
+          portfolioId,
+          instrumentId,
+          version: 3,
+        })),
+        (error) => error.code === "P0001" && error.message === "LEDGER_INSUFFICIENT_POSITION",
       );
       assert.deepEqual(await snapshotLedger(admin, portfolioId), afterSellRace);
     } finally {

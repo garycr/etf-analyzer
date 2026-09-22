@@ -85,11 +85,13 @@ Feature: CT-DB-001 PostgreSQL contract conformance
       | migration_owner    | migration_executor | false       | false         | true      |
       | anchor_owner       | migration_owner    | false       | false         | true      |
       | application_writer_owner | migration_owner | false     | false         | true      |
+      | audit_activity_verifier_owner | migration_owner | false | false       | true      |
       | audit_writer_owner | migration_owner    | false       | false         | true      |
       | evidence_writer_owner | migration_owner | false       | false         | true      |
       | ledger_writer_owner | migration_owner   | false       | false         | true      |
       | projection_owner   | migration_owner    | false       | false         | true      |
       | schema_owner       | migration_owner    | false       | false         | true      |
+      | pg_read_all_stats  | audit_activity_verifier_owner | false | true    | false     |
     And deployment_login connects, sets migration_executor, sets migration_owner, then resets and closes before its credential is removed
     When grants are compared with the closed role matrix
     Then PUBLIC has no database, schema, table, sequence, function, or role privilege

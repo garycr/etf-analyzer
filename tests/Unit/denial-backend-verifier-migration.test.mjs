@@ -46,7 +46,7 @@ test("0007 uses temporary schema create authority and replaces only denial corre
   );
   assert.match(
     sql,
-    /REVOKE CREATE ON SCHEMA etf FROM audit_activity_verifier_owner/u,
+    /REVOKE USAGE, CREATE ON SCHEMA etf FROM audit_activity_verifier_owner/u,
   );
   assert.match(sql, /REVOKE CREATE ON SCHEMA etf FROM audit_writer_owner/u);
   assert.match(sql, /CREATE OR REPLACE FUNCTION etf\.audit_append\(payload jsonb\)/u);
@@ -55,5 +55,11 @@ test("0007 uses temporary schema create authority and replaces only denial corre
     /etf\.denial_backend_matches\(\(subject ->> 'originalBackendPid'\)::integer, \(subject ->> 'backendStart'\)::timestamp with time zone, subject ->> 'originalSessionUser', 'etf-denial:' \|\| \(subject ->> 'denialNonce'\)\)/u,
   );
   assert.doesNotMatch(sql, /IF NOT EXISTS \(SELECT 1 FROM pg_catalog\.pg_stat_activity/iu);
+  assert.match(sql, /pg_advisory_xact_lock\(pg_catalog\.hashtextextended\(pg_catalog\.jsonb_build_array\('etf:denial-dedup'/u);
+  assert.match(sql, /extract\(epoch FROM \(subject ->> 'backendStart'\)::timestamp\(3\) with time zone\) \* 1000\)::bigint/u);
+  assert.match(sql, /replay_audit_id uuid/u);
+  assert.match(sql, /SELECT denial\.audit_id, denial\.content_hash, commitment\.audit_sequence/u);
+  assert.match(sql, /replay_evidence <> evidence/u);
+  assert.match(sql, /RAISE EXCEPTION 'ANALYTICS_ACCESS_DENIAL_AUDIT_FAILED' USING ERRCODE = '55000'/u);
   assert.match(sql, /REVOKE ALL ON FUNCTION etf\.audit_append\(jsonb\) FROM PUBLIC/u);
 });

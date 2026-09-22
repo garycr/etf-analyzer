@@ -517,7 +517,7 @@ test(
           { sequence: 4, migration_id: "0004-fixtures", content_hash: "9bf81885aab5fafe8bcac9b372d7bbd0bec601fc29e0cdbc234a65fc3d5489f1", schema_manifest_hash: "bc0e77af221c697b287d6e82e70a2400d569d56b371b42686ad5398c909db4c3" },
           { sequence: 5, migration_id: "0005-analytics-evidence", content_hash: "638fdcb40695be04a30c56807e529f753fd37c80ccfdcd6ad58f04e603287cc4", schema_manifest_hash: "089df576fc69615023861fbb3909b36ee06359db19a4f8637cedd455de2fb8f2" },
           { sequence: 6, migration_id: "0006-controlled-access", content_hash: "609dcf7bd1faa472e850b7ed1cd32511987a596e7f52403ede1b832fc1e4e8dc", schema_manifest_hash: "5435948ea8d2f55ac11a2a2db9378466d4d6dc64be7ba1c2eac615471e15de51" },
-          { sequence: 7, migration_id: "0007-denial-backend-verifier", content_hash: "76f71b0805b7a9cd604effd7ae6e4c230732be4845a2f93239f45c0e6cb4e203", schema_manifest_hash: "3d19b4dd5081810b104b8fdbadffa5d4f12e7026e65bbcfc7ccbc2ab5b42dd6e" },
+          { sequence: 7, migration_id: "0007-denial-backend-verifier", content_hash: "0d07358c3056885e15ba190681402a381ed71485beb35e3b9088cc8d107b1340", schema_manifest_hash: "915d698edc5d95ef648d38d754ed5754dc46fffa8a9d6272304eaf58cf274c2e" },
         ],
       );
     } finally {
@@ -942,6 +942,125 @@ test(
           );
         }
         await client.query("RESET SESSION AUTHORIZATION");
+      }
+    } finally {
+      await client.query("RESET SESSION AUTHORIZATION").catch(() => undefined);
+      await cleanBootstrap(client).catch(() => undefined);
+      await client.query(unlockSql).catch(() => undefined);
+      await client.end();
+    }
+  },
+);
+
+test(
+  "CT-DB-001D roles and controlled operations enforce least privilege",
+  { skip: connectionString ? false : "ETF_TEST_POSTGRES_URL is not configured" },
+  async (context) => {
+    const client = new pg.Client({ connectionString });
+    const expectDeniedAs = async (sessionUser, statement) => {
+      await client.query(`SET SESSION AUTHORIZATION ${sessionUser}`);
+      try {
+        await assert.rejects(
+          () => client.query(statement),
+          (error) => error.code === "42501",
+        );
+      } finally {
+        await client.query("RESET ROLE").catch(() => undefined);
+        await client.query("RESET SESSION AUTHORIZATION");
+      }
+    };
+    const protectedState = async () => (await client.query(
+      `SELECT
+         (SELECT count(*)::integer FROM etf.ledger_transactions) AS ledger_transactions,
+         (SELECT count(*)::integer FROM etf.ledger_anchors) AS ledger_anchors,
+         (SELECT count(*)::integer FROM etf.anchor_keys) AS anchor_keys,
+         (SELECT count(*)::integer FROM etf.access_denial_audit) AS denial_audits`,
+    )).rows;
+
+    await client.connect();
+    await client.query(lockSql);
+    try {
+      await cleanBootstrap(client);
+      await applyCompleteMigrationSet(client);
+
+      const memberships = await client.query(
+        `SELECT granted.rolname AS role, member.rolname AS member,
+                membership.admin_option,
+                membership.inherit_option,
+                membership.set_option
+           FROM pg_catalog.pg_auth_members AS membership
+           JOIN pg_catalog.pg_roles AS granted ON granted.oid = membership.roleid
+           JOIN pg_catalog.pg_roles AS member ON member.oid = membership.member
+          WHERE granted.rolname = ANY($1::text[])
+            AND member.rolname = ANY($1::text[])
+          ORDER BY granted.rolname, member.rolname`,
+        [[...productRoles.map(({ name }) => name), "pg_read_all_stats"]],
+      );
+      assert.deepEqual(memberships.rows, [...roleMemberships]
+        .sort((left, right) => left.role.localeCompare(right.role) || left.member.localeCompare(right.member))
+        .map(({ role, member, admin, inherit, set }) => ({
+          role,
+          member,
+          admin_option: admin,
+          inherit_option: inherit,
+          set_option: set,
+        })));
+
+      const databaseAuthority = await client.query(
+        `SELECT role_name,
+                pg_catalog.has_database_privilege(role_name, current_database(), 'CONNECT') AS connect,
+                pg_catalog.has_database_privilege(role_name, current_database(), 'TEMPORARY') AS temporary
+           FROM pg_catalog.unnest($1::text[]) AS role_name
+          ORDER BY role_name`,
+        [productRoles.map(({ name }) => name)],
+      );
+      const databaseConnectRoles = new Set([
+        "app_runtime",
+        "audit_runtime",
+        "deployment_login",
+        "key_injector",
+        "migration_executor",
+        "projection_runtime",
+      ]);
+      assert.ok(databaseAuthority.rows.every(({ role_name, connect, temporary }) =>
+        connect === databaseConnectRoles.has(role_name) && temporary === false));
+
+      const publicAuthority = await client.query(
+        `SELECT
+           NOT EXISTS (
+             SELECT 1
+               FROM pg_catalog.pg_database AS database_record
+              CROSS JOIN LATERAL pg_catalog.aclexplode(
+                COALESCE(database_record.datacl, pg_catalog.acldefault('d', database_record.datdba))
+              ) AS privilege
+              WHERE database_record.datname = current_database()
+                AND privilege.grantee = 0
+                AND privilege.privilege_type IN ('CONNECT', 'TEMPORARY')
+           ) AS database_denied,
+           pg_catalog.has_schema_privilege('public', 'etf', 'USAGE') AS schema_usage,
+           pg_catalog.has_schema_privilege('public', 'etf', 'CREATE') AS schema_create,
+           pg_catalog.has_function_privilege('public', 'etf.ledger_append(jsonb)', 'EXECUTE') AS writer_execute`,
+      );
+      assert.deepEqual(publicAuthority.rows, [{
+        database_denied: true,
+        schema_usage: false,
+        schema_create: false,
+        writer_execute: false,
+      }]);
+
+      const before = await protectedState();
+      for (const [name, sessionUser, statement] of [
+        ["app_runtime cannot SET ROLE migration_owner", "app_runtime", "SET ROLE migration_owner"],
+        ["app_runtime cannot insert ledger transactions", "app_runtime", "INSERT INTO etf.ledger_transactions DEFAULT VALUES"],
+        ["key_injector cannot execute anchor_append", "key_injector", "SELECT etf.anchor_append('{}'::jsonb)"],
+        ["projection_runtime cannot replace a ledger anchor", "projection_runtime", "UPDATE etf.ledger_anchors SET commitment_hash = commitment_hash WHERE false"],
+        ["app_runtime cannot read protected key material", "app_runtime", "SELECT key_ciphertext FROM etf.anchor_keys"],
+        ["PUBLIC cannot execute a controlled writer", "audit_runtime", "SELECT etf.ledger_append('{}'::jsonb)"],
+      ]) {
+        await context.test(name, async () => {
+          await expectDeniedAs(sessionUser, statement);
+          assert.deepEqual(await protectedState(), before);
+        });
       }
     } finally {
       await client.query("RESET SESSION AUTHORIZATION").catch(() => undefined);

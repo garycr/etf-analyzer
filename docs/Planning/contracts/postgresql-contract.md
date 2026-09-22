@@ -52,7 +52,7 @@ The current WP-8 PostgreSQL 16.15 identities are:
 | 4 | `9bf81885aab5fafe8bcac9b372d7bbd0bec601fc29e0cdbc234a65fc3d5489f1` | `bc0e77af221c697b287d6e82e70a2400d569d56b371b42686ad5398c909db4c3` |
 | 5 | `638fdcb40695be04a30c56807e529f753fd37c80ccfdcd6ad58f04e603287cc4` | `089df576fc69615023861fbb3909b36ee06359db19a4f8637cedd455de2fb8f2` |
 | 6 | `609dcf7bd1faa472e850b7ed1cd32511987a596e7f52403ede1b832fc1e4e8dc` | `5435948ea8d2f55ac11a2a2db9378466d4d6dc64be7ba1c2eac615471e15de51` |
-| 7 | `76f71b0805b7a9cd604effd7ae6e4c230732be4845a2f93239f45c0e6cb4e203` | `3d19b4dd5081810b104b8fdbadffa5d4f12e7026e65bbcfc7ccbc2ab5b42dd6e` |
+| 7 | `0d07358c3056885e15ba190681402a381ed71485beb35e3b9088cc8d107b1340` | `915d698edc5d95ef648d38d754ed5754dc46fffa8a9d6272304eaf58cf274c2e` |
 
 **2026-09-21 DEC-070 amendment.** Clean bootstrap adds `audit_activity_verifier_owner` and its two bounded membership edges before migration projection. Existing canonical sequence-6 installations use the projector-backed provisioner upgrade, which locks the migration domain, verifies the exact six-row ledger and stored terminal manifest, re-projects the sequence-6 catalog, rejects role, membership, schema, and PUBLIC ACL drift, and only then creates the verifier role and edges in the same transaction. Migration `0007-denial-backend-verifier` installs the boolean-only backend correlation helper. Identical migration replay re-projects the current catalog and accepts a no-op only when its hash equals the stored manifest hash.
 

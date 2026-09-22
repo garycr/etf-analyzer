@@ -16,4 +16,6 @@ The self-contained reproduction command uses exact digest PostgreSQL `16.15|UTF8
 
 CT-DB-001D..J, PT-E2E-001, WP-8 closure, DP-33, Ring 2 closure, release, deployment, and production remain open or unauthorized. CT-DB-001K remains separately accepted under DEC-072/REV-168; REV-164 and the original CT-DB-001K artifact remain invalidated history.
 
+Subsequent CT-DB-001D denial-replay and least-privilege hardening changed only migration 0007's SQL and manifest identity. CT-DB-001A-C were rerun against successor SQL hash `0d07358c3056885e15ba190681402a381ed71485beb35e3b9088cc8d107b1340` and manifest hash `915d698edc5d95ef648d38d754ed5754dc46fffa8a9d6272304eaf58cf274c2e`; this does not reopen the reviewed A-C behaviors.
+
 Estimated review cost was below $0.25 across the initial review and focused rechecks. Exact provider token telemetry and pricing are unavailable.

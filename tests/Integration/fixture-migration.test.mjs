@@ -294,7 +294,7 @@ test(
       );
       assert.equal(
         applied.schemaManifestHash,
-        "75c373765dd6f88c76eb280e3f9e2ace72a646ae21d6d7c6595756fea8dba4c4",
+        "bc0e77af221c697b287d6e82e70a2400d569d56b371b42686ad5398c909db4c3",
       );
 
       const owners = await client.query(
@@ -379,6 +379,10 @@ test(
 
       await client.query("GRANT USAGE ON SCHEMA etf TO app_runtime");
       const payload = fixturePayload();
+      payload.marketObservations[0].sourceAvailableAt = "2026-01-30T12:00:00.000Z";
+      payload.marketObservations[0].numericClass = "Quantity";
+      payload.marketObservations[0].value = "0.0000000000";
+      payload.marketObservations[0].currency = "";
       const first = await ingest(client, payload);
       const replay = await ingest(client, payload);
       assert.deepEqual(replay, first);
@@ -524,6 +528,7 @@ test(
         [(payload) => { payload.marketObservations[0].value = "-0.0000000000"; }, "FIXTURE_DECIMAL_INVALID"],
         [(payload) => { payload.marketObservations[0].tradingDate = "2026-02-30"; }, "FIXTURE_TEMPORAL_INVALID"],
         [(payload) => { payload.marketObservations[0].sourceAvailableAt = "2026-01-30 22:00:00+00"; }, "FIXTURE_TEMPORAL_INVALID"],
+        [(payload) => { payload.marketObservations[0].sourceAvailableAt = "2026-01-30T12:00:00.0001Z"; }, "FIXTURE_TEMPORAL_INVALID"],
         [(payload) => {
           payload.marketObservations[0].qualityState = "Stale";
           payload.marketObservations[0].qualityCodes = ["Z_CODE", "A_CODE"];

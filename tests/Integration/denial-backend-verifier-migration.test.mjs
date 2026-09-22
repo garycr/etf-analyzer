@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { randomBytes } from "node:crypto";
 import test from "node:test";
 
 import pg from "pg";
@@ -157,10 +158,12 @@ test(
       );
       const closedAuthority = await client.query(
         `SELECT
+           pg_catalog.has_schema_privilege('audit_activity_verifier_owner', 'etf', 'USAGE') AS schema_usage,
            pg_catalog.has_schema_privilege('audit_activity_verifier_owner', 'etf', 'CREATE') AS schema_create,
            pg_catalog.pg_has_role('audit_writer_owner', 'pg_read_all_stats', 'MEMBER') AS audit_stats_role`,
       );
       assert.deepEqual(closedAuthority.rows, [{
+        schema_usage: false,
         schema_create: false,
         audit_stats_role: false,
       }]);
@@ -339,6 +342,320 @@ test(
       await admin.query("RESET ROLE");
     } finally {
       await runtime?.end().catch(() => undefined);
+      await cleanBootstrap(admin).catch(() => undefined);
+      await admin.query(unlockSql).catch(() => undefined);
+      await admin.end();
+    }
+  },
+);
+
+test(
+  "CT-DB-001D conflicting denial deduplication content fails closed without mutation",
+  { skip: !connectionString },
+  async () => {
+    const admin = new pg.Client({ connectionString });
+    let deniedRuntime;
+    let auditRuntime;
+    let concurrentAuditRuntime;
+    await admin.connect();
+    await admin.query(lockSql);
+    try {
+      await cleanBootstrap(admin);
+      await applyThroughSequenceSix(admin);
+      await applyMigration(
+        admin,
+        denialBackendVerifierMigration,
+        "2026-09-21T01:06:00.000Z",
+        projectPostgresSchemaManifest,
+      );
+      await admin.query(
+        "INSERT INTO etf.anchor_keys VALUES ('primary', decode('00112233445566778899aabbccddeeff', 'hex'), '2026-09-21T00:00:00.000Z', NULL)",
+      );
+
+      const deniedPassword = randomBytes(24).toString("hex");
+      const auditPassword = randomBytes(24).toString("hex");
+      await admin.query(`ALTER ROLE app_runtime PASSWORD '${deniedPassword}'`);
+      await admin.query(`ALTER ROLE audit_runtime PASSWORD '${auditPassword}'`);
+      const deniedUrl = new URL(connectionString);
+      deniedUrl.username = "app_runtime";
+      deniedUrl.password = deniedPassword;
+      deniedRuntime = new pg.Client({ connectionString: deniedUrl.toString() });
+      await deniedRuntime.connect();
+      const nonce = randomBytes(16).toString("hex");
+      await deniedRuntime.query("SELECT pg_catalog.set_config('application_name', $1, false)", [`etf-denial:${nonce}`]);
+      const backend = (await admin.query(
+        `SELECT pid, backend_start::text AS backend_start
+           FROM pg_catalog.pg_stat_activity
+          WHERE pid = $1`,
+        [(await deniedRuntime.query("SELECT pg_catalog.pg_backend_pid() AS pid")).rows[0].pid],
+      )).rows[0];
+
+      const auditUrl = new URL(connectionString);
+      auditUrl.username = "audit_runtime";
+      auditUrl.password = auditPassword;
+      auditRuntime = new pg.Client({ connectionString: auditUrl.toString() });
+      await auditRuntime.connect();
+      concurrentAuditRuntime = new pg.Client({ connectionString: auditUrl.toString() });
+      await concurrentAuditRuntime.connect();
+      await concurrentAuditRuntime.query("SET TIME ZONE 'America/New_York'");
+      const payload = {
+        action: "EvidenceRead",
+        attemptIntentId: "82000000-0000-4000-8000-000000000001",
+        correlationId: "82000000-0000-4000-8000-000000000002",
+        domain: "Denial",
+        keyIdentifier: "primary",
+        outcome: "PermissionDenied",
+        subject: {
+          auditId: "82000000-0000-4000-8000-000000000003",
+          originalBackendPid: backend.pid,
+          backendStart: backend.backend_start,
+          originalSessionUser: "app_runtime",
+          denialNonce: nonce,
+          objectClass: "function",
+          objectName: "etf.evidence_read",
+          denialCode: "PermissionDenied",
+          deniedAt: "2026-09-21T02:00:00.000Z",
+        },
+      };
+      const original = (await auditRuntime.query(
+        "SELECT etf.audit_append($1::jsonb) AS result",
+        [payload],
+      )).rows[0].result;
+      const before = (await admin.query(
+        `SELECT
+           (SELECT count(*)::integer FROM etf.access_denial_audit) AS denials,
+           (SELECT count(*)::integer FROM etf.audit_commitments) AS commitments,
+           (SELECT count(*)::integer FROM etf.audit_anchor_checkpoints) AS checkpoints`,
+      )).rows;
+      assert.deepEqual(
+        (await auditRuntime.query(
+          "SELECT etf.audit_append($1::jsonb) AS result",
+          [{
+            ...payload,
+            subject: {
+              ...payload.subject,
+              auditId: "82000000-0000-4000-8000-000000000004",
+            },
+          }],
+        )).rows[0].result,
+        original,
+      );
+      assert.deepEqual((await admin.query(
+        `SELECT
+           (SELECT count(*)::integer FROM etf.access_denial_audit) AS denials,
+           (SELECT count(*)::integer FROM etf.audit_commitments) AS commitments,
+           (SELECT count(*)::integer FROM etf.audit_anchor_checkpoints) AS checkpoints`,
+      )).rows, before);
+
+      await assert.rejects(
+        () => auditRuntime.query("SELECT etf.audit_append($1::jsonb)", [{
+          ...payload,
+          subject: {
+            ...payload.subject,
+            auditId: "82000000-0000-4000-8000-000000000005",
+            deniedAt: "2026-09-21T02:00:01.000Z",
+          },
+        }]),
+        (error) => error.code === "55000" && error.message === "ANALYTICS_ACCESS_DENIAL_AUDIT_FAILED",
+      );
+      assert.deepEqual((await admin.query(
+        `SELECT
+           (SELECT count(*)::integer FROM etf.access_denial_audit) AS denials,
+           (SELECT count(*)::integer FROM etf.audit_commitments) AS commitments,
+           (SELECT count(*)::integer FROM etf.audit_anchor_checkpoints) AS checkpoints`,
+      )).rows, before);
+
+      const concurrentPayload = {
+        ...payload,
+        attemptIntentId: "82000000-0000-4000-8000-000000000006",
+        correlationId: "82000000-0000-4000-8000-000000000007",
+        subject: {
+          ...payload.subject,
+          auditId: "82000000-0000-4000-8000-000000000008",
+          deniedAt: "2026-09-21T02:00:02.000Z",
+        },
+      };
+      const concurrentBefore = before[0];
+      const concurrentResults = await Promise.all([
+        auditRuntime.query("SELECT etf.audit_append($1::jsonb) AS result", [concurrentPayload]),
+        concurrentAuditRuntime.query("SELECT etf.audit_append($1::jsonb) AS result", [{
+          ...concurrentPayload,
+          subject: {
+            ...concurrentPayload.subject,
+            auditId: "82000000-0000-4000-8000-000000000009",
+            backendStart: concurrentPayload.subject.backendStart
+              .replace(" ", "T")
+              .replace(/\+00$/u, "Z"),
+          },
+        }]),
+      ]);
+      assert.deepEqual(concurrentResults[1].rows[0].result, concurrentResults[0].rows[0].result);
+      assert.deepEqual((await admin.query(
+        `SELECT
+           (SELECT count(*)::integer FROM etf.access_denial_audit) AS denials,
+           (SELECT count(*)::integer FROM etf.audit_commitments) AS commitments,
+           (SELECT count(*)::integer FROM etf.audit_anchor_checkpoints) AS checkpoints`,
+      )).rows, [{
+        denials: concurrentBefore.denials + 1,
+        commitments: concurrentBefore.commitments + 1,
+        checkpoints: concurrentBefore.checkpoints + 1,
+      }]);
+    } finally {
+      await deniedRuntime?.end().catch(() => undefined);
+      await auditRuntime?.end().catch(() => undefined);
+      await concurrentAuditRuntime?.end().catch(() => undefined);
+      await cleanBootstrap(admin).catch(() => undefined);
+      await admin.query(unlockSql).catch(() => undefined);
+      await admin.end();
+    }
+  },
+);
+
+test(
+  "CT-DB-001D denial binding accepts only a live matching backend",
+  { skip: !connectionString },
+  async (context) => {
+    const admin = new pg.Client({ connectionString });
+    const runtimeClients = [];
+    let auditRuntime;
+    await admin.connect();
+    await admin.query(lockSql);
+    try {
+      await cleanBootstrap(admin);
+      await applyThroughSequenceSix(admin);
+      await applyMigration(
+        admin,
+        denialBackendVerifierMigration,
+        "2026-09-21T01:06:00.000Z",
+        projectPostgresSchemaManifest,
+      );
+      await admin.query(
+        "INSERT INTO etf.anchor_keys VALUES ('primary', decode('00112233445566778899aabbccddeeff', 'hex'), '2026-09-21T00:00:00.000Z', NULL)",
+      );
+
+      const runtimePassword = randomBytes(24).toString("hex");
+      const auditPassword = randomBytes(24).toString("hex");
+      await admin.query(`ALTER ROLE app_runtime PASSWORD '${runtimePassword}'`);
+      await admin.query(`ALTER ROLE audit_runtime PASSWORD '${auditPassword}'`);
+      const connectRuntime = async (nonce) => {
+        const runtimeUrl = new URL(connectionString);
+        runtimeUrl.username = "app_runtime";
+        runtimeUrl.password = runtimePassword;
+        const runtime = new pg.Client({ connectionString: runtimeUrl.toString() });
+        await runtime.connect();
+        runtimeClients.push(runtime);
+        await runtime.query("SELECT pg_catalog.set_config('application_name', $1, false)", [`etf-denial:${nonce}`]);
+        const pid = (await runtime.query("SELECT pg_catalog.pg_backend_pid() AS pid")).rows[0].pid;
+        return (await admin.query(
+          "SELECT pid, backend_start::text AS backend_start FROM pg_catalog.pg_stat_activity WHERE pid = $1",
+          [pid],
+        )).rows[0];
+      };
+      const activeNonce = randomBytes(16).toString("hex");
+      const activeBackend = await connectRuntime(activeNonce);
+      const vanishedNonce = randomBytes(16).toString("hex");
+      const vanishedBackend = await connectRuntime(vanishedNonce);
+      await runtimeClients.pop().end();
+
+      const auditUrl = new URL(connectionString);
+      auditUrl.username = "audit_runtime";
+      auditUrl.password = auditPassword;
+      auditRuntime = new pg.Client({ connectionString: auditUrl.toString() });
+      await auditRuntime.connect();
+      let identity = 10;
+      const payload = (overrides = {}) => ({
+        action: "EvidenceRead",
+        attemptIntentId: `83000000-0000-4000-8000-${String(identity++).padStart(12, "0")}`,
+        correlationId: `83000000-0000-4000-8000-${String(identity++).padStart(12, "0")}`,
+        domain: "Denial",
+        keyIdentifier: "primary",
+        outcome: "PermissionDenied",
+        subject: {
+          auditId: `83000000-0000-4000-8000-${String(identity++).padStart(12, "0")}`,
+          originalBackendPid: activeBackend.pid,
+          backendStart: activeBackend.backend_start,
+          originalSessionUser: "app_runtime",
+          denialNonce: activeNonce,
+          objectClass: "function",
+          objectName: "etf.evidence_read",
+          denialCode: "PermissionDenied",
+          deniedAt: "2026-09-21T02:10:00.000Z",
+          ...overrides,
+        },
+      });
+      const snapshot = async () => (await admin.query(
+        `SELECT
+           (SELECT count(*)::integer FROM etf.access_denial_audit) AS denials,
+           (SELECT count(*)::integer FROM etf.audit_commitments) AS commitments,
+           (SELECT count(*)::integer FROM etf.audit_anchor_checkpoints) AS checkpoints`,
+      )).rows;
+
+      for (const [name, overrides] of [
+        ["original backend vanished", {
+          originalBackendPid: vanishedBackend.pid,
+          backendStart: vanishedBackend.backend_start,
+          denialNonce: vanishedNonce,
+        }],
+        ["backend PID reused with new start", {
+          originalBackendPid: activeBackend.pid,
+          backendStart: vanishedBackend.backend_start,
+        }],
+        ["backend start differs", { backendStart: "2000-01-01T00:00:00.000Z" }],
+        ["nonce is missing", { denialNonce: null }],
+        ["nonce differs from application_name", { denialNonce: "f".repeat(32) }],
+      ]) {
+        await context.test(name, async () => {
+          const before = await snapshot();
+          await assert.rejects(
+            () => auditRuntime.query("SELECT etf.audit_append($1::jsonb)", [payload(overrides)]),
+            (error) => error.code === "55000" && error.message === "ANALYTICS_ACCESS_DENIAL_AUDIT_FAILED",
+          );
+          assert.deepEqual(await snapshot(), before);
+        });
+      }
+
+      await context.test("denial audit insert rolls back", async () => {
+        await admin.query(
+          `CREATE FUNCTION etf.force_denial_insert_failure() RETURNS trigger
+             LANGUAGE plpgsql AS $failure$ BEGIN RAISE EXCEPTION 'ANALYTICS_ACCESS_DENIAL_AUDIT_FAILED' USING ERRCODE = '55000'; END $failure$;
+           CREATE TRIGGER trg_access_denial_audit__force_failure
+             BEFORE INSERT ON etf.access_denial_audit
+             FOR EACH ROW EXECUTE FUNCTION etf.force_denial_insert_failure();`,
+        );
+        const before = await snapshot();
+        try {
+          await assert.rejects(
+            () => auditRuntime.query("SELECT etf.audit_append($1::jsonb)", [payload()]),
+            (error) => error.code === "55000" && error.message === "ANALYTICS_ACCESS_DENIAL_AUDIT_FAILED",
+          );
+          assert.deepEqual(await snapshot(), before);
+        } finally {
+          await admin.query(
+            `DROP TRIGGER trg_access_denial_audit__force_failure ON etf.access_denial_audit;
+             DROP FUNCTION etf.force_denial_insert_failure();`,
+          );
+        }
+      });
+
+      await context.test("live backend and nonce match", async () => {
+        const before = await snapshot();
+        const result = (await auditRuntime.query(
+          "SELECT etf.audit_append($1::jsonb) AS result",
+          [payload()],
+        )).rows[0].result;
+        assert.equal(typeof result.auditId, "string");
+        assert.equal(typeof result.evidenceHash, "string");
+        assert.equal(typeof result.auditSequence, "number");
+        const after = await snapshot();
+        assert.deepEqual(after, [{
+          denials: before[0].denials + 1,
+          commitments: before[0].commitments + 1,
+          checkpoints: before[0].checkpoints + 1,
+        }]);
+      });
+    } finally {
+      for (const runtime of runtimeClients) await runtime.end().catch(() => undefined);
+      await auditRuntime?.end().catch(() => undefined);
       await cleanBootstrap(admin).catch(() => undefined);
       await admin.query(unlockSql).catch(() => undefined);
       await admin.end();

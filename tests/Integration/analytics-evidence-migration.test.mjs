@@ -29,7 +29,7 @@ const lockSql =
 const unlockSql =
   "SELECT pg_catalog.pg_advisory_unlock(pg_catalog.hashtextextended('etf:test:role-bootstrap', 0))";
 const analyticsEvidenceContentHash = "638fdcb40695be04a30c56807e529f753fd37c80ccfdcd6ad58f04e603287cc4";
-const analyticsEvidenceManifestHash = "6630284475e86d0023177e6da094db81cf16974e0a04b4d78b2d75157684b563";
+const analyticsEvidenceManifestHash = "089df576fc69615023861fbb3909b36ee06359db19a4f8637cedd455de2fb8f2";
 
 async function cleanBootstrap(client) {
   await client.query("ROLLBACK").catch(() => undefined);
@@ -655,6 +655,16 @@ test(
           canonicalResult: {
             ...payload.canonicalResult,
             metrics: [{ metricId: "totalReturn", numericClass: "Rate", value: "0.0100" }],
+          },
+        }), /ANALYTICS_NUMERIC_CLASS_INVALID/],
+        [rehashEvidence(evidencePayload(), {
+          evidenceId: "evidence-metric-nan",
+          evidenceCommitCommandId: "50000000-0000-4000-8000-000000000042",
+          publicationTargetId: "invalid-metric-nan",
+          inputSetId: "input-invalid-metric-nan",
+          canonicalResult: {
+            ...payload.canonicalResult,
+            metrics: [{ metricId: "totalReturn", numericClass: "Rate", value: "NaN" }],
           },
         }), /ANALYTICS_NUMERIC_CLASS_INVALID/],
         [rehashEvidence(evidencePayload(), {

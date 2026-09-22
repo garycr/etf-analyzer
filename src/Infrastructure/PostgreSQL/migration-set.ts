@@ -7,6 +7,7 @@ export const expectedMigrationIds = [
   "0004-fixtures",
   "0005-analytics-evidence",
   "0006-controlled-access",
+  "0007-denial-backend-verifier",
 ] as const;
 
 export interface MigrationArtifact {
@@ -54,7 +55,7 @@ export function prepareMigrationSet(
   artifacts: readonly MigrationArtifact[],
 ): PreparedMigration[] {
   if (artifacts.length !== expectedMigrationIds.length) {
-    throw new Error("migration set must contain exactly 6 artifacts");
+    throw new Error(`migration set must contain exactly ${expectedMigrationIds.length} artifacts`);
   }
 
   return artifacts.map((artifact, index) => {

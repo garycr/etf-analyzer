@@ -10,9 +10,10 @@ Feature: CT-DB-001 PostgreSQL contract conformance
 
   Rule: Empty bootstrap has one ordered result
   Scenario: CT-DB-001A an empty database reaches the exact candidate schema
-    Given no application schema, migration row, extension, or product role exists
+    Given no application schema, migration row, product-created extension, or product role exists
+    And externally provisioned extension "pgcrypto" and system extension "plpgsql" are present
     And the external provisioner is not a product role and has PostgreSQL CREATEROLE and database-owner authority
-    When the provisioner creates all fourteen product roles with the contract attributes
+    When the provisioner creates all fifteen product roles with the contract attributes
     And the provisioner grants deployment_login membership in migration_executor with ADMIN FALSE, INHERIT FALSE, and SET TRUE
     And the provisioner grants migration_executor membership in migration_owner with ADMIN FALSE, INHERIT FALSE, and SET TRUE
     And the provisioner grants migration_owner SET TRUE, INHERIT FALSE, and ADMIN FALSE membership in every other owner role
@@ -25,7 +26,7 @@ Feature: CT-DB-001 PostgreSQL contract conformance
     Then every migration commits exactly once
     And every product role has SUPERUSER false, CREATEROLE false, CREATEDB false, REPLICATION false, and BYPASSRLS false
     And the recorded migration identities, content hashes, and schema manifest hash match the contract
-    And system extension "plpgsql" is present and no product-created extension exists
+    And system extensions "pgcrypto" and "plpgsql" are present and no product-created extension exists
     And no table, column, constraint, index, role, grant, function, trigger, product extension, or schema exists outside the manifest
 
   Scenario Outline: CT-DB-001B migration replay is deterministic and drift fails closed
@@ -73,6 +74,7 @@ Feature: CT-DB-001 PostgreSQL contract conformance
       | 0004-fixtures               | after first observation table    |
       | 0005-analytics-evidence     | after first evidence table       |
       | 0006-controlled-access      | after first function grant       |
+        | 0007-denial-backend-verifier | after verifier function replacement |
 
   Rule: Database authority is deny by default
   Scenario: CT-DB-001D roles and controlled operations enforce least privilege

@@ -1,8 +1,21 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import test from "node:test";
 
 import pg from "pg";
 
+import { applyDenialVerifierRoleUpgrade } from "../../dist/Infrastructure/PostgreSQL/denial-verifier-role-upgrade.js";
+import { applyMigration } from "../../dist/Infrastructure/PostgreSQL/migration-runner.js";
+import { applicationMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/application.js";
+import { analyticsEvidenceMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/analytics-evidence.js";
+import { controlledAccessMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/controlled-access.js";
+import { domainLedgerMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/domain-ledger.js";
+import { fixtureMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/fixtures.js";
+import { foundationMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/foundation.js";
+import {
+  projectCurrentPostgresSchemaManifestPrefix,
+  projectPostgresSchemaManifest,
+} from "../../dist/Infrastructure/PostgreSQL/postgres-schema-manifest.js";
 import {
   createRoleBootstrapSql,
   productRoles,
@@ -14,6 +27,60 @@ const fixtureLockSql =
   "SELECT pg_catalog.pg_advisory_lock(pg_catalog.hashtextextended('etf:test:role-bootstrap', 0))";
 const fixtureUnlockSql =
   "SELECT pg_catalog.pg_advisory_unlock(pg_catalog.hashtextextended('etf:test:role-bootstrap', 0))";
+const migrations = [
+  foundationMigration,
+  applicationMigration,
+  domainLedgerMigration,
+  fixtureMigration,
+  analyticsEvidenceMigration,
+  controlledAccessMigration,
+];
+const preparedMigrations = migrations.map((migration) => ({
+  ...migration,
+  contentHash: createHash("sha256").update(migration.sql, "utf8").digest("hex"),
+}));
+
+async function applyLegacySequenceSix(client) {
+  await client.query(createRoleBootstrapSql());
+  for (const [index, migration] of migrations.entries()) {
+    await applyMigration(
+      client,
+      migration,
+      `2026-09-21T00:0${index}:00.000Z`,
+      projectPostgresSchemaManifest,
+    );
+  }
+  await client.query("DROP ROLE audit_activity_verifier_owner");
+  const legacyControlledAccessManifestHash = createHash("sha256")
+    .update(await projectCurrentPostgresSchemaManifestPrefix(client, 6), "utf8")
+    .digest("hex");
+  await client.query(
+    "UPDATE etf.schema_migrations SET schema_manifest_hash = $1 WHERE sequence = 6",
+    [legacyControlledAccessManifestHash],
+  );
+  return {
+    migrations: preparedMigrations.map(({ sequence, migrationId, contentHash }) => ({
+      sequence,
+      migrationId,
+      contentHash,
+    })),
+    controlledAccessManifestHash: legacyControlledAccessManifestHash,
+  };
+}
+
+async function verifierAuthority(client) {
+  const result = await client.query(
+    `SELECT parent.rolname AS role, member.rolname AS member,
+            membership.admin_option, membership.inherit_option, membership.set_option
+       FROM pg_catalog.pg_auth_members AS membership
+       JOIN pg_catalog.pg_roles AS parent ON parent.oid = membership.roleid
+       JOIN pg_catalog.pg_roles AS member ON member.oid = membership.member
+      WHERE parent.rolname = 'audit_activity_verifier_owner'
+        OR member.rolname = 'audit_activity_verifier_owner'
+      ORDER BY parent.rolname`,
+  );
+  return result.rows;
+}
 
 async function dropProductRoles(client) {
   await client.query("ROLLBACK").catch(() => undefined);
@@ -96,19 +163,19 @@ test(
             AND member.rolname = ANY($2::text[])
           ORDER BY array_position($3::text[], parent.rolname)`,
         [
-          productRoles.map(({ name }) => name),
+          [...productRoles.map(({ name }) => name), "pg_read_all_stats"],
           productRoles.map(({ name }) => name),
           roleMemberships.map(({ role }) => role),
         ],
       );
       assert.deepEqual(
         memberships.rows,
-        roleMemberships.map(({ role, member }) => ({
+        roleMemberships.map(({ role, member, admin, inherit, set }) => ({
           role,
           member,
-          admin_option: false,
-          inherit_option: false,
-          set_option: true,
+          admin_option: admin,
+          inherit_option: inherit,
+          set_option: set,
         })),
       );
 
@@ -262,6 +329,299 @@ test(
           default_acl_count: 0,
         },
       ]);
+    } finally {
+      try {
+        await dropProductRoles(client);
+      } finally {
+        await client.query(fixtureUnlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
+  "canonical sequence-6 upgrade creates exact verifier authority and replays as a no-op",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    await client.connect();
+    await client.query(fixtureLockSql);
+    try {
+      await dropProductRoles(client);
+      const hashes = await applyLegacySequenceSix(client);
+      const baselineManifest = await projectCurrentPostgresSchemaManifestPrefix(client, 6);
+      assert.equal(
+        createHash("sha256").update(baselineManifest, "utf8").digest("hex"),
+        hashes.controlledAccessManifestHash,
+      );
+
+      await applyDenialVerifierRoleUpgrade(client, hashes);
+      const firstRoleOid = await client.query(
+        "SELECT oid::text AS oid FROM pg_catalog.pg_roles WHERE rolname = 'audit_activity_verifier_owner'",
+      );
+      assert.equal(firstRoleOid.rows.length, 1);
+      assert.deepEqual(await verifierAuthority(client), [
+        {
+          role: "audit_activity_verifier_owner",
+          member: "migration_owner",
+          admin_option: false,
+          inherit_option: false,
+          set_option: true,
+        },
+        {
+          role: "pg_read_all_stats",
+          member: "audit_activity_verifier_owner",
+          admin_option: false,
+          inherit_option: true,
+          set_option: false,
+        },
+      ]);
+      assert.equal(
+        await projectCurrentPostgresSchemaManifestPrefix(client, 6),
+        baselineManifest,
+      );
+
+      await applyDenialVerifierRoleUpgrade(client, hashes);
+      const replayRoleOid = await client.query(
+        "SELECT oid::text AS oid FROM pg_catalog.pg_roles WHERE rolname = 'audit_activity_verifier_owner'",
+      );
+      assert.deepEqual(replayRoleOid.rows, firstRoleOid.rows);
+      assert.equal((await verifierAuthority(client)).length, 2);
+    } finally {
+      try {
+        await dropProductRoles(client);
+      } finally {
+        await client.query(fixtureUnlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
+  "sequence-6 upgrade rejects a mismatched ledger before role mutation",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    await client.connect();
+    await client.query(fixtureLockSql);
+    try {
+      await dropProductRoles(client);
+      const hashes = await applyLegacySequenceSix(client);
+      await client.query(
+        "UPDATE etf.schema_migrations SET content_hash = $1 WHERE sequence = 2",
+        ["f".repeat(64)],
+      );
+
+      await assert.rejects(
+        () => applyDenialVerifierRoleUpgrade(client, hashes),
+        /APPLICATION_MIGRATIONS_INCOMPLETE/u,
+      );
+      await client.query("ROLLBACK").catch(() => undefined);
+      const verifier = await client.query(
+        "SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = 'audit_activity_verifier_owner'",
+      );
+      assert.deepEqual(verifier.rows, []);
+    } finally {
+      try {
+        await dropProductRoles(client);
+      } finally {
+        await client.query(fixtureUnlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
+  "sequence-6 upgrade rolls back verifier role and edges after forced failure",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    await client.connect();
+    await client.query(fixtureLockSql);
+    try {
+      await dropProductRoles(client);
+      const hashes = await applyLegacySequenceSix(client);
+      const failingClient = {
+        query: async (sql, values) => {
+          if (sql === "COMMIT") {
+            return client.query("SELECT missing_verifier_upgrade_function()");
+          }
+          return client.query(sql, values);
+        },
+      };
+
+      await assert.rejects(
+        () => applyDenialVerifierRoleUpgrade(failingClient, hashes),
+        /missing_verifier_upgrade_function/u,
+      );
+      await client.query("ROLLBACK").catch(() => undefined);
+      const verifier = await client.query(
+        "SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = 'audit_activity_verifier_owner'",
+      );
+      assert.deepEqual(verifier.rows, []);
+    } finally {
+      try {
+        await dropProductRoles(client);
+      } finally {
+        await client.query(fixtureUnlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
+  "sequence-6 upgrade rejects a partial verifier authority state",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    await client.connect();
+    await client.query(fixtureLockSql);
+    try {
+      await dropProductRoles(client);
+      const hashes = await applyLegacySequenceSix(client);
+      await client.query(
+        "CREATE ROLE audit_activity_verifier_owner NOLOGIN NOINHERIT NOSUPERUSER NOCREATEROLE NOCREATEDB NOREPLICATION NOBYPASSRLS",
+      );
+
+      await assert.rejects(
+        () => applyDenialVerifierRoleUpgrade(client, hashes),
+        /APPLICATION_MIGRATIONS_INCOMPLETE/u,
+      );
+      await client.query("ROLLBACK").catch(() => undefined);
+      assert.deepEqual(await verifierAuthority(client), []);
+    } finally {
+      try {
+        await dropProductRoles(client);
+      } finally {
+        await client.query(fixtureUnlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
+  "sequence-6 upgrade rejects altered legacy role or membership authority",
+  { skip: !connectionString },
+  async (context) => {
+    const client = new pg.Client({ connectionString });
+    await client.connect();
+    await client.query(fixtureLockSql);
+    try {
+      for (const [name, mutate] of [
+        ["role attribute", () => client.query("ALTER ROLE audit_writer_owner INHERIT")],
+        ["membership", () => client.query("GRANT pg_read_all_stats TO audit_writer_owner")],
+      ]) {
+        await context.test(name, async () => {
+          await dropProductRoles(client);
+          const hashes = await applyLegacySequenceSix(client);
+          await mutate();
+
+          await assert.rejects(
+            () => applyDenialVerifierRoleUpgrade(client, hashes),
+            /APPLICATION_MIGRATIONS_INCOMPLETE/u,
+          );
+          await client.query("ROLLBACK").catch(() => undefined);
+          const verifier = await client.query(
+            "SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = 'audit_activity_verifier_owner'",
+          );
+          assert.deepEqual(verifier.rows, []);
+        });
+      }
+    } finally {
+      try {
+        await dropProductRoles(client);
+      } finally {
+        await client.query(fixtureUnlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
+  "sequence-6 upgrade rejects ledger schema and PUBLIC authority drift",
+  { skip: !connectionString },
+  async (context) => {
+    const client = new pg.Client({ connectionString });
+    await client.connect();
+    await client.query(fixtureLockSql);
+    try {
+      for (const [name, mutate] of [
+        ["extra migration row", () => client.query(
+          `INSERT INTO etf.schema_migrations
+           SELECT 7, '0007-unexpected', $1, applied_at, $2
+             FROM etf.schema_migrations WHERE sequence = 6`,
+          ["7".repeat(64), "8".repeat(64)],
+        )],
+        ["schema owner", () => client.query("ALTER SCHEMA etf OWNER TO postgres")],
+        ["PUBLIC database CONNECT", () => client.query(
+          "GRANT CONNECT ON DATABASE postgres TO PUBLIC",
+        )],
+        ["PUBLIC database TEMPORARY", () => client.query(
+          "GRANT TEMPORARY ON DATABASE postgres TO PUBLIC",
+        )],
+        ["PUBLIC schema USAGE", () => client.query(
+          "GRANT USAGE ON SCHEMA etf TO PUBLIC",
+        )],
+        ["PUBLIC schema CREATE", () => client.query(
+          "GRANT CREATE ON SCHEMA etf TO PUBLIC",
+        )],
+        ["PUBLIC function execution", () => client.query(
+          "GRANT EXECUTE ON FUNCTION etf.audit_append(jsonb) TO PUBLIC",
+        )],
+      ]) {
+        await context.test(name, async () => {
+          await dropProductRoles(client);
+          const hashes = await applyLegacySequenceSix(client);
+          await mutate();
+
+          await assert.rejects(
+            () => applyDenialVerifierRoleUpgrade(client, hashes),
+            /APPLICATION_MIGRATIONS_INCOMPLETE/u,
+          );
+          await client.query("ROLLBACK").catch(() => undefined);
+          const verifier = await client.query(
+            "SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = 'audit_activity_verifier_owner'",
+          );
+          assert.deepEqual(verifier.rows, []);
+        });
+      }
+    } finally {
+      try {
+        await dropProductRoles(client);
+      } finally {
+        await client.query(fixtureUnlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
+  "sequence-6 upgrade rejects current manifest drift before role mutation",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    await client.connect();
+    await client.query(fixtureLockSql);
+    try {
+      await dropProductRoles(client);
+      const hashes = await applyLegacySequenceSix(client);
+      await client.query("ALTER FUNCTION etf.audit_append(jsonb) OWNER TO schema_owner");
+
+      await assert.rejects(
+        () => applyDenialVerifierRoleUpgrade(client, hashes),
+        /APPLICATION_MIGRATIONS_INCOMPLETE/u,
+      );
+      const verifier = await client.query(
+        "SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = 'audit_activity_verifier_owner'",
+      );
+      assert.deepEqual(verifier.rows, []);
     } finally {
       try {
         await dropProductRoles(client);

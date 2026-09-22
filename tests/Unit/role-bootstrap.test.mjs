@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { applyDenialVerifierRoleUpgrade } from "../../dist/Infrastructure/PostgreSQL/denial-verifier-role-upgrade.js";
 import {
   createRoleBootstrapSql,
   productRoles,
@@ -14,6 +15,7 @@ const expectedOwnerRoles = [
   "ledger_writer_owner",
   "projection_owner",
   "audit_writer_owner",
+  "audit_activity_verifier_owner",
   "anchor_owner",
   "evidence_writer_owner",
 ];
@@ -27,7 +29,7 @@ const expectedLoginRoles = [
   "key_injector",
 ];
 
-test("role bootstrap defines the exact fourteen product roles", () => {
+test("role bootstrap defines the exact fifteen product roles", () => {
   assert.deepEqual(
     productRoles.filter(({ login }) => !login).map(({ name }) => name),
     expectedOwnerRoles,
@@ -36,20 +38,22 @@ test("role bootstrap defines the exact fourteen product roles", () => {
     productRoles.filter(({ login }) => login).map(({ name }) => name),
     expectedLoginRoles,
   );
-  assert.equal(productRoles.length, 14);
+  assert.equal(productRoles.length, 15);
 });
 
-test("role bootstrap defines the exact nine set-only memberships", () => {
+test("role bootstrap defines the exact eleven authority memberships", () => {
   assert.deepEqual(roleMemberships, [
-    { role: "migration_executor", member: "deployment_login" },
-    { role: "migration_owner", member: "migration_executor" },
-    { role: "anchor_owner", member: "migration_owner" },
-    { role: "application_writer_owner", member: "migration_owner" },
-    { role: "audit_writer_owner", member: "migration_owner" },
-    { role: "evidence_writer_owner", member: "migration_owner" },
-    { role: "ledger_writer_owner", member: "migration_owner" },
-    { role: "projection_owner", member: "migration_owner" },
-    { role: "schema_owner", member: "migration_owner" },
+    { role: "migration_executor", member: "deployment_login", admin: false, inherit: false, set: true },
+    { role: "migration_owner", member: "migration_executor", admin: false, inherit: false, set: true },
+    { role: "anchor_owner", member: "migration_owner", admin: false, inherit: false, set: true },
+    { role: "application_writer_owner", member: "migration_owner", admin: false, inherit: false, set: true },
+    { role: "audit_activity_verifier_owner", member: "migration_owner", admin: false, inherit: false, set: true },
+    { role: "audit_writer_owner", member: "migration_owner", admin: false, inherit: false, set: true },
+    { role: "evidence_writer_owner", member: "migration_owner", admin: false, inherit: false, set: true },
+    { role: "ledger_writer_owner", member: "migration_owner", admin: false, inherit: false, set: true },
+    { role: "projection_owner", member: "migration_owner", admin: false, inherit: false, set: true },
+    { role: "schema_owner", member: "migration_owner", admin: false, inherit: false, set: true },
+    { role: "pg_read_all_stats", member: "audit_activity_verifier_owner", admin: false, inherit: true, set: false },
   ]);
 });
 
@@ -79,14 +83,43 @@ test("role bootstrap SQL is transactional and denies elevated attributes", () =>
     1,
   );
   assert.doesNotMatch(sql, /CREATE TABLE|CREATE FUNCTION|CREATE VIEW/iu);
-  assert.equal((sql.match(/CREATE ROLE/gu) ?? []).length, 14);
-  assert.equal((sql.match(/NOSUPERUSER/gu) ?? []).length, 14);
-  assert.equal((sql.match(/NOCREATEROLE/gu) ?? []).length, 14);
-  assert.equal((sql.match(/NOCREATEDB/gu) ?? []).length, 14);
-  assert.equal((sql.match(/NOREPLICATION/gu) ?? []).length, 14);
-  assert.equal((sql.match(/NOBYPASSRLS/gu) ?? []).length, 14);
+  assert.equal((sql.match(/CREATE ROLE/gu) ?? []).length, 15);
+  assert.equal((sql.match(/NOSUPERUSER/gu) ?? []).length, 15);
+  assert.equal((sql.match(/NOCREATEROLE/gu) ?? []).length, 15);
+  assert.equal((sql.match(/NOCREATEDB/gu) ?? []).length, 15);
+  assert.equal((sql.match(/NOREPLICATION/gu) ?? []).length, 15);
+  assert.equal((sql.match(/NOBYPASSRLS/gu) ?? []).length, 15);
   assert.equal(
     (sql.match(/WITH ADMIN FALSE, INHERIT FALSE, SET TRUE/gu) ?? []).length,
-    9,
+    10,
   );
+  assert.match(
+    sql,
+    /GRANT pg_read_all_stats TO audit_activity_verifier_owner WITH ADMIN FALSE, INHERIT TRUE, SET FALSE;/,
+  );
+});
+
+test("denial verifier role upgrade rejects noncanonical metadata before querying", async () => {
+  let queryCount = 0;
+  await assert.rejects(() => applyDenialVerifierRoleUpgrade({
+    query: async () => {
+      queryCount += 1;
+      return { rows: [] };
+    },
+  }, {
+    migrations: [
+      "0001-foundation",
+      "0002-application",
+      "0003-domain-ledger",
+      "0004-fixtures",
+      "0005-analytics-evidence",
+      "0006-controlled-access",
+    ].map((migrationId, index) => ({
+      sequence: index + 1,
+      migrationId,
+      contentHash: String(index + 1).repeat(64),
+    })),
+    controlledAccessManifestHash: "not-a-hash",
+  }), /canonical sequence-6 ledger/u);
+  assert.equal(queryCount, 0);
 });

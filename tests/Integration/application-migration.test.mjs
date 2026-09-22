@@ -41,6 +41,79 @@ async function cleanBootstrap(client) {
 }
 
 test(
+  "0002 rolls back its complete catalog on manifest failure",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    await client.connect();
+    await client.query(fixtureLockSql);
+    try {
+      await cleanBootstrap(client);
+      await client.query(createRoleBootstrapSql());
+      await applyMigration(
+        client,
+        foundationMigration,
+        "2026-09-14T00:00:00.000Z",
+        projectPostgresSchemaManifest,
+      );
+      const foundationLedger = (await client.query(
+        "SELECT sequence, migration_id, content_hash, applied_at, schema_manifest_hash FROM etf.schema_migrations ORDER BY sequence",
+      )).rows;
+
+      await assert.rejects(
+        applyMigration(
+          client,
+          applicationMigration,
+          "2026-09-14T00:01:00.000Z",
+          async () => {
+            throw new Error("forced 0002 manifest stop");
+          },
+        ),
+        /forced 0002 manifest stop/u,
+      );
+
+      const remaining = await client.query(
+        `SELECT
+           (SELECT count(*)::integer
+              FROM pg_catalog.pg_class AS relation
+              JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = relation.relnamespace
+             WHERE namespace.nspname = 'etf' AND relation.relname = ANY($1::text[])) AS table_count,
+           (SELECT count(*)::integer
+              FROM pg_catalog.pg_proc AS routine
+              JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = routine.pronamespace
+             WHERE namespace.nspname = 'etf' AND routine.proname = ANY($2::text[])) AS function_count,
+           pg_catalog.has_schema_privilege('application_writer_owner', 'etf', 'CREATE') AS schema_create,
+           COALESCE(
+             pg_catalog.has_function_privilege(
+               'app_runtime',
+               pg_catalog.to_regprocedure('etf.application_replay_get_or_put(jsonb)'),
+               'EXECUTE'
+             ),
+             false
+           ) AS runtime_execute`,
+        [applicationTableNames, applicationFunctionNames],
+      );
+      assert.deepEqual(remaining.rows, [{
+        table_count: 0,
+        function_count: 0,
+        schema_create: false,
+        runtime_execute: false,
+      }]);
+      assert.deepEqual((await client.query(
+        "SELECT sequence, migration_id, content_hash, applied_at, schema_manifest_hash FROM etf.schema_migrations ORDER BY sequence",
+      )).rows, foundationLedger);
+    } finally {
+      try {
+        await cleanBootstrap(client);
+      } finally {
+        await client.query(fixtureUnlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
   "0002 commits exact application objects and controlled behavior",
   { skip: !connectionString },
   async () => {
@@ -72,9 +145,9 @@ test(
       );
       assert.equal(
         applicationApplied.schemaManifestHash,
-        "7f6929ff5e9414a99921fd74d26ef9795a10cfeb1f8939ef240d974834873abb",
+        "440d618a1a4c5ddd2a147a34c3729d953c1874a54cf0005a3dedeab7420e521c",
       );
-      assert.equal(Buffer.byteLength(applicationManifest, "utf8"), 7667);
+      assert.equal(Buffer.byteLength(applicationManifest, "utf8"), 8089);
       const manifest = JSON.parse(applicationManifest);
       assert.equal(manifest.migrationSequence.length, 2);
       assert.equal(manifest.objects.filter(({ kind }) => kind === "table").length, 10);

@@ -6,6 +6,9 @@ export interface ProductRole {
 export interface RoleMembership {
   role: string;
   member: string;
+  admin: boolean;
+  inherit: boolean;
+  set: boolean;
 }
 
 export const productRoles: readonly ProductRole[] = [
@@ -15,6 +18,7 @@ export const productRoles: readonly ProductRole[] = [
   { name: "ledger_writer_owner", login: false },
   { name: "projection_owner", login: false },
   { name: "audit_writer_owner", login: false },
+  { name: "audit_activity_verifier_owner", login: false },
   { name: "anchor_owner", login: false },
   { name: "evidence_writer_owner", login: false },
   { name: "deployment_login", login: true },
@@ -26,15 +30,17 @@ export const productRoles: readonly ProductRole[] = [
 ];
 
 export const roleMemberships: readonly RoleMembership[] = [
-  { role: "migration_executor", member: "deployment_login" },
-  { role: "migration_owner", member: "migration_executor" },
-  { role: "anchor_owner", member: "migration_owner" },
-  { role: "application_writer_owner", member: "migration_owner" },
-  { role: "audit_writer_owner", member: "migration_owner" },
-  { role: "evidence_writer_owner", member: "migration_owner" },
-  { role: "ledger_writer_owner", member: "migration_owner" },
-  { role: "projection_owner", member: "migration_owner" },
-  { role: "schema_owner", member: "migration_owner" },
+  { role: "migration_executor", member: "deployment_login", admin: false, inherit: false, set: true },
+  { role: "migration_owner", member: "migration_executor", admin: false, inherit: false, set: true },
+  { role: "anchor_owner", member: "migration_owner", admin: false, inherit: false, set: true },
+  { role: "application_writer_owner", member: "migration_owner", admin: false, inherit: false, set: true },
+  { role: "audit_activity_verifier_owner", member: "migration_owner", admin: false, inherit: false, set: true },
+  { role: "audit_writer_owner", member: "migration_owner", admin: false, inherit: false, set: true },
+  { role: "evidence_writer_owner", member: "migration_owner", admin: false, inherit: false, set: true },
+  { role: "ledger_writer_owner", member: "migration_owner", admin: false, inherit: false, set: true },
+  { role: "projection_owner", member: "migration_owner", admin: false, inherit: false, set: true },
+  { role: "schema_owner", member: "migration_owner", admin: false, inherit: false, set: true },
+  { role: "pg_read_all_stats", member: "audit_activity_verifier_owner", admin: false, inherit: true, set: false },
 ];
 
 const deniedAttributes =
@@ -46,8 +52,8 @@ export function createRoleBootstrapSql(): string {
       `CREATE ROLE ${name} ${login ? "LOGIN" : "NOLOGIN"} ${deniedAttributes};`,
   );
   const membershipStatements = roleMemberships.map(
-    ({ role, member }) =>
-      `GRANT ${role} TO ${member} WITH ADMIN FALSE, INHERIT FALSE, SET TRUE;`,
+    ({ role, member, admin, inherit, set }) =>
+      `GRANT ${role} TO ${member} WITH ADMIN ${admin ? "TRUE" : "FALSE"}, INHERIT ${inherit ? "TRUE" : "FALSE"}, SET ${set ? "TRUE" : "FALSE"};`,
   );
 
   return [

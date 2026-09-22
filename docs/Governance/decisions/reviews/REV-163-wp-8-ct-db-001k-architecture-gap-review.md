@@ -4,6 +4,8 @@
 **Reviewer:** Architect Reviewer agent
 **Disposition:** CONDITIONAL
 
+**Supersession notice:** The resolution below was later invalidated by REV-164's correction and DEC-070. It is retained as historical review context only; its claims that migration SQL was unchanged and that REV-164 closed the architecture gap are not current governance state.
+
 **Resolution:** Closed by the Fully Agentic reforecast and REV-164 PASS. The implemented boundary injects already-authenticated runtime-client factories and adds no credential configuration, migration, dependency, service, route, or Application contract.
 
 CT-DB-001K exposes missing PostgreSQL Infrastructure binding rather than new Domain/Application semantics. Application readiness ordering, precedence, stable errors, and presentation remain unchanged.

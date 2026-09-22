@@ -8,6 +8,7 @@ import type {
 import { productRoles } from "./role-bootstrap.js";
 import {
   buildCurrentSchemaManifest,
+  buildCurrentSchemaManifestPrefix,
   buildSchemaManifest,
   type ManifestGrant,
   type ManifestObjectSource,
@@ -33,6 +34,7 @@ import {
   controlledAccessFunctionNames,
   controlledAccessViewNames,
 } from "./migrations/controlled-access.js";
+import { denialBackendVerifierFunctionNames } from "./migrations/denial-backend-verifier.js";
 import { foundationTableNames } from "./migrations/foundation.js";
 
 interface TableSource {
@@ -183,10 +185,14 @@ async function projectPostgresSchemaManifestInternal(
   client: ManifestClient,
   prospectiveMigration: ManifestMigration,
   currentState: boolean,
+  currentSequence = 7,
 ): Promise<string> {
-  if (prospectiveMigration.sequence < 1 || prospectiveMigration.sequence > 6) {
+  if (prospectiveMigration.sequence < 1 || prospectiveMigration.sequence > 7) {
     throw new Error("APPLICATION_MIGRATIONS_INCOMPLETE");
   }
+  const manifestRoles = currentState && currentSequence === 6
+    ? productRoles.filter(({ name }) => name !== "audit_activity_verifier_owner")
+    : productRoles;
   const extensions = await client.query(
     "SELECT extname AS name, extversion AS version FROM pg_catalog.pg_extension ORDER BY extname",
   );
@@ -207,7 +213,7 @@ async function projectPostgresSchemaManifestInternal(
        FROM pg_catalog.pg_roles
       WHERE rolname = ANY($1::text[])
       ORDER BY rolname`,
-    [productRoles.map(({ name }) => name)],
+    [manifestRoles.map(({ name }) => name)],
   );
   const memberships = await client.query(
     `SELECT parent.rolname AS role, member.rolname AS member,
@@ -218,7 +224,7 @@ async function projectPostgresSchemaManifestInternal(
       WHERE parent.rolname = ANY($1::text[])
          OR member.rolname = ANY($1::text[])
       ORDER BY parent.rolname, member.rolname`,
-    [productRoles.map(({ name }) => name)],
+    [manifestRoles.map(({ name }) => name)],
   );
   const migrations = await client.query(
     `SELECT sequence, migration_id, content_hash
@@ -408,6 +414,7 @@ async function projectPostgresSchemaManifestInternal(
     ...(prospectiveMigration.sequence >= 4 ? fixtureFunctionNames : []),
     ...(prospectiveMigration.sequence >= 5 ? analyticsEvidenceFunctionNames : []),
     ...(prospectiveMigration.sequence >= 6 ? controlledAccessFunctionNames : []),
+    ...(prospectiveMigration.sequence >= 7 ? denialBackendVerifierFunctionNames : []),
   ].sort(compareCodeUnits);
   const expectedViewNames = [
     ...(prospectiveMigration.sequence >= 6 ? controlledAccessViewNames : []),
@@ -415,7 +422,7 @@ async function projectPostgresSchemaManifestInternal(
 
   if (
     schemaResult.rows.length !== 1 ||
-    roles.rows.length !== productRoles.length ||
+    roles.rows.length !== manifestRoles.length ||
     tables.rows.length !== expectedTableNames.length ||
     functions.rows.length !== expectedFunctionNames.length ||
     views.rows.length !== expectedViewNames.length ||
@@ -526,17 +533,21 @@ async function projectPostgresSchemaManifestInternal(
   const functionObjects: ManifestObjectSource[] = functions.rows.map(
     (row): ManifestObjectSource => {
       const configuration = row.configuration;
+      const functionName = requireString(row.name);
+      const expectedSearchPath = functionName === "denial_backend_matches"
+        ? "search_path=pg_catalog"
+        : "search_path=pg_catalog, etf";
       if (
         !Array.isArray(configuration) ||
         configuration.length !== 1 ||
-        configuration[0] !== "search_path=pg_catalog, etf"
+        configuration[0] !== expectedSearchPath
       ) {
         throw new Error("APPLICATION_MIGRATIONS_INCOMPLETE");
       }
       return {
         kind: "function",
         schema: "etf",
-        name: requireString(row.name),
+        name: functionName,
         owner: requireString(row.owner),
         definition: {
           arguments: requireString(row.arguments),
@@ -545,7 +556,9 @@ async function projectPostgresSchemaManifestInternal(
           securityDefiner: requireBoolean(row.security_definer),
           volatility: requireString(row.volatility),
           parallelSafety: requireString(row.parallel_safety),
-          searchPath: ["pg_catalog", "etf"],
+          searchPath: functionName === "denial_backend_matches"
+            ? ["pg_catalog"]
+            : ["pg_catalog", "etf"],
           bodyHash: sha256Text(
             normalizePostgresDefinition(requireString(row.definition)),
           ),
@@ -608,7 +621,12 @@ async function projectPostgresSchemaManifestInternal(
     ...functionObjects,
     ...viewObjects,
   ];
-  const roleMemberships: ManifestRoleMembership[] = memberships.rows.map((row) => ({
+  const manifestMembershipRows = currentState && currentSequence === 6
+    ? memberships.rows.filter((row) =>
+      row.role !== "audit_activity_verifier_owner" &&
+      row.member !== "audit_activity_verifier_owner")
+    : memberships.rows;
+  const roleMemberships: ManifestRoleMembership[] = manifestMembershipRows.map((row) => ({
     role: requireString(row.role),
     member: requireString(row.member),
     adminOption: requireBoolean(row.admin_option),
@@ -629,17 +647,42 @@ async function projectPostgresSchemaManifestInternal(
       roleMemberships,
       grants,
     };
-  return currentState
-    ? buildCurrentSchemaManifest(source)
+  const migrationSequence = source.migrationSequence;
+  const replayState = !currentState &&
+    migrationSequence.length === prospectiveMigration.sequence &&
+    migrationSequence.at(-1)?.sequence === prospectiveMigration.sequence &&
+    migrationSequence.at(-1)?.migrationId === prospectiveMigration.migrationId &&
+    migrationSequence.at(-1)?.contentHash === prospectiveMigration.contentHash;
+  return currentState || replayState
+    ? currentState && currentSequence === 7
+      ? buildCurrentSchemaManifest(source)
+      : buildCurrentSchemaManifestPrefix(
+        source,
+        replayState ? prospectiveMigration.sequence : currentSequence,
+      )
     : buildSchemaManifest(source, prospectiveMigration);
+}
+
+export async function projectCurrentPostgresSchemaManifestPrefix(
+  client: ManifestClient,
+  sequence: number,
+): Promise<string> {
+  if (sequence < 1 || sequence > 7) {
+    throw new Error("APPLICATION_MIGRATIONS_INCOMPLETE");
+  }
+  return projectPostgresSchemaManifestInternal(client, {
+    sequence,
+    migrationId: "current-prefix",
+    contentHash: "0".repeat(64),
+  }, true, sequence);
 }
 
 export async function projectCurrentPostgresSchemaManifest(
   client: ManifestClient,
 ): Promise<string> {
   return projectPostgresSchemaManifestInternal(client, {
-    sequence: 6,
-    migrationId: "0006-controlled-access",
+    sequence: 7,
+    migrationId: "0007-denial-backend-verifier",
     contentHash: "0".repeat(64),
   }, true);
 }

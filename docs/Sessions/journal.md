@@ -3151,3 +3151,81 @@
 **authorization-boundary:** DEC-070 implementation only; CT-DB-001K acceptance, A-J, PT-E2E-001, WP-8 closure, DP-33, Ring 3, release, deployment, and production remain open or unauthorized
 
 ---
+
+## 2026-09-21 | WP-8 denial verifier remediation implemented and validated | Ring-2 | @solo-orchestrator
+
+**Type:** IMPLEMENTATION-EVIDENCE
+**Decision:** Implement DEC-070 through one projector-backed sequence-6 provisioner upgrade, migration 0007, fail-closed migration replay, sequence-7 manifest/readiness reconciliation, and exhaustive verifier authority evidence
+**Policy:** DEC-070 | CT-DB-001D/K | least privilege | test-first development | exact pinned PostgreSQL evidence
+**Authority:** Agent under Fully Agentic mode; no production, release, or ring-gate authority exercised
+**Accountability:** Solo Orchestrator preserves REV-164 as invalidated history, obtains superseding Code/Security/Architecture review, and does not claim CT-DB-001K, WP-8, Ring 2, or DP-33 closure before those reviews pass
+**Result:** 396/396 units PASS; exact digest PostgreSQL 16.15 with `UTF8|UTC|on|C` affected aggregate 30/30 PASS with zero skips; all seven sequence-6 drift mutations and the complete product-role EXECUTE/SET-role matrices pass; build, lint, diff check, and diagnostics pass
+**Artifacts:** DEC-070 | docs/Planning/contracts/postgresql-contract.md | docs/Planning/tasks/wp-8-denial-verifier-remediation-plan.md | GitHub issue #84
+**authorization-boundary:** Implementation evidence only; REV-164 remains invalidated; CT-DB-001K superseding acceptance, integrated A-J, PT-E2E-001, WP-8 closure, DP-33, Ring 3, release, deployment, and production remain open or unauthorized
+
+---
+
+## 2026-09-21 | WP-8 denial verifier Code and Security reviews passed | Ring-2 | @solo-orchestrator
+
+**Type:** REVIEW-EVIDENCE
+**Decision:** Accept the independent DEC-070 Code and Security review verdicts while retaining Architecture review and all capability/package acceptance gates
+**Policy:** DEC-070 | independent decision review | code review | security review | evidence custody
+**Authority:** Agent under Fully Agentic mode; Code Reviewer and Security Reviewer each returned PASS with zero findings
+**Accountability:** Solo Orchestrator publishes REV-165 and REV-166, obtains final Architecture review against those custody records, and does not infer CT-DB-001K or package closure from component review PASS
+**Result:** REV-165 Code PASS and REV-166 Security PASS; Architecture review remains pending; REV-164 remains invalidated and CT-DB-001K remains open
+**Artifacts:** REV-165 | REV-166 | DEC-070 | docs/Planning/contracts/postgresql-contract.md | GitHub issue #84
+**authorization-boundary:** Review evidence only; CT-DB-001K superseding acceptance, integrated A-J, PT-E2E-001, WP-8 closure, DP-33, Ring 3, release, deployment, and production remain open or unauthorized
+
+---
+
+## 2026-09-21 | WP-8 denial verifier independent reviews completed | Ring-2 | @solo-orchestrator
+
+**Type:** REVIEW-EVIDENCE
+**Decision:** Complete DEC-070's independent review cycle after Code, Security, and Architecture each returned PASS with zero findings
+**Policy:** DEC-070 | REV-165 | REV-166 | architecture review | evidence custody
+**Authority:** Agent under Fully Agentic mode; Architect Reviewer final PASS after superseding-review and governance-custody verification
+**Accountability:** Solo Orchestrator preserves the three bounded review records and advances only to superseding integrated CT-DB-001K evidence; no component review substitutes for capability or package acceptance
+**Result:** REV-165 Code PASS, REV-166 Security PASS, and REV-167 Architecture PASS; DEC-070 review cycle complete; REV-164 remains invalidated and CT-DB-001K remains open
+**Artifacts:** REV-165 | REV-166 | REV-167 | DEC-070 | docs/Planning/contracts/postgresql-contract.md | GitHub issue #84
+**authorization-boundary:** Independent review completion only; CT-DB-001K superseding acceptance, integrated A-J, PT-E2E-001, WP-8 closure, DP-33, Ring 3, release, deployment, and production remain open or unauthorized
+
+---
+
+## 2026-09-21 | Workspace Owner approved DEC-070 review package | Ring-2 | @solo-orchestrator
+
+**Type:** HUMAN-DECISION
+**Decision:** Approve REV-165 Code PASS, REV-166 Security PASS, and REV-167 Architecture PASS as the bounded independent review package for DEC-070
+**Policy:** Workspace Owner directive `approve` | DEC-070 | decision traceability | independent review
+**Authority:** Workspace Owner explicit approval
+**Accountability:** Solo Orchestrator records DEC-071, preserves REV-164 as invalidated history, and proceeds only to superseding integrated CT-DB-001K evidence
+**Result:** DEC-071 approved; DEC-070 review package accepted with zero findings; no capability, package, decision-point, ring, release, deployment, or production gate advanced
+**Artifacts:** DEC-071 | REV-165 | REV-166 | REV-167 | DEC-070 | GitHub issue #84
+**authorization-boundary:** Review-package approval only; CT-DB-001K superseding acceptance, integrated CT-DB-001A..J, PT-E2E-001, WP-8 closure, DP-33, Ring 2 closure, release, deployment, and production remain open or unauthorized
+
+---
+
+## 2026-09-21 | Superseding CT-DB-001K readiness accepted | Ring-2 | @solo-orchestrator
+
+**Type:** CAPABILITY-ACCEPTANCE
+**Decision:** Accept CT-DB-001K on new superseding evidence after DEC-070 remediation and REV-168 independent Capability PASS
+**Policy:** DEC-069 | DEC-070 | DEC-071 | CT-DB-001K | exact pinned PostgreSQL evidence | independent capability review
+**Authority:** Agent under Fully Agentic mode; no human-owned production or hotfix decision exercised
+**Accountability:** Solo Orchestrator preserves REV-164 and the earlier readiness artifact as invalidated history, continues to integrated CT-DB-001A..J, and keeps every package and ring gate open
+**Result:** Exact digest PostgreSQL `16.15|UTF8|UTC|on|C`; selected clean-bootstrap capability path PASS with exit 0; migration count 7, PUBLIC EXECUTE 0, real denial and ledger probes Ready, deliberate mismatch fail-closed, protected state unchanged, temporary container removed; REV-168 PASS with zero findings
+**Artifacts:** DEC-072 | REV-168 | docs/artifacts/gate-evidence/wp-8-ct-db-001k-readiness-superseding.md | DEC-070 | GitHub issue #84
+**authorization-boundary:** CT-DB-001K only; integrated CT-DB-001A..J, PT-E2E-001, WP-8 closure, DP-33, Ring 2 closure, release, deployment, and production remain open or unauthorized
+
+---
+
+## 2026-09-21 | Integrated CT-DB-001A-C conformance accepted | Ring-2 | @solo-orchestrator
+
+**Type:** CAPABILITY-ACCEPTANCE
+**Decision:** Accept integrated CT-DB-001A-C after remediating the initial review findings and receiving REV-169 independent Code Review PASS with no findings
+**Policy:** DEC-069 | DEC-070 | DEC-072 | CT-DB-001A-C | exact pinned PostgreSQL evidence | independent code review
+**Authority:** Agent under Fully Agentic mode; no human-owned production or hotfix decision exercised
+**Accountability:** Solo Orchestrator advances only to CT-DB-001D..J and PT-E2E-001, preserves the separate CT-DB-001K acceptance and invalidated history, and keeps package and ring gates open
+**Result:** Exact digest PostgreSQL `16.15|UTF8|UTC|on|C`; self-contained live aggregate 21/21 PASS with zero failures/skips and container removal; impossible-ledger unit matrix 6/6 PASS; lint, build, and diff checks PASS; REV-169 PASS with zero findings
+**Artifacts:** DEC-073 | REV-169 | docs/artifacts/gate-evidence/wp-8-ct-db-001a-c-conformance.md | DEC-072 | REV-168 | GitHub issue #84
+**authorization-boundary:** CT-DB-001A-C only; CT-DB-001D..J, PT-E2E-001, WP-8 closure, DP-33, Ring 2 closure, release, deployment, and production remain open or unauthorized
+
+---

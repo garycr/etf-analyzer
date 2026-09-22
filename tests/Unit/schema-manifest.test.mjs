@@ -235,8 +235,8 @@ test("PostgreSQL projector rejects unsupported migration sequences before queryi
           },
         },
         {
-          sequence: 7,
-          migrationId: "0007-unsupported",
+          sequence: 8,
+          migrationId: "0008-unsupported",
           contentHash: "a".repeat(64),
         },
       ),

@@ -7,14 +7,16 @@
 
 ## Outcome
 
-Integrate and harden the complete local fixture-only prototype, prove one clean bootstrap-to-reconciled-paper-portfolio workflow, close integrated `CT-DB-001A..L`, package Ring 2 evidence, and complete DP-33 gap review and Workspace Owner disposition before Ring 3.
+Integrate and harden the complete local fixture-only prototype as a greenfield PostgreSQL deployment candidate, prove one clean bootstrap-to-reconciled-paper-portfolio workflow, close integrated `CT-DB-001A..L`, package Ring 2 evidence, and complete DP-33 gap review and Workspace Owner disposition before Ring 3.
 
 ## Ownership And Boundaries
 
 - Existing Domain, Application, PostgreSQL, HTTP, and Web owners remain authoritative; WP-8 adds no second state machine or operation.
 - The first slice closes the two REV-100 API hardening Minors in `src/Infrastructure/Http/api-adapter.ts` without changing the closed 16-operation API.
 - Integration evidence composes approved local fixtures only. Provider egress remains disabled.
-- No new runtime package, service, route, API operation, migration, or durable handoff is permitted. Any exception requires OSS/dependency review, architecture impact review, and effort reforecast before implementation.
+- Versioned PostgreSQL DDL, clean bootstrap, rollback, replay, manifest, role, readiness, and application-integration validation are in scope. DEC-070 authorizes additive migration `0007-denial-backend-verifier` within that boundary.
+- SQL Server schema conversion or parity, legacy database discovery, data extraction/transformation/loading, migrated-data reconciliation, source/target coexistence, cutover, migration downtime, and rollback to SQL Server are out of scope under DEC-057.
+- No new runtime package, service, route, API operation, unapproved PostgreSQL migration, or durable handoff is permitted. Any exception requires OSS/dependency review, architecture impact review, and effort reforecast before implementation.
 - WP-8 does not authorize a baseline, live provider, broker, external account, public ingress, event, queue, scheduler, worker, release, deployment, production use, or Ring 3 entry.
 
 ## Test-First Sequence
@@ -52,7 +54,7 @@ Hypothesis: the existing adapter admits canonical requests correctly but leaves 
 | CT-API-001N | `CT-API-001N explicitly rejects non-record top-level payloads` | `tests/Unit/api-adapter.test.mjs` | Null, arrays, and primitives reject; canonical record passes |
 | CT-DB-001A | `CT-DB-001A an empty database reaches the exact candidate schema` | `tests/Integration/wp-8-contract-conformance.test.mjs` | Exact closed schema from empty bootstrap |
 | CT-DB-001B | `CT-DB-001B migration replay is deterministic and drift fails closed` | Same | Replay stable; all declared drift controls readiness |
-| CT-DB-001C | `CT-DB-001C a failed migration leaves no partial candidate state` | Same | Six migration rollback boundaries pass |
+| CT-DB-001C | `CT-DB-001C a failed migration leaves no partial candidate state` | Same | Seven PostgreSQL migration rollback boundaries pass |
 | CT-DB-001D | `CT-DB-001D roles and controlled operations enforce least privilege` | Same | Closed role matrix, denials, audits, and bounded readers pass |
 | CT-DB-001E | `CT-DB-001E exact values reject noncanonical input before PostgreSQL cast` | Same | All six owner/numeric vectors pass without mutation |
 | CT-DB-001F | `CT-DB-001F paper-order state replay and history are atomic` | Same | Three failure vectors and successful visibility are atomic |

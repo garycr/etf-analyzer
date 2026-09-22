@@ -30,6 +30,15 @@ const prohibitedObjectNames = [
 ];
 
 test("migration preflight publishes ordered exact-byte hashes", () => {
+  assert.deepEqual(expectedMigrationIds, [
+    "0001-foundation",
+    "0002-application",
+    "0003-domain-ledger",
+    "0004-fixtures",
+    "0005-analytics-evidence",
+    "0006-controlled-access",
+    "0007-denial-backend-verifier",
+  ]);
   const prepared = prepareMigrationSet(
     expectedMigrationIds.map((migrationId, index) => ({
       migrationId,
@@ -50,7 +59,7 @@ test("migration preflight publishes ordered exact-byte hashes", () => {
 });
 
 test("migration preflight rejects a missing migration set", () => {
-  assert.throws(() => prepareMigrationSet([]), /migration set must contain exactly 6 artifacts/);
+  assert.throws(() => prepareMigrationSet([]), /migration set must contain exactly 7 artifacts/);
 });
 
 test("migration preflight rejects reordered identities", () => {

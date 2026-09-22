@@ -16,7 +16,7 @@
 | M5 - Deterministic analytics | WP-5 | Weeks 8-10 | Reproducible P0 backtest and evidence/publication guards pass |
 | M6 - Paper order and ledger | WP-6 | Weeks 11-13 | Eight-state lifecycle, immutable FIFO ledger, and reconciliation pass |
 | M7 - Accessible workbench | WP-7 | Weeks 14-15 | Keyboard, warning, non-color, canonical display, and responsive checks pass |
-| M8 - Integrated evidence | WP-8 | Week 16 | Clean end-to-end walkthrough, Ring 2 evidence package, and DP-33 architecture/gap review and owner disposition complete before IV&V |
+| M8 - Integrated evidence | WP-8 | Week 16 | Clean greenfield PostgreSQL deployment-candidate walkthrough, Ring 2 evidence package, and DP-33 architecture/gap review and owner disposition complete before IV&V; no SQL Server or data-migration cutover evidence required |
 
 ## Critical Path and Controls
 

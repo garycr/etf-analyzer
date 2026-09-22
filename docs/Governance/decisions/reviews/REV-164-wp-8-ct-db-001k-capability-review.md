@@ -6,6 +6,8 @@
 
 **Correction:** A later clean isolated PostgreSQL run proved the denial-audit capability returns `ANALYTICS_ACCESS_DENIAL_AUDIT_FAILED`. The earlier PASS was based on mixed-run evidence that did not isolate the role-correct path. Because `audit_append` executes as `audit_writer_owner`, PostgreSQL redacts the `audit_runtime` backend fields used by its `pg_stat_activity` correlation check. CT-DB-001K is reopened pending reviewed migration/role-authority remediation.
 
+**Supersession notice:** The historical acceptance conclusion below is void. DEC-070 supersedes the invalidated implementation, and CT-DB-001K remains open pending superseding review evidence and integrated acceptance.
+
 The completed CT-DB-001K readiness slice uses injected factories for actual authenticated `audit_runtime` and `projection_runtime` connections. It does not add credentials, environment variables, migrations, runtime dependencies, routes, services, or Application contracts.
 
 The denial-audit probe verifies `session_user`, installs bounded transaction-local lock, statement, and idle-transaction timeouts, creates unique invocation identifiers, invokes the existing denial append owner, and publishes Ready only after rollback and connection close both succeed. The ledger-integrity probe verifies `session_user`, operates in a read-only transaction, checks every protected checkpoint through the existing Verify owner, treats an empty checkpoint set as Ready, and fails closed on drift or cleanup failure.

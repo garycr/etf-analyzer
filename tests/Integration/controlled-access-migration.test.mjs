@@ -23,12 +23,14 @@ import {
   controlledAccessMigration,
   controlledAccessViewNames,
 } from "../../dist/Infrastructure/PostgreSQL/migrations/controlled-access.js";
+import { denialBackendVerifierMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/denial-backend-verifier.js";
 import { domainLedgerMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/domain-ledger.js";
 import { fixtureMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/fixtures.js";
 import { foundationMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/foundation.js";
 import { dispatchPostgresPaperOrder } from "../../dist/Infrastructure/PostgreSQL/paper-order-owner.js";
 import {
   collectPostgresManifestGrants,
+  projectCurrentPostgresSchemaManifestPrefix,
   projectPostgresSchemaManifest,
 } from "../../dist/Infrastructure/PostgreSQL/postgres-schema-manifest.js";
 import {
@@ -43,7 +45,7 @@ const lockSql =
 const unlockSql =
   "SELECT pg_catalog.pg_advisory_unlock(pg_catalog.hashtextextended('etf:test:role-bootstrap', 0))";
 const controlledAccessContentHash = "609dcf7bd1faa472e850b7ed1cd32511987a596e7f52403ede1b832fc1e4e8dc";
-const controlledAccessManifestHash = "e76bb6b4bf2d7a4ede521d7e469e7deb5c24090f610044890e6328dd84628ef4";
+const controlledAccessManifestHash = "5435948ea8d2f55ac11a2a2db9378466d4d6dc64be7ba1c2eac615471e15de51";
 
 async function cleanBootstrap(client) {
   await client.query("ROLLBACK").catch(() => undefined);
@@ -64,6 +66,34 @@ async function cleanBootstrap(client) {
   );
 }
 
+async function collectEmptyBootstrapState(client) {
+  return (await client.query(
+    `SELECT owner.rolname AS owner,
+            namespace.nspacl::text AS schema_acl,
+            (SELECT count(*)::integer FROM pg_catalog.pg_class AS relation
+              WHERE relation.relnamespace = namespace.oid) AS relation_count,
+            (SELECT count(*)::integer FROM pg_catalog.pg_proc AS routine
+              WHERE routine.pronamespace = namespace.oid) AS routine_count,
+            COALESCE(
+              (SELECT pg_catalog.jsonb_agg(
+                        pg_catalog.jsonb_build_object(
+                          'owner', default_owner.rolname,
+                          'object_type', defaults.defaclobjtype,
+                          'acl', defaults.defaclacl::text
+                        )
+                        ORDER BY default_owner.rolname, defaults.defaclobjtype, defaults.defaclacl::text
+                      )
+                 FROM pg_catalog.pg_default_acl AS defaults
+                 JOIN pg_catalog.pg_roles AS default_owner ON default_owner.oid = defaults.defaclrole
+                WHERE defaults.defaclnamespace = namespace.oid),
+              '[]'::jsonb
+            ) AS default_acls
+       FROM pg_catalog.pg_namespace AS namespace
+       JOIN pg_catalog.pg_roles AS owner ON owner.oid = namespace.nspowner
+      WHERE namespace.nspname = 'etf'`,
+  )).rows;
+}
+
 async function applyCompleteMigrationSet(client) {
   await client.query(createRoleBootstrapSql());
   const migrations = [
@@ -73,6 +103,7 @@ async function applyCompleteMigrationSet(client) {
     fixtureMigration,
     analyticsEvidenceMigration,
     controlledAccessMigration,
+    denialBackendVerifierMigration,
   ];
   for (const [index, migration] of migrations.entries()) {
     if (migration.sequence === 6) {
@@ -239,7 +270,7 @@ test(
 );
 
 test(
-  "CT-DB-001A/L an empty database reaches the exact candidate schema without durable handoff",
+  "CT-DB-001A an empty database reaches the exact candidate schema",
   { skip: connectionString ? false : "ETF_TEST_POSTGRES_URL is not configured" },
   async () => {
     const client = new pg.Client({ connectionString });
@@ -312,16 +343,16 @@ test(
           WHERE granted.rolname = ANY($1::text[])
             AND member.rolname = ANY($1::text[])
           ORDER BY granted.rolname, member.rolname`,
-        [productRoles.map(({ name }) => name)],
+        [[...productRoles.map(({ name }) => name), "pg_read_all_stats"]],
       );
       assert.deepEqual(memberships.rows, [...roleMemberships]
         .sort((left, right) => left.role.localeCompare(right.role) || left.member.localeCompare(right.member))
-        .map(({ role, member }) => ({
+        .map(({ role, member, admin, inherit, set }) => ({
           role,
           member,
-          admin_option: false,
-          inherit_option: false,
-          set_option: true,
+          admin_option: admin,
+          inherit_option: inherit,
+          set_option: set,
         })));
       const extensions = await client.query(
         "SELECT extname AS name, extversion AS version FROM pg_catalog.pg_extension ORDER BY extname",
@@ -333,6 +364,23 @@ test(
       await cleanBootstrap(client);
       await applyCompleteMigrationSet(client);
 
+      const readinessPreconditions = await client.query(
+        `SELECT
+           (SELECT count(*)::integer FROM etf.schema_migrations) AS migration_count,
+           (SELECT count(*)::integer
+              FROM pg_catalog.pg_proc AS function_record
+              JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = function_record.pronamespace
+             CROSS JOIN LATERAL pg_catalog.aclexplode(
+               COALESCE(function_record.proacl, pg_catalog.acldefault('f', function_record.proowner))
+             ) AS privilege
+             WHERE namespace.nspname = 'etf'
+               AND privilege.grantee = 0
+               AND privilege.privilege_type = 'EXECUTE') AS public_execute_count`,
+      );
+      assert.deepEqual(readinessPreconditions.rows, [{
+        migration_count: 7,
+        public_execute_count: 0,
+      }]);
       assert.deepEqual(await checkPostgresMigrationState(client), { ready: true });
       assert.deepEqual(await checkPostgresSchemaManifest(client), { ready: true });
 
@@ -450,7 +498,7 @@ test(
           objectType,
           catalog.rows.filter(({ object_type }) => object_type === objectType).length,
         ])),
-        { table: 43, function: 21, trigger: 102, index: 69 },
+        { table: 43, function: 22, trigger: 102, index: 69 },
       );
 
       assert.deepEqual(
@@ -458,24 +506,233 @@ test(
         [],
       );
       const migrations = await client.query(
-        "SELECT migration_id, schema_manifest_hash FROM etf.schema_migrations ORDER BY sequence",
+        "SELECT sequence::integer AS sequence, migration_id, content_hash, schema_manifest_hash FROM etf.schema_migrations ORDER BY sequence",
       );
       assert.deepEqual(
-        migrations.rows.map(({ migration_id }) => migration_id),
+        migrations.rows,
         [
-          "0001-foundation",
-          "0002-application",
-          "0003-domain-ledger",
-          "0004-fixtures",
-          "0005-analytics-evidence",
-          "0006-controlled-access",
+          { sequence: 1, migration_id: "0001-foundation", content_hash: "a604802a67bed66c6ce79d2f2f856b48e184ae5b4f76803ab8ead3a135c85291", schema_manifest_hash: "87ea9ff557792b72510ea30a937f829d7ad01586ffb928b9354c8e79ad7d8003" },
+          { sequence: 2, migration_id: "0002-application", content_hash: "ad458453834e72413f644e81e38829ae491a26a44f1ca03deeaf71349552c198", schema_manifest_hash: "440d618a1a4c5ddd2a147a34c3729d953c1874a54cf0005a3dedeab7420e521c" },
+          { sequence: 3, migration_id: "0003-domain-ledger", content_hash: "c5da21109969595e17dfb7b31e5c45296324b6d20caf1f1debdb1a70ea84a496", schema_manifest_hash: "94185f0d11619a22c67302802f983dae3e11c17f1eb6a9ab0ef5f6835ffff060" },
+          { sequence: 4, migration_id: "0004-fixtures", content_hash: "9bf81885aab5fafe8bcac9b372d7bbd0bec601fc29e0cdbc234a65fc3d5489f1", schema_manifest_hash: "bc0e77af221c697b287d6e82e70a2400d569d56b371b42686ad5398c909db4c3" },
+          { sequence: 5, migration_id: "0005-analytics-evidence", content_hash: "638fdcb40695be04a30c56807e529f753fd37c80ccfdcd6ad58f04e603287cc4", schema_manifest_hash: "089df576fc69615023861fbb3909b36ee06359db19a4f8637cedd455de2fb8f2" },
+          { sequence: 6, migration_id: "0006-controlled-access", content_hash: "609dcf7bd1faa472e850b7ed1cd32511987a596e7f52403ede1b832fc1e4e8dc", schema_manifest_hash: "5435948ea8d2f55ac11a2a2db9378466d4d6dc64be7ba1c2eac615471e15de51" },
+          { sequence: 7, migration_id: "0007-denial-backend-verifier", content_hash: "76f71b0805b7a9cd604effd7ae6e4c230732be4845a2f93239f45c0e6cb4e203", schema_manifest_hash: "3d19b4dd5081810b104b8fdbadffa5d4f12e7026e65bbcfc7ccbc2ab5b42dd6e" },
         ],
       );
-      assert.equal(migrations.rows.at(-1).schema_manifest_hash, controlledAccessManifestHash);
     } finally {
       await cleanBootstrap(client).catch(() => undefined);
       await client.query(unlockSql).catch(() => undefined);
       await client.end();
+    }
+  },
+);
+
+test(
+  "CT-DB-001B migration replay is deterministic and drift fails closed",
+  { skip: connectionString ? false : "ETF_TEST_POSTGRES_URL is not configured" },
+  async (context) => {
+    const client = new pg.Client({ connectionString });
+    await client.connect();
+    try {
+      await client.query(lockSql);
+      await cleanBootstrap(client);
+      await applyCompleteMigrationSet(client);
+      const migrationRowsBefore = (await client.query(
+        "SELECT sequence, migration_id, content_hash, applied_at, schema_manifest_hash FROM etf.schema_migrations ORDER BY sequence",
+      )).rows;
+
+      const replay = await applyMigration(
+        client,
+        denialBackendVerifierMigration,
+        "2026-09-14T00:07:00.000Z",
+        projectPostgresSchemaManifest,
+      );
+      assert.equal(replay.applied, false);
+      assert.deepEqual((await client.query(
+        "SELECT sequence, migration_id, content_hash, applied_at, schema_manifest_hash FROM etf.schema_migrations ORDER BY sequence",
+      )).rows, migrationRowsBefore);
+
+      for (const [name, mutate, mutationRemains] of [
+        [
+          "changed check constraint expression",
+          () => client.query(
+            "ALTER TABLE etf.watchlist_state DROP CONSTRAINT ck_watchlist_state__version_nonnegative, ADD CONSTRAINT ck_watchlist_state__version_nonnegative CHECK (version > -1)",
+          ),
+          async () => (await client.query(
+            `SELECT pg_catalog.pg_get_constraintdef(constraint_record.oid) <> 'CHECK ((version >= 0))' AS remains
+               FROM pg_catalog.pg_constraint AS constraint_record
+              WHERE constraint_record.conname = 'ck_watchlist_state__version_nonnegative'`,
+          )).rows[0]?.remains,
+        ],
+        [
+          "unknown table etf.event_outbox",
+          () => client.query("CREATE TABLE etf.event_outbox (event_id bigint PRIMARY KEY)"),
+          async () => (await client.query("SELECT pg_catalog.to_regclass('etf.event_outbox') IS NOT NULL AS remains")).rows[0]?.remains,
+        ],
+        [
+          "changed function body hash",
+          () => client.query(
+            `CREATE OR REPLACE FUNCTION etf.denial_backend_matches(
+               requested_pid integer,
+               requested_backend_start timestamp with time zone,
+               requested_session_user text,
+               requested_application_name text
+             )
+             RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog AS 'SELECT false'`,
+          ),
+          async () => (await client.query(
+            `SELECT pg_catalog.pg_get_functiondef(
+               'etf.denial_backend_matches(integer,timestamp with time zone,text,text)'::regprocedure
+             ) LIKE '%SELECT false%' AS remains`,
+          )).rows[0]?.remains,
+        ],
+        [
+          "extra runtime role membership",
+          () => client.query("GRANT audit_writer_owner TO app_runtime"),
+          async () => (await client.query("SELECT pg_catalog.pg_has_role('app_runtime', 'audit_writer_owner', 'MEMBER') AS remains")).rows[0]?.remains,
+        ],
+        [
+          "PUBLIC execute grant",
+          () => client.query("GRANT EXECUTE ON FUNCTION etf.denial_backend_matches(integer, timestamp with time zone, text, text) TO PUBLIC"),
+          async () => (await client.query(
+            "SELECT pg_catalog.has_function_privilege('public', 'etf.denial_backend_matches(integer,timestamp with time zone,text,text)', 'EXECUTE') AS remains",
+          )).rows[0]?.remains,
+        ],
+        [
+          "PUBLIC database CONNECT grant",
+          () => client.query("DO $drift$ BEGIN EXECUTE format('GRANT CONNECT ON DATABASE %I TO PUBLIC', current_database()); END $drift$;"),
+          async () => (await client.query("SELECT pg_catalog.has_database_privilege('public', current_database(), 'CONNECT') AS remains")).rows[0]?.remains,
+        ],
+        [
+          "PUBLIC database TEMPORARY grant",
+          () => client.query("DO $drift$ BEGIN EXECUTE format('GRANT TEMPORARY ON DATABASE %I TO PUBLIC', current_database()); END $drift$;"),
+          async () => (await client.query("SELECT pg_catalog.has_database_privilege('public', current_database(), 'TEMPORARY') AS remains")).rows[0]?.remains,
+        ],
+        [
+          "missing app_runtime database CONNECT grant",
+          () => client.query("DO $drift$ BEGIN EXECUTE format('REVOKE CONNECT ON DATABASE %I FROM app_runtime', current_database()); END $drift$;"),
+          async () => !(await client.query("SELECT pg_catalog.has_database_privilege('app_runtime', current_database(), 'CONNECT') AS present")).rows[0]?.present,
+        ],
+      ]) {
+        await context.test(name, async () => {
+          await cleanBootstrap(client);
+          await applyCompleteMigrationSet(client);
+          const ledgerBeforeDrift = (await client.query(
+            "SELECT sequence, migration_id, content_hash, applied_at, schema_manifest_hash FROM etf.schema_migrations ORDER BY sequence",
+          )).rows;
+          await mutate();
+
+          assert.deepEqual(await checkPostgresSchemaManifest(client), {
+            errorCode: "APPLICATION_MIGRATIONS_INCOMPLETE",
+            ready: false,
+          });
+          assert.equal(await mutationRemains(), true);
+          assert.deepEqual((await client.query(
+            "SELECT sequence, migration_id, content_hash, applied_at, schema_manifest_hash FROM etf.schema_migrations ORDER BY sequence",
+          )).rows, ledgerBeforeDrift);
+        });
+      }
+    } finally {
+      await cleanBootstrap(client).catch(() => undefined);
+      await client.query(unlockSql).catch(() => undefined);
+      await client.end();
+    }
+  },
+);
+
+test(
+  "CT-DB-001C a failed migration leaves no partial candidate state",
+  { skip: connectionString ? false : "ETF_TEST_POSTGRES_URL is not configured" },
+  async (context) => {
+    const client = new pg.Client({ connectionString });
+    const lockObserver = new pg.Client({ connectionString });
+    await client.connect();
+    await lockObserver.connect();
+    const migrations = [
+      foundationMigration,
+      applicationMigration,
+      domainLedgerMigration,
+      fixtureMigration,
+      analyticsEvidenceMigration,
+      controlledAccessMigration,
+      denialBackendVerifierMigration,
+    ];
+    try {
+      await client.query(lockSql);
+      for (const migration of migrations) {
+        await context.test(migration.migrationId, async () => {
+          await cleanBootstrap(client);
+          await client.query(createRoleBootstrapSql());
+          for (const prerequisite of migrations.slice(0, migration.sequence - 1)) {
+            await applyMigration(
+              client,
+              prerequisite,
+              `2026-09-14T00:0${prerequisite.sequence - 1}:00.000Z`,
+              projectPostgresSchemaManifest,
+            );
+          }
+          const ledgerBefore = migration.sequence === 1 ? [] : (await client.query(
+            "SELECT sequence, migration_id, content_hash, applied_at, schema_manifest_hash FROM etf.schema_migrations ORDER BY sequence",
+          )).rows;
+          const bootstrapBefore = migration.sequence === 1
+            ? await collectEmptyBootstrapState(client)
+            : null;
+          const manifestBefore = migration.sequence === 1
+            ? null
+            : await projectCurrentPostgresSchemaManifestPrefix(client, migration.sequence - 1);
+
+          await assert.rejects(
+            applyMigration(
+              client,
+              migration,
+              `2026-09-14T00:0${migration.sequence - 1}:30.000Z`,
+              async (transaction, prospectiveMigration) => {
+                await projectPostgresSchemaManifest(transaction, prospectiveMigration);
+                throw new Error(`FORCED_${migration.sequence}_ROLLBACK`);
+              },
+            ),
+            new RegExp(`FORCED_${migration.sequence}_ROLLBACK`, "u"),
+          );
+
+          if (migration.sequence === 1) {
+            assert.deepEqual(await collectEmptyBootstrapState(client), bootstrapBefore);
+          } else {
+            assert.deepEqual((await client.query(
+              "SELECT sequence, migration_id, content_hash, applied_at, schema_manifest_hash FROM etf.schema_migrations ORDER BY sequence",
+            )).rows, ledgerBefore);
+            assert.equal(
+              await projectCurrentPostgresSchemaManifestPrefix(client, migration.sequence - 1),
+              manifestBefore,
+            );
+          }
+          const runtimeAuthority = await client.query(
+            `SELECT CASE $1::integer
+               WHEN 1 THEN pg_catalog.to_regclass('etf.schema_migrations') IS NOT NULL
+               WHEN 2 THEN pg_catalog.to_regprocedure('etf.application_replay_get_or_put(jsonb)') IS NOT NULL
+               WHEN 3 THEN pg_catalog.to_regprocedure('etf.paper_order_command(jsonb)') IS NOT NULL
+               WHEN 4 THEN pg_catalog.to_regprocedure('etf.fixture_package_put(jsonb)') IS NOT NULL
+               WHEN 5 THEN pg_catalog.to_regprocedure('etf.analytics_evidence_commit(jsonb)') IS NOT NULL
+               WHEN 6 THEN pg_catalog.to_regprocedure('etf.job_get(uuid)') IS NOT NULL
+               WHEN 7 THEN pg_catalog.to_regprocedure('etf.denial_backend_matches(integer,timestamp with time zone,text,text)') IS NOT NULL
+             END AS target_exists`,
+            [migration.sequence],
+          );
+          assert.equal(runtimeAuthority.rows[0]?.target_exists, false);
+          const migrationLock = await lockObserver.query(
+            "SELECT pg_catalog.pg_try_advisory_lock(pg_catalog.hashtextextended('etf:v1.0.0-prototype.1:migrations', 0)) AS acquired",
+          );
+          assert.deepEqual(migrationLock.rows, [{ acquired: true }]);
+          await lockObserver.query(
+            "SELECT pg_catalog.pg_advisory_unlock(pg_catalog.hashtextextended('etf:v1.0.0-prototype.1:migrations', 0))",
+          );
+        });
+      }
+    } finally {
+      await cleanBootstrap(client).catch(() => undefined);
+      await client.query(unlockSql).catch(() => undefined);
+      await client.end();
+      await lockObserver.end();
     }
   },
 );

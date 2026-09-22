@@ -31,7 +31,10 @@
 | DEC-067 | 2026-09-21 | Workbench security and performance | Accept PT-UI-010 loopback security, local performance, caching, and redaction evidence | Agent (Fully Agentic) | Solo Orchestrator | Reviewed |
 | DEC-068 | 2026-09-21 | Package closure | Approve WP-7 closure; make WP-8 eligible as the next sequential package without starting it | Workspace Owner | Solo Orchestrator | Approved |
 | DEC-069 | 2026-09-21 | Package activation | Activate WP-8 integration and Ring 2 evidence work under issue #84 | Agent (Fully Agentic) | Solo Orchestrator | Active |
-| DEC-070 | 2026-09-21 | Denial verification authority | Reforecast WP-8 and add a dedicated boolean-only PostgreSQL backend verifier through migration 0007 | Agent (Fully Agentic) | Solo Orchestrator | Approved plan; implementation pending |
+| DEC-070 | 2026-09-21 | Denial verification authority | Reforecast WP-8 and add a dedicated boolean-only PostgreSQL backend verifier through migration 0007 | Agent (Fully Agentic) | Solo Orchestrator | Implemented; independent reviews PASS; acceptance open |
+| DEC-071 | 2026-09-21 | Review approval | Approve the bounded DEC-070 Code, Security, and Architecture review package | Workspace Owner | Solo Orchestrator | Approved; integrated acceptance open |
+| DEC-072 | 2026-09-21 | Capability acceptance | Accept the superseding CT-DB-001K readiness checkpoint after isolated exact-digest evidence and REV-168 PASS | Agent (Fully Agentic) | Solo Orchestrator | Accepted; integrated A-J open |
+| DEC-073 | 2026-09-21 | Integrated conformance acceptance | Accept CT-DB-001A-C after exact-digest aggregate evidence and REV-169 PASS | Agent (Fully Agentic) | Solo Orchestrator | Accepted; D-J and end-to-end open |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -71,6 +74,51 @@
 
 ## Decision Records
 
+### DEC-073: Accept Integrated CT-DB-001A-C Conformance
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-073 |
+| **Date** | 2026-09-21 |
+| **Category** | PostgreSQL integrated conformance acceptance |
+| **Decision** | Accept CT-DB-001A, CT-DB-001B, and CT-DB-001C after exact seven-row migration identity evidence, complete impossible-ledger and live-catalog drift matrices, uniform seven-boundary rollback evidence, a self-contained exact-digest 21/21 live run, a 6/6 unit run, and REV-169 Code Review PASS |
+| **Policy** | DEC-069; DEC-070; DEC-072; CT-DB-001A-C; test-first development; exact PostgreSQL evidence; independent code review |
+| **Authority** | Agent under Fully Agentic mode; this is not DP-1, DP-25, or DP-26 |
+| **Accountability** | Solo Orchestrator preserves CT-DB-001K's separate DEC-072/REV-168 acceptance and invalidated history, advances only to CT-DB-001D..J and PT-E2E-001, and does not infer WP-8, DP-33, Ring 2, release, deployment, or production closure |
+| **Status** | Accepted under REV-169; CT-DB-001D..J, PT-E2E-001, WP-8 closure, DP-33, Ring 2 closure, release, deployment, and production remain open or unauthorized |
+
+---
+
+### DEC-072: Accept Superseding CT-DB-001K Readiness
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-072 |
+| **Date** | 2026-09-21 |
+| **Category** | PostgreSQL capability acceptance |
+| **Decision** | Accept the superseding CT-DB-001K readiness checkpoint after DEC-070 remediation, bounded Code/Security/Architecture review, isolated exact-digest capability evidence, and REV-168 Capability PASS |
+| **Policy** | DEC-069; DEC-070; DEC-071; CT-DB-001K; test-first development; exact PostgreSQL evidence; independent capability review |
+| **Authority** | Agent under Fully Agentic mode; this is not DP-1, DP-25, or DP-26 |
+| **Accountability** | Solo Orchestrator preserves REV-164 and the earlier readiness artifact as invalidated history, advances to integrated CT-DB-001A..J, and does not infer PT-E2E-001, WP-8, DP-33, or Ring 2 closure |
+| **Status** | Accepted under REV-168; integrated CT-DB-001A..J, PT-E2E-001, WP-8 closure, DP-33, Ring 2 closure, release, deployment, and production remain open or unauthorized |
+
+---
+
+### DEC-071: Approve DEC-070 Independent Review Package
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-071 |
+| **Date** | 2026-09-21 |
+| **Category** | Review approval |
+| **Decision** | Approve REV-165 Code PASS, REV-166 Security PASS, and REV-167 Architecture PASS as the bounded independent review package for DEC-070 |
+| **Policy** | Workspace Owner directive `approve`; DEC-070; independent Code, Security, and Architecture review; decision traceability; least privilege |
+| **Authority** | Workspace Owner explicit approval |
+| **Accountability** | Solo Orchestrator records the approval, preserves REV-164 as invalidated history, and continues only with superseding integrated CT-DB-001K evidence without inferring package or ring closure |
+| **Status** | Approved; at this decision CT-DB-001K superseding acceptance remained open and was later accepted by DEC-072; integrated CT-DB-001A..J, PT-E2E-001, WP-8 closure, DP-33, Ring 2 closure, release, deployment, and production remain open or unauthorized |
+
+---
+
 ### DEC-070: Add Dedicated Denial Backend Verification Authority
 
 | Field | Value |
@@ -82,7 +130,7 @@
 | **Policy** | DEC-069; CT-DB-001D/K; least privilege; PostgreSQL 16.15 behavior; Architect Reviewer CONDITIONAL recommendation; selected dedicated-verifier option after rejecting broad statistics grants, runtime assertions, and wrapper-only trust; evidence correction after REV-164 invalidation |
 | **Authority** | Agent under Fully Agentic mode; this is not DP-1, DP-25, or DP-26 |
 | **Accountability** | Solo Orchestrator obtains Plan review before migration edits, updates exact role/migration/manifest contracts, requires isolated pinned evidence and Code/Security/Architecture review, and keeps WP-8/Ring 2 open |
-| **Status** | Plan review PASS after authority-lifecycle remediation; implementation pending; no migration edit made |
+| **Status** | Implemented and validated on exact pinned PostgreSQL 16.15; REV-165 Code PASS, REV-166 Security PASS, and REV-167 Architecture PASS; superseding CT-DB-001K accepted under DEC-072 and REV-168; REV-164 remains invalidated |
 
 ---
 
@@ -97,7 +145,7 @@
 | **Policy** | DEC-023; DEC-028; DEC-030; DEC-039; DEC-068; approved sequential WBS; test-first development; architecture, code, security, and decision review |
 | **Authority** | Agent under Fully Agentic mode following the Workspace Owner directive to continue after WP-7 approval |
 | **Accountability** | Solo Orchestrator keeps one sequential stream, preserves the fixture-only/loopback/no-brokerage boundary, completes DP-33 gap review and stops for Workspace Owner disposition before Ring 3 |
-| **Status** | Active; issue #84 created; REV-157 Plan PASS; REV-158 Architecture PASS; CT-API-001M/N pass; REV-159 Code PASS; REV-160 Security PASS; CT-DB-001L passes under REV-161; REV-164 was invalidated by clean isolated role evidence and CT-DB-001K is reopened for reviewed migration/role-authority remediation; integrated A-J and end-to-end evidence remain pending |
+| **Status** | Active; issue #84 created; REV-157 Plan PASS; REV-158 Architecture PASS; CT-API-001M/N pass; REV-159 Code PASS; REV-160 Security PASS; CT-DB-001L passes under REV-161; REV-164 remains invalidated and superseding CT-DB-001K passes under DEC-072/REV-168; integrated CT-DB-001A-C passes under DEC-073/REV-169; CT-DB-001D..J and end-to-end evidence remain pending |
 
 ---
 

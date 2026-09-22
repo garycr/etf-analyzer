@@ -82,6 +82,10 @@ test("migration runner returns an identical committed migration as a no-op", asy
   const contentHash = createHash("sha256")
     .update(migration.sql, "utf8")
     .digest("hex");
+  const manifestJson = '{"objects":[]}';
+  const schemaManifestHash = createHash("sha256")
+    .update(manifestJson, "utf8")
+    .digest("hex");
   const client = recordingClient([
     undefined,
     undefined,
@@ -94,24 +98,34 @@ test("migration runner returns an identical committed migration as a no-op", asy
           sequence: migration.sequence,
           migration_id: migration.migrationId,
           content_hash: contentHash,
-          schema_manifest_hash: "e".repeat(64),
+          schema_manifest_hash: schemaManifestHash,
         },
       ],
     },
+    { rows: [{ applied_count: "1", min_sequence: 1, max_sequence: 1 }] },
     undefined,
   ]);
+  let projectedMigration;
 
   const result = await applyMigration(
     client,
     { ...migration, contentHash: "d".repeat(64) },
     "2026-09-14T00:00:00.000Z",
-    async () => assert.fail("manifest projection must not run for replay"),
+    async (_client, prospectiveMigration) => {
+      projectedMigration = prospectiveMigration;
+      return manifestJson;
+    },
   );
 
   assert.deepEqual(result, {
     applied: false,
     contentHash,
-    schemaManifestHash: "e".repeat(64),
+    schemaManifestHash,
+  });
+  assert.deepEqual(projectedMigration, {
+    sequence: migration.sequence,
+    migrationId: migration.migrationId,
+    contentHash,
   });
   assert.equal(client.queries.at(-1).sql, "COMMIT");
   assert.equal(client.queries.some(({ sql }) => sql === migration.sql), false);

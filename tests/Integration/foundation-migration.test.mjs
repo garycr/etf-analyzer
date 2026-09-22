@@ -136,9 +136,9 @@ test(
       );
       assert.equal(
         applied.schemaManifestHash,
-        "3ba3b63c429cf051378ce3eb4adafe0db697dec487d070669a6bc47dba2f8f7c",
+        "87ea9ff557792b72510ea30a937f829d7ad01586ffb928b9354c8e79ad7d8003",
       );
-      assert.equal(Buffer.byteLength(manifestJson, "utf8"), 5444);
+      assert.equal(Buffer.byteLength(manifestJson, "utf8"), 5866);
       const manifest = JSON.parse(manifestJson);
       assert.equal(manifest.contractVersion, "1.0.0-candidate.2");
       assert.deepEqual(manifest.systemExtensions, [
@@ -146,9 +146,9 @@ test(
         { name: "plpgsql", version: "1.0" },
       ]);
       assert.equal(manifest.objects.filter(({ kind }) => kind === "schema").length, 1);
-      assert.equal(manifest.objects.filter(({ kind }) => kind === "role").length, 14);
+      assert.equal(manifest.objects.filter(({ kind }) => kind === "role").length, 15);
       assert.equal(manifest.objects.filter(({ kind }) => kind === "table").length, 4);
-      assert.equal(manifest.roleMemberships.length, 9);
+      assert.equal(manifest.roleMemberships.length, 11);
       assert.deepEqual(
         manifest.grants.map(({ objectKind, schema, object, grantee, privilege }) => [
           objectKind,
@@ -185,7 +185,7 @@ test(
         client,
         foundationMigration,
         "2026-09-14T00:00:00.000Z",
-        async () => assert.fail("manifest projection must not run for replay"),
+        projectPostgresSchemaManifest,
       );
       assert.deepEqual(replayed, { ...applied, applied: false });
     } finally {

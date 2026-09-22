@@ -13,6 +13,7 @@ import {
 import { analyticsEvidenceMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/analytics-evidence.js";
 import { applicationMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/application.js";
 import { controlledAccessMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/controlled-access.js";
+import { denialBackendVerifierMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/denial-backend-verifier.js";
 import { domainLedgerMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/domain-ledger.js";
 import { fixtureMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/fixtures.js";
 import { foundationMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/foundation.js";
@@ -107,7 +108,7 @@ test("exact empty schema prerequisite remains NotReady without a migration ledge
   });
 });
 
-test("CT-DB-001K migration readiness rejects incomplete or drifted identities and hashes", async () => {
+test("CT-DB-001B migration ledger drift fails closed without repair", async (context) => {
   const canonicalRows = [
     foundationMigration,
     applicationMigration,
@@ -115,44 +116,40 @@ test("CT-DB-001K migration readiness rejects incomplete or drifted identities an
     fixtureMigration,
     analyticsEvidenceMigration,
     controlledAccessMigration,
+    denialBackendVerifierMigration,
   ].map(({ sequence, migrationId, sql }) => ({
     sequence,
     migration_id: migrationId,
     content_hash: createHash("sha256").update(sql, "utf8").digest("hex"),
   }));
-  const driftedRows = [
-    [],
-    canonicalRows.slice(0, -1),
-    [...canonicalRows, { ...canonicalRows[5], sequence: 7 }],
-    [canonicalRows[1], canonicalRows[0], ...canonicalRows.slice(2)],
-    ...canonicalRows.flatMap((_, index) => [
-      canonicalRows.map((row, rowIndex) => rowIndex === index
-        ? { ...row, migration_id: `${row.migration_id}-drift` }
-        : row),
-      canonicalRows.map((row, rowIndex) => rowIndex === index
-        ? { ...row, content_hash: "0".repeat(64) }
-        : row),
-    ]),
-  ];
-  for (const migrationRows of driftedRows) {
-    let queryCount = 0;
-    const result = await checkPostgresMigrationState({
-      query: async () => {
-        queryCount += 1;
-        return queryCount === 1
-          ? { rows: [{ migration_table: "etf.schema_migrations" }] }
-          : { rows: migrationRows };
-      },
-    });
+  for (const [name, migrationRows] of [
+    ["missing migration 0004-fixtures", canonicalRows.filter(({ sequence }) => sequence !== 4)],
+    ["duplicate migration sequence 4", [...canonicalRows, { ...canonicalRows[3], migration_id: "0004-duplicate" }]],
+    ["reordered migrations 0004 and 0005", [...canonicalRows.slice(0, 3), canonicalRows[4], canonicalRows[3], ...canonicalRows.slice(5)]],
+    ["unknown migration 0007-outbox", [...canonicalRows.slice(0, 6), { ...canonicalRows[6], migration_id: "0007-outbox" }]],
+    ["changed migration content hash", canonicalRows.map((row) => row.sequence === 4 ? { ...row, content_hash: "0".repeat(64) } : row)],
+  ]) {
+    await context.test(name, async () => {
+      let queryCount = 0;
+      const result = await checkPostgresMigrationState({
+        query: async () => {
+          queryCount += 1;
+          return queryCount === 1
+            ? { rows: [{ migration_table: "etf.schema_migrations" }] }
+            : { rows: migrationRows };
+        },
+      });
 
-    assert.deepEqual(result, {
-      errorCode: "APPLICATION_MIGRATIONS_INCOMPLETE",
-      ready: false,
+      assert.deepEqual(result, {
+        errorCode: "APPLICATION_MIGRATIONS_INCOMPLETE",
+        ready: false,
+      });
+      assert.equal(queryCount, 2);
     });
   }
 });
 
-test("CT-DB-001K migration readiness accepts only the canonical six-row ledger", async () => {
+test("CT-DB-001K migration readiness accepts only the canonical seven-row ledger", async () => {
   const migrationRows = [
     foundationMigration,
     applicationMigration,
@@ -160,6 +157,7 @@ test("CT-DB-001K migration readiness accepts only the canonical six-row ledger",
     fixtureMigration,
     analyticsEvidenceMigration,
     controlledAccessMigration,
+    denialBackendVerifierMigration,
   ].map(({ sequence, migrationId, sql }) => ({
     sequence,
     migration_id: migrationId,
@@ -203,6 +201,7 @@ test("CT-DB-001K migration readiness rejects PUBLIC function execution", async (
           fixtureMigration,
           analyticsEvidenceMigration,
           controlledAccessMigration,
+          denialBackendVerifierMigration,
         ].map(({ sequence, migrationId, sql }) => ({
           sequence,
           migration_id: migrationId,

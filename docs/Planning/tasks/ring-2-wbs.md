@@ -28,6 +28,7 @@ Only one work package may be in implementation at a time. Each package uses test
 
 - No live provider, broker, external account, real order, public ingress, durable event handoff, queue, scheduler, multi-user behavior, or production deployment is included.
 - Provider assessment remains planning input; Ring 2 runtime data remains approved local fixtures with outbound provider access disabled.
+- Database work provisions and validates a greenfield PostgreSQL candidate through versioned native DDL. SQL Server schema conversion/parity, legacy-data ETL or reconciliation, source/target coexistence, cutover, and rollback to SQL Server are not included under DEC-057.
 - `CT-DB-002` is deferred until a populated-baseline compatibility claim exists. `CT-EVT-001` is deferred until a durable delayed handoff is proposed.
 - Proposed architecture remains Proposed. This WBS does not accept an ADR, activate a baseline, or authorize production use.
 

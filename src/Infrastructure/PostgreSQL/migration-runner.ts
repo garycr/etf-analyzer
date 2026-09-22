@@ -87,7 +87,29 @@ export async function applyMigration(
         ) {
           throw new Error("APPLICATION_MIGRATIONS_INCOMPLETE");
         }
+        const replayLedgerState = await client.query(
+          "SELECT count(*) AS applied_count, min(sequence) AS min_sequence, max(sequence) AS max_sequence FROM etf.schema_migrations",
+        );
+        const replayState = replayLedgerState.rows[0];
+        if (
+          Number(replayState?.applied_count) !== migration.sequence ||
+          Number(replayState?.min_sequence) !== 1 ||
+          Number(replayState?.max_sequence) !== migration.sequence
+        ) {
+          throw new Error("APPLICATION_MIGRATIONS_INCOMPLETE");
+        }
         const schemaManifestHash = String(row.schema_manifest_hash);
+        const currentManifestJson = await projectManifest(client, {
+          sequence: migration.sequence,
+          migrationId: migration.migrationId,
+          contentHash,
+        });
+        const currentSchemaManifestHash = createHash("sha256")
+          .update(currentManifestJson, "utf8")
+          .digest("hex");
+        if (currentSchemaManifestHash !== schemaManifestHash) {
+          throw new Error("APPLICATION_MIGRATIONS_INCOMPLETE");
+        }
         await client.query("COMMIT");
         return { applied: false, contentHash, schemaManifestHash };
       }

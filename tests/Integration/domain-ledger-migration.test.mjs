@@ -435,9 +435,9 @@ test(
       );
       assert.equal(
         applied.schemaManifestHash,
-        "6b45b57e06bc6e5e4097a35156f4e2544cec3cd0bc567319ac42292a41e5f782",
+        "94185f0d11619a22c67302802f983dae3e11c17f1eb6a9ab0ef5f6835ffff060",
       );
-      assert.equal(Buffer.byteLength(manifestJson, "utf8"), 15771);
+      assert.equal(Buffer.byteLength(manifestJson, "utf8"), 16193);
       assert.equal(manifest.migrationSequence.length, 3);
       assert.equal(manifest.objects.filter(({ kind }) => kind === "table").length, 28);
       assert.equal(manifest.objects.filter(({ kind }) => kind === "function").length, 11);

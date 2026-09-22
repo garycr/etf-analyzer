@@ -110,6 +110,24 @@ function validateCompleteMigrationSequence(
   }
 }
 
+function validateMigrationPrefix(
+  migrations: readonly ManifestMigration[],
+  expectedSequence: number,
+): void {
+  if (migrations.length !== expectedSequence) {
+    throw new Error("APPLICATION_MIGRATIONS_INCOMPLETE");
+  }
+  for (const [index, migration] of migrations.entries()) {
+    if (
+      migration.sequence !== index + 1 ||
+      migration.migrationId !== expectedMigrationIds[index] ||
+      !/^[0-9a-f]{64}$/u.test(migration.contentHash)
+    ) {
+      throw new Error("APPLICATION_MIGRATIONS_INCOMPLETE");
+    }
+  }
+}
+
 function renderSchemaManifest(
   source: SchemaManifestSource,
   migrationSequence: readonly ManifestMigration[],
@@ -175,5 +193,13 @@ export function buildSchemaManifest(
 
 export function buildCurrentSchemaManifest(source: SchemaManifestSource): string {
   validateCompleteMigrationSequence(source.migrationSequence);
+  return renderSchemaManifest(source, source.migrationSequence);
+}
+
+export function buildCurrentSchemaManifestPrefix(
+  source: SchemaManifestSource,
+  expectedSequence: number,
+): string {
+  validateMigrationPrefix(source.migrationSequence, expectedSequence);
   return renderSchemaManifest(source, source.migrationSequence);
 }

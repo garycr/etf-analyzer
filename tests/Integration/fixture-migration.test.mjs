@@ -4,6 +4,12 @@ import test from "node:test";
 
 import pg from "pg";
 
+import {
+  FixtureConformanceError,
+  selectFixturePackageAt,
+  validateFixturePackage,
+} from "../../dist/Application/fixture-package.js";
+import { canonicalizeJson } from "../../dist/Infrastructure/CanonicalJson/canonical-json.js";
 import { applyMigration } from "../../dist/Infrastructure/PostgreSQL/migration-runner.js";
 import { applicationMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/application.js";
 import { domainLedgerMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/domain-ledger.js";
@@ -24,6 +30,8 @@ const fixtureLockSql =
   "SELECT pg_catalog.pg_advisory_lock(pg_catalog.hashtextextended('etf:test:role-bootstrap', 0))";
 const fixtureUnlockSql =
   "SELECT pg_catalog.pg_advisory_unlock(pg_catalog.hashtextextended('etf:test:role-bootstrap', 0))";
+const governedRawSource = Buffer.from("approved local fixture source\n", "utf8");
+const governedRawSourceHash = createHash("sha256").update(governedRawSource).digest("hex");
 
 async function cleanBootstrap(client) {
   await client.query("ROLLBACK").catch(() => undefined);
@@ -219,6 +227,114 @@ async function ingest(client, payload) {
   } finally {
     await client.query("RESET SESSION AUTHORIZATION");
   }
+}
+
+async function snapshotFixtureState(client) {
+  return (await client.query(
+     `SELECT
+       (SELECT jsonb_agg(to_jsonb(package) ORDER BY package.dataset_id, package.dataset_version)
+         FROM etf.fixture_packages AS package) AS packages,
+       (SELECT jsonb_agg(to_jsonb(descriptor) ORDER BY descriptor.dataset_id, descriptor.dataset_version, descriptor.ordinal)
+         FROM etf.fixture_descriptors AS descriptor) AS descriptors,
+       (SELECT jsonb_agg(to_jsonb(source) ORDER BY source.dataset_id, source.dataset_version, source.raw_source_hash)
+         FROM etf.fixture_raw_sources AS source) AS raw_sources,
+       (SELECT jsonb_agg(to_jsonb(observation) ORDER BY observation.dataset_id, observation.dataset_version,
+              observation.instrument_id, observation.trading_date, observation.provider_id,
+              observation.adjustment_policy, observation.revision)
+         FROM etf.market_observations AS observation) AS market_observations,
+       (SELECT jsonb_agg(to_jsonb(observation) ORDER BY observation.dataset_id, observation.dataset_version,
+              observation.provider_id, observation.series_id, observation.observation_date,
+              observation.release_timestamp, observation.vintage_id)
+         FROM etf.economic_observations AS observation) AS economic_observations,
+       (SELECT jsonb_agg(to_jsonb(replay) ORDER BY replay.dataset_id, replay.dataset_version, replay.job_id)
+         FROM etf.fixture_ingestion_replays AS replay) AS replays,
+       (SELECT jsonb_agg(to_jsonb(job) ORDER BY job.job_id)
+         FROM etf.jobs AS job) AS jobs,
+       (SELECT jsonb_agg(to_jsonb(checkpoint) ORDER BY checkpoint.job_id, checkpoint.attempt, checkpoint.sequence)
+         FROM etf.job_checkpoints AS checkpoint) AS checkpoints`,
+  )).rows;
+}
+
+function validationPackage() {
+  const marketRecord = fixturePayload().marketObservations[0];
+  const economicRecord = fixturePayload().economicObservations[0];
+  const files = {
+      "market-observations.jsonl": Buffer.from(`${canonicalizeJson(marketRecord)}\n`, "utf8"),
+      "economic-vintages.jsonl": Buffer.from(`${canonicalizeJson(economicRecord)}\n`, "utf8"),
+      [`raw-sources/${governedRawSourceHash}`]: governedRawSource,
+  };
+  const manifest = {
+      contractVersion: "1.0.0-candidate.2",
+      datasetId: "etf-prototype-core",
+      datasetVersion: "2026.01.1",
+      economicCoverage: [
+        { observationDates: [economicRecord.observationDate], providerId: "FRED", seriesId: "CPI" },
+      ],
+      files: [
+        {
+          byteLength: files["economic-vintages.jsonl"].byteLength,
+          mediaType: "application/x-ndjson",
+          recordCount: 1,
+          relativePath: "economic-vintages.jsonl",
+          sha256: createHash("sha256").update(files["economic-vintages.jsonl"]).digest("hex"),
+        },
+        {
+          byteLength: files["market-observations.jsonl"].byteLength,
+          mediaType: "application/x-ndjson",
+          recordCount: 1,
+          relativePath: "market-observations.jsonl",
+          sha256: createHash("sha256").update(files["market-observations.jsonl"]).digest("hex"),
+        },
+        {
+          byteLength: governedRawSource.byteLength,
+          mediaType: "application/octet-stream",
+          recordCount: 1,
+          relativePath: `raw-sources/${governedRawSourceHash}`,
+          sha256: governedRawSourceHash,
+        },
+      ],
+      fixturePolicyId: "fixture-policy-1",
+      marketCoverage: [
+        {
+          adjustmentPolicy: "split-adjusted",
+          instrumentId: "ETF-1",
+          requiredTradingDates: [marketRecord.tradingDate],
+        },
+      ],
+      prototypeCandidate: "v1.0.0-prototype.1",
+      schemaVersion: "1.0.0",
+  };
+  manifest.datasetHash = createHash("sha256").update(Buffer.from(canonicalizeJson({
+      ...manifest,
+      domain: "etf.fixture.dataset.v1",
+  }), "utf8")).digest("hex");
+  return { files, manifest: Buffer.from(canonicalizeJson(manifest), "utf8") };
+}
+
+function mutateValidationRecords(fixturePackage, relativePath, mutate) {
+  const manifest = JSON.parse(fixturePackage.manifest.toString("utf8"));
+  const records = fixturePackage.files[relativePath].toString("utf8").trimEnd().split("\n").map(JSON.parse);
+  mutate(records);
+  const bytes = Buffer.from(`${records.map((record) => canonicalizeJson(record)).join("\n")}\n`, "utf8");
+  fixturePackage.files[relativePath] = bytes;
+  const descriptor = manifest.files.find((item) => item.relativePath === relativePath);
+  descriptor.byteLength = bytes.byteLength;
+  descriptor.recordCount = records.length;
+  descriptor.sha256 = createHash("sha256").update(bytes).digest("hex");
+  const { datasetHash: ignoredDatasetHash, ...hashMembers } = manifest;
+  void ignoredDatasetHash;
+  manifest.datasetHash = createHash("sha256").update(Buffer.from(canonicalizeJson({
+      ...hashMembers,
+      domain: "etf.fixture.dataset.v1",
+  }), "utf8")).digest("hex");
+  fixturePackage.manifest = Buffer.from(canonicalizeJson(manifest), "utf8");
+}
+
+function assertFixtureFailure(action, code) {
+  assert.throws(
+    action,
+    (error) => error instanceof FixtureConformanceError && error.code === code,
+  );
 }
 
 test(
@@ -543,6 +659,105 @@ test(
         "SELECT count(*)::integer AS package_count FROM etf.fixture_packages",
       );
       assert.deepEqual(remaining.rows, [{ package_count: 0 }]);
+    } finally {
+      try {
+        await cleanBootstrap(client);
+      } finally {
+        await client.query(fixtureUnlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
+  "0004 preserves complete fixture state across H persistence failures",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    await client.connect();
+    await client.query(fixtureLockSql);
+    try {
+      await cleanBootstrap(client);
+      await applyPrerequisites(client);
+      await applyMigration(
+        client,
+        fixtureMigration,
+        "2026-09-14T00:03:00.000Z",
+        projectPostgresSchemaManifest,
+      );
+      await client.query("GRANT USAGE ON SCHEMA etf TO app_runtime");
+
+      const acceptedPayload = fixturePayload();
+      await ingest(client, acceptedPayload);
+      const ingestionJobIds = await client.query(
+        `SELECT ingestion_job_id FROM etf.market_observations
+         UNION
+         SELECT ingestion_job_id FROM etf.economic_observations
+         ORDER BY ingestion_job_id`,
+      );
+      assert.deepEqual(ingestionJobIds.rows, [{ ingestion_job_id: "fixture-build-1" }]);
+      const acceptedState = await snapshotFixtureState(client);
+
+      const changedContent = fixturePayload();
+      changedContent.marketObservations[0].value = "101.0000000000";
+      await assert.rejects(
+        () => ingest(client, changedContent),
+        /FIXTURE_IDEMPOTENCY_CONFLICT/,
+      );
+      assert.deepEqual(await snapshotFixtureState(client), acceptedState);
+
+      const validationFailures = [
+        [() => {
+          const fixturePackage = validationPackage();
+          mutateValidationRecords(fixturePackage, "economic-vintages.jsonl", (records) => {
+            records.push({ ...structuredClone(records[0]), vintageId: "2026-01-15-corrected" });
+          });
+          return () => validateFixturePackage(fixturePackage);
+        }, "FIXTURE_TEMPORAL_INVALID"],
+        [() => {
+          const fixturePackage = validationPackage();
+          fixturePackage.files[`raw-sources/${governedRawSourceHash}`] = Buffer.from(
+            "changed local fixture source\n",
+            "utf8",
+          );
+          return () => validateFixturePackage(fixturePackage);
+        }, "FIXTURE_FILE_INTEGRITY_FAILED"],
+        [() => {
+          const fixturePackage = validationPackage();
+          mutateValidationRecords(fixturePackage, "market-observations.jsonl", ([record]) => {
+            delete record.normalizationId;
+          });
+          return () => validateFixturePackage(fixturePackage);
+        }, "FIXTURE_PROVENANCE_INVALID"],
+        [() => {
+          const fixturePackage = validationPackage();
+          mutateValidationRecords(fixturePackage, "market-observations.jsonl", ([record]) => {
+            record.qualityState = "Quarantined";
+            record.qualityCodes = ["SOURCE_QUARANTINED"];
+          });
+          return () => selectFixturePackageAt(fixturePackage, "2026-01-30T22:00:00.000Z");
+        }, "FIXTURE_REQUIRED_QUARANTINED"],
+      ];
+      for (const [createAction, errorCode] of validationFailures) {
+        assertFixtureFailure(createAction(), errorCode);
+        assert.deepEqual(await snapshotFixtureState(client), acceptedState);
+      }
+
+      const lateDatabaseFailure = fixturePayload({
+        datasetVersion: "2026.01.1",
+        datasetHash: "6".repeat(64),
+        jobId: "40000000-0000-4000-8000-000000000002",
+      });
+      lateDatabaseFailure.manifest.datasetVersion = lateDatabaseFailure.datasetVersion;
+      lateDatabaseFailure.manifest.datasetHash = lateDatabaseFailure.datasetHash;
+      lateDatabaseFailure.marketObservations[0].qualityState = "Stale";
+      lateDatabaseFailure.marketObservations[0].qualityCodes = ["Z_CODE", "A_CODE"];
+      await assert.rejects(
+        () => ingest(client, lateDatabaseFailure),
+        /FIXTURE_MANIFEST_INVALID/,
+      );
+      assert.deepEqual(await snapshotFixtureState(client), acceptedState);
     } finally {
       try {
         await cleanBootstrap(client);

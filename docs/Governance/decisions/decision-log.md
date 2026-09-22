@@ -39,6 +39,7 @@
 | DEC-075 | 2026-09-22 | Exact-value conformance acceptance | Accept CT-DB-001E after all six owner/numeric vectors, pre-cast rejection, canonical readback, rollback, and REV-172/173 PASS | Agent (Fully Agentic) | Solo Orchestrator | Accepted; F-J and end-to-end open |
 | DEC-076 | 2026-09-22 | Paper-order atomicity acceptance | Accept CT-DB-001F after exact success visibility and stale-version, replay-conflict, and transition-guard rollback evidence plus REV-174/175 PASS | Agent (Fully Agentic) | Solo Orchestrator | Accepted; G-J and end-to-end open |
 | DEC-077 | 2026-09-22 | Ledger integrity conformance acceptance | Accept CT-DB-001G after immutable anchored evidence, exact four-failure rollback, append-only reversal, and verified projection evidence plus REV-176/177 PASS | Agent (Fully Agentic) | Solo Orchestrator | Accepted; H-J and end-to-end open |
+| DEC-078 | 2026-09-22 | Fixture integrity conformance acceptance | Accept CT-DB-001H after exact identity, provenance, temporal, integrity, quality, no-mutation, and late transactional rollback evidence plus REV-178/179 PASS | Agent (Fully Agentic) | Solo Orchestrator | Accepted; I-J and end-to-end open |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -77,6 +78,21 @@
 ---
 
 ## Decision Records
+
+### DEC-078: Accept CT-DB-001H Fixture Integrity Conformance
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-078 |
+| **Date** | 2026-09-22 |
+| **Category** | PostgreSQL fixture identity and provenance conformance acceptance |
+| **Decision** | Accept CT-DB-001H after exact package and owner-identifier readback; five controlling identity, temporal, raw-integrity, provenance, and quality failures; deterministic no-mutation snapshots across eight protected relations; and supplementary late PostgreSQL transaction rollback evidence |
+| **Policy** | DEC-069; CT-DB-001H; fixture-only operation; fail-closed integrity and provenance; transaction atomicity; test-first development; exact PostgreSQL evidence; independent Code and Security review |
+| **Authority** | Agent under Fully Agentic mode; this is not DP-1, DP-25, or DP-26 |
+| **Accountability** | Solo Orchestrator preserves accepted CT-DB-001A-H/K/L checkpoints and invalidated REV-164 history, advances only to CT-DB-001I/J and PT-E2E-001, and does not infer WP-8, DP-33, Ring 2, release, deployment, or production closure |
+| **Status** | Accepted under REV-178 and REV-179; CT-DB-001I/J, PT-E2E-001, WP-8 closure, DP-33, Ring 2 closure, release, deployment, and production remain open or unauthorized |
+
+---
 
 ### DEC-077: Accept CT-DB-001G Ledger Integrity Conformance
 
@@ -209,7 +225,7 @@
 | **Policy** | DEC-023; DEC-028; DEC-030; DEC-039; DEC-068; approved sequential WBS; test-first development; architecture, code, security, and decision review |
 | **Authority** | Agent under Fully Agentic mode following the Workspace Owner directive to continue after WP-7 approval |
 | **Accountability** | Solo Orchestrator keeps one sequential stream, preserves the fixture-only/loopback/no-brokerage boundary, completes DP-33 gap review and stops for Workspace Owner disposition before Ring 3 |
-| **Status** | Active; issue #84 created; REV-157 Plan PASS; REV-158 Architecture PASS; CT-API-001M/N pass; REV-159 Code PASS; REV-160 Security PASS; CT-DB-001L passes under REV-161; REV-164 remains invalidated and superseding CT-DB-001K passes under DEC-072/REV-168; integrated CT-DB-001A-C passes under DEC-073/REV-169; CT-DB-001D passes under DEC-074/REV-170/171; CT-DB-001E passes under DEC-075/REV-172/173; CT-DB-001F passes under DEC-076/REV-174/175; CT-DB-001G passes under DEC-077/REV-176/177; CT-DB-001H-J and end-to-end evidence remain pending |
+| **Status** | Active; issue #84 created; REV-157 Plan PASS; REV-158 Architecture PASS; CT-API-001M/N pass; REV-159 Code PASS; REV-160 Security PASS; CT-DB-001L passes under REV-161; REV-164 remains invalidated and superseding CT-DB-001K passes under DEC-072/REV-168; integrated CT-DB-001A-C passes under DEC-073/REV-169; CT-DB-001D passes under DEC-074/REV-170/171; CT-DB-001E passes under DEC-075/REV-172/173; CT-DB-001F passes under DEC-076/REV-174/175; CT-DB-001G passes under DEC-077/REV-176/177; CT-DB-001H passes under DEC-078/REV-178/179; CT-DB-001I/J and end-to-end evidence remain pending |
 
 ---
 

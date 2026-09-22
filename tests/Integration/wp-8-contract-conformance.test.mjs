@@ -89,3 +89,18 @@ test(
     );
   },
 );
+
+test(
+  "CT-DB-001H fixture identity and provenance constraints reject ambiguity",
+  { skip: !connectionString },
+  async () => {
+    await runOwnerTests(
+      ["0004 commits exact fixture authority and atomic replay behavior"],
+      ["tests/Integration/fixture-migration.test.mjs"],
+    );
+    await runOwnerTests(
+      ["0004 preserves complete fixture state across H persistence failures"],
+      ["tests/Integration/fixture-migration.test.mjs"],
+    );
+  },
+);

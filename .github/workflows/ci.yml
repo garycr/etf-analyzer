@@ -80,6 +80,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -91,12 +93,10 @@ jobs:
         run: npm ci
 
       - name: Audit dependencies
-        run: npm audit --audit-level=high
+        run: npm run test:security:audit
 
       - name: Secret pattern scan
-        run: |
-          ! git grep -nE '(gh[pousr]_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|Account[K]ey=|SharedAccess[K]ey=|Client[S]ecret=)' -- ':!package-lock.json'
+        run: npm run test:security:secrets
 
       - name: SAST guardrail scan
-        run: |
-          ! git grep -nE '(exec\(|spawn\(|execSync\(|eval\(|new Function\(|curl .*[|] *sh|Invoke-Expression)' -- src ':!src/**/*.test.ts'
+        run: npm run test:security:sast

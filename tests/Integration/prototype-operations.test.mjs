@@ -147,7 +147,7 @@ test(
             ? undefined
             : new URL(connectionString).password;
           assert.equal(degraded.body.includes(connectionString), false);
-          assert.equal(degraded.body.includes(databasePassword), false);
+          if (databasePassword.length > 0) assert.equal(degraded.body.includes(databasePassword), false);
       readiness = ready;
 
       const dashboardDurationsMs = [];
@@ -166,7 +166,7 @@ test(
       assert.match(dashboardResponse.body, /Status: <\/span>Ready/);
       assert.doesNotMatch(dashboardResponse.body, /password|secret|token/iu);
           assert.equal(dashboardResponse.body.includes(connectionString), false);
-          assert.equal(dashboardResponse.body.includes(databasePassword), false);
+          if (databasePassword.length > 0) assert.equal(dashboardResponse.body.includes(databasePassword), false);
 
       for (let index = 0; index < 25; index += 1) {
         const startedAt = performance.now();
@@ -182,7 +182,7 @@ test(
         assert.equal(response.status, 200);
         assert.doesNotMatch(response.body, /password|secret|token/iu);
             assert.equal(response.body.includes(connectionString), false);
-            assert.equal(response.body.includes(databasePassword), false);
+            if (databasePassword.length > 0) assert.equal(response.body.includes(databasePassword), false);
       }
 
       const observations = (await client.query(

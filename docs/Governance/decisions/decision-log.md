@@ -43,6 +43,7 @@
 | DEC-079 | 2026-09-22 | Analytics admission conformance acceptance | Accept CT-DB-001I after candidate.3 admission, manifest identity, precedence, rollback, exact-hash, and independent review evidence | Agent (Fully Agentic) | Solo Orchestrator | Accepted under REV-180/181; J and end-to-end open |
 | DEC-083 | 2026-09-23 | Coverage acceptance | Accept PT-COVERAGE-001 after exhaustive Domain/Application line and exact 16-route behavioral gates passed | Agent (Fully Agentic) | Solo Orchestrator | Accepted under REV-188/189; WP-8 remains open |
 | DEC-084 | 2026-09-23 | Accessibility acceptance | Accept PT-A11Y-002 after digest-pinned axe, natural keyboard, visible focus, and reflow gates passed at all required viewports | Agent (Fully Agentic) | Solo Orchestrator | Accepted under REV-190/191; WP-8 remains open |
+| DEC-085 | 2026-09-23 | Security acceptance | Accept PT-SEC-001 after dependency, secret, SAST, OSS, and redaction gates passed | Agent (Fully Agentic) | Solo Orchestrator | Accepted under REV-192/193; WP-8 remains open |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -81,6 +82,21 @@
 ---
 
 ## Decision Records
+
+### DEC-085: Accept Bounded PT-SEC-001 Evidence
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-085 |
+| **Date** | 2026-09-23 |
+| **Category** | Dependency, secret, SAST, OSS, and redaction evidence |
+| **Decision** | Accept PT-SEC-001 after zero vulnerabilities at every severity, explicit Moderate disposition enforcement, full current/index/history secret scanning, fail-closed AST SAST controls, unchanged reviewed dependency licenses, and focused redaction tests passed |
+| **Policy** | DEC-069; PT-SEC-001; zero Critical/High; explicit Medium disposition; CI secret/SAST gates; lockfile/dependency diff; OSS review; fail-closed redaction |
+| **Authority** | Agent under Fully Agentic mode after independent Security and Code Reviewer PASS; this is not DP-1, DP-25, or DP-26 |
+| **Accountability** | Solo Orchestrator preserves full-history checkout, exact policy provenance, audit/SAST/secret adversarial controls, and does not infer WP-8, DP-33, Ring 2, release, deployment, or production closure |
+| **Status** | Accepted under REV-192 and REV-193 for PT-SEC-001 only; WP-8, DP-33, Ring 2, release, deployment, and production remain open or unauthorized |
+
+---
 
 ### DEC-084: Accept Bounded PT-A11Y-002 Evidence
 

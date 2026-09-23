@@ -95,11 +95,33 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Audit dependencies
-        run: npm run test:security:audit
+      - name: Run security gates with commit-bound evidence
+        run: npm run test:security:evidence
 
-      - name: Secret pattern scan
-        run: npm run test:security:secrets
+      - name: Upload immutable security evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: security-evidence-${{ github.sha }}-${{ github.run_attempt }}
+          path: security-evidence/
+          if-no-files-found: error
+          retention-days: 90
 
-      - name: SAST guardrail scan
-        run: npm run test:security:sast
+  codeql:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@3ea06614dafe36dec890db3446326e0d40ce53d4
+        with:
+          languages: javascript-typescript
+
+      - name: Analyze source
+        uses: github/codeql-action/analyze@3ea06614dafe36dec890db3446326e0d40ce53d4
+        with:
+          category: /language:javascript-typescript

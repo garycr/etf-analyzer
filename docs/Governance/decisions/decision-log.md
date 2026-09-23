@@ -45,6 +45,7 @@
 | DEC-084 | 2026-09-23 | Accessibility acceptance | Accept PT-A11Y-002 after digest-pinned axe, natural keyboard, visible focus, and reflow gates passed at all required viewports | Agent (Fully Agentic) | Solo Orchestrator | Accepted under REV-190/191; WP-8 remains open |
 | DEC-085 | 2026-09-23 | Security acceptance | Accept PT-SEC-001 after dependency, secret, SAST, OSS, and redaction gates passed | Agent (Fully Agentic) | Solo Orchestrator | Accepted under REV-192/193; WP-8 remains open |
 | DEC-086 | 2026-09-23 | PostgreSQL evidence reconciliation | Replace stale recorded schema-manifest roots with the reproducible seven-row live catalog chain | Agent (Fully Agentic) | Solo Orchestrator | Implemented; independent review pending; WP-8 remains open |
+| DEC-087 | 2026-09-23 | Security evidence hardening | Add pinned CodeQL analysis and commit-bound raw security evidence artifacts | Agent (Fully Agentic) | Solo Orchestrator | Implemented; CI verification and independent review pending |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -83,6 +84,27 @@
 ---
 
 ## Decision Records
+
+### DEC-087: Harden Security Analysis And Provenance
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-087 |
+| **Date** | 2026-09-23 |
+| **Category** | Security analysis and evidence provenance |
+| **Decision** | Retain the bounded AST banned-function guardrail, add commit-pinned CodeQL JavaScript/TypeScript analysis, and make CI upload a 90-day artifact containing raw stdout/stderr plus SHA-256 and byte-count bindings for the dependency, secret, and banned-function gates under exact commit/run/job identity |
+| **Policy** | RH-011; RH-012; CI/CD security scanning; supply-chain pinning; immutable evidence provenance; least-privilege workflow permissions; no unsupported production claim |
+| **Authority** | Agent under Fully Agentic mode after aggregate review hardening identified missing broad SAST and commit-bound provenance; this is not DP-1, DP-25, or DP-26 |
+| **Accountability** | Solo Orchestrator verifies the first pushed CI run, preserves raw artifact identity and CodeQL results, obtains independent security review, and does not infer WP-8, DP-33, Ring 2, release, deployment, or production closure |
+| **Context** | The existing scanner is intentionally narrow and successful commands previously left no raw commit-bound output. GitHub Actions already provides commit/run/job identity, and CodeQL plus artifact upload can be commit-pinned without adding a package dependency or widening the runtime boundary. |
+| **Alternatives** | Continue with the custom scanner alone; add a new npm analyzer dependency; record an accepted deferral; use pinned native GitHub CodeQL and commit-bound artifacts. The decision selects the final option. |
+| **Consequences** | Broader semantic analysis becomes a distinct CI job; existing gates remain independently visible; raw outputs are cryptographically bound to their manifest; failed gates still produce evidence; CI confirmation and independent review remain required before RH-011/RH-012 can close. |
+| **Assumptions** | GitHub code scanning is enabled for the repository and the pinned action revisions remain available; 90-day artifact retention is sufficient for this Ring 2 review packet. |
+| **Invalidation** | Floating action references, absent/mismatched raw stream hashes, incomplete CI identity, suppressed failed-gate artifacts, CodeQL execution failure, or unavailable security-event publication invalidates this decision and leaves RH-011/RH-012 open. |
+| **Linked Artifacts** | `.github/workflows/ci.yml`; `scripts/security-evidence-runner.mjs`; `scripts/security-evidence-lib.mjs`; `tests/Unit/security-evidence.test.mjs`; `docs/artifacts/gate-evidence/wp-8-security.md`; `docs/Quality/ring-2-review-hardening.md` |
+| **Status** | Implemented and locally verified; pushed CI evidence and independent review pending |
+
+---
 
 ### DEC-086: Reconcile PostgreSQL Manifest Authority
 

@@ -15,7 +15,8 @@
     "test:coverage:wp8": "npm run build && node scripts/wp-8-coverage.mjs",
     "test:security:audit": "node scripts/audit-policy.mjs",
     "test:security:sast": "node scripts/sast-guardrail.mjs",
-    "test:security:secrets": "node scripts/secret-guardrail.mjs"
+    "test:security:secrets": "node scripts/secret-guardrail.mjs",
+    "test:security:evidence": "node scripts/security-evidence-runner.mjs"
   },
   "dependencies": {
     "pg": "8.16.0"

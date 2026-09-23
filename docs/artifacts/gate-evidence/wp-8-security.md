@@ -19,6 +19,12 @@
 
 The source guardrail rejects child-process acquisition through static import, `require`, aliased loaders, and dynamic import; dynamic or aliased `eval`/`Function`; malformed source; and source symlinks. It scans `.js`, `.jsx`, `.mjs`, `.cjs`, `.ts`, `.tsx`, `.mts`, and `.cts`. Regular-expression `.exec()` remains allowed. This is a bounded banned-function control, not general taint-flow SAST; broader SAST coverage remains an open Ring 2 hardening item.
 
+## Review-Hardening Addendum
+
+DEC-087 adds a distinct commit-pinned CodeQL JavaScript/TypeScript job and a fail-closed security evidence runner. The runner captures raw stdout and stderr for dependency audit, full-history secret scanning, and the bounded banned-function guardrail, then records byte counts and SHA-256 digests under exact GitHub commit, repository, workflow, job, ref, run, and attempt identity. CI uploads the bundle even when a gate fails and retains it for 90 days.
+
+Local verification passed all three gates and independently recomputed every raw-stream byte count and digest. RH-011 and RH-012 remain open until the pushed workflow produces successful CodeQL results and the commit-bound artifact is verified; this addendum does not retroactively alter REV-192 or REV-193.
+
 The secret gate scans every blob/path in every reachable commit, exact staged index blobs, and tracked or untracked working files. It includes binary bytes and lockfiles and fails closed on Git or file errors. Signatures cover private keys, AWS, GitHub, GitLab, npm, OpenAI, Slack, credential-bearing database URIs, bearer/JWT, and Azure-like keys. Five exact synthetic PostgreSQL fixture fingerprints are allowlisted only at reviewed test/evidence paths with owner, rationale, and 2027-09-23 expiry; copying the same value elsewhere fails.
 
 ## Dependency And License Review
@@ -44,6 +50,7 @@ Focused controls passed for PT-UI-010, both PT-OPS-001 evaluator outcomes, recur
 - Remediation replaced fragile text scanning with TypeScript AST and Git object-model controls, strengthened audit schema/policy enforcement, broadened token signatures, and added adversarial tests.
 - Final Security Review REV-192: PASS with no remaining Critical, High, or Medium finding.
 - Final Code Review REV-193: PASS with no blocking finding.
+- Aggregate Ring 2 hardening subsequently opened RH-011/RH-012; DEC-087 implementation is locally verified, with pushed CI evidence and independent re-review pending.
 
 ## Boundary
 

@@ -32,8 +32,8 @@ No review returned unconditional PASS. Slice-level reviews remain historical inp
 | RH-008 | Major | Observability claim exceeds implemented capability | Remediated in architecture: bounded test observations are separated from absent retained telemetry pipeline |
 | RH-009 | Major | DP-33 aggregate packet and owner disposition absent | Open by design; packet may start only after exit controls pass |
 | RH-010 | Major | Threat model was an empty template | Remediated: implemented-boundary STRIDE model now records mitigated, accepted, and open risks |
-| RH-011 | Major | “Production SAST” claim exceeded custom scanner | Partially remediated: evidence renamed to bounded banned-function guardrail; broader SAST remains open |
-| RH-012 | Major | Security evidence lacks commit-bound raw provenance bundle | Open: requires immutable command/tool/output manifest and CI identity |
+| RH-011 | Major | “Production SAST” claim exceeded custom scanner | Remediation implemented under DEC-087: bounded guardrail retained and distinct commit-pinned CodeQL analysis added; pushed CI result and independent re-review pending |
+| RH-012 | Major | Security evidence lacks commit-bound raw provenance bundle | Remediation implemented under DEC-087: CI always uploads raw stdout/stderr with SHA-256, byte counts, and exact commit/run/job identity; pushed artifact verification and independent re-review pending |
 | RH-013 | Minor | PT-OPS passes empty workflow-count maps | Open: exact counts exist in PT-E2E but must be composed into PT-OPS evidence or its claim narrowed |
 | RH-014 | Minor | Full transitive OSS inventory incomplete | Open: lockfile-derived license/maintenance/lifecycle inventory required |
 | RH-015 | Minor | CI runner and Node selector remain mutable | Open: pin runner generation/exact Node patch or record owner acceptance |
@@ -48,9 +48,11 @@ No review returned unconditional PASS. Slice-level reviews remain historical inp
 - Editor diagnostics for both changed test files: no errors.
 - Seven-row manifest reconciliation: deterministic across Node 20/24 and trust/password bootstrap shapes; normative roots corrected under DEC-086.
 - Focused independent Code Reviewer follow-up for DEC-086/RH-003/RH-005: PASS with no remaining bounded finding.
+- DEC-087 local security provenance run: three gates passed; manifest commit matched HEAD; all six raw streams matched recorded byte counts and SHA-256 digests; unit contract 3/3 passed.
+- Focused independent Security Reviewer follow-up for DEC-087: CONDITIONAL with no Critical or Major implementation defect; pushed CodeQL and downloaded artifact verification remain required.
 
 ## Gate Result
 
-Review hardening remains **FAIL** because RH-007, RH-009, RH-011, and RH-012 remain open Major findings. The next bounded work is security provenance and broader SAST disposition, followed by independent re-review and DP-33 packet preparation.
+Review hardening remains **FAIL** because RH-007, RH-009, RH-011, and RH-012 remain open Major findings. RH-011/RH-012 now await pushed CI evidence and independent re-review; no finding closes from local implementation alone. DP-33 packet preparation remains blocked on exit-control disposition.
 
 REV-164 and the original CT-DB-001K evidence remain invalidated history. Greenfield PostgreSQL is the sole persistence target.

@@ -58,6 +58,9 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: WP-8 coverage gate
+        run: npm run test:coverage:wp8
+
   browser-accessibility:
     runs-on: ubuntu-latest
     container:

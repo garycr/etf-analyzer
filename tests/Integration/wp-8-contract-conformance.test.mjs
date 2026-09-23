@@ -22,6 +22,7 @@ function escapeRegExp(value) {
 }
 
 async function runOwnerTests(testTitles, testFiles) {
+  assert.equal(process.versions.node.split(".")[0], "20");
   const testNamePattern = `^(${testTitles.map(escapeRegExp).join("|")})$`;
   const childEnvironment = { ...process.env };
   delete childEnvironment.NODE_TEST_CONTEXT;
@@ -42,10 +43,15 @@ async function runOwnerTests(testTitles, testFiles) {
     const escapedTitle = escapeRegExp(title);
     assert.match(stdout, new RegExp(`# Subtest: ${escapedTitle}\\n(?:.*\\n)*?ok \\d+ - ${escapedTitle}\\n`));
   }
-  assert.match(stdout, new RegExp(`# tests ${testTitles.length}\\n`));
-  assert.match(stdout, new RegExp(`# pass ${testTitles.length}\\n`));
-  assert.match(stdout, /# fail 0\n/);
-  assert.match(stdout, /# skipped 0\n/);
+  const summary = Object.fromEntries(
+    [...stdout.matchAll(/^# (tests|pass|fail|cancelled|skipped|todo) (\d+)$/gmu)]
+      .map(([, key, value]) => [key, Number(value)]),
+  );
+  assert.equal(summary.pass, testTitles.length);
+  assert.equal(summary.fail, 0);
+  assert.equal(summary.cancelled, 0);
+  assert.equal(summary.todo, 0);
+  assert.equal(summary.tests, summary.pass + summary.skipped);
 }
 
 test(
@@ -101,6 +107,31 @@ test(
     await runOwnerTests(
       ["0004 preserves complete fixture state across H persistence failures"],
       ["tests/Integration/fixture-migration.test.mjs"],
+    );
+  },
+);
+
+test(
+  "CT-DB-001I analytics evidence publishes only complete verified bundles",
+  { skip: !connectionString },
+  async () => {
+    await runOwnerTests(
+      [
+        "0005 preserves complete analytics state across CT-DB-001I failures",
+        "0005 applies analytics validation precedence before publication persistence",
+      ],
+      ["tests/Integration/analytics-evidence-migration.test.mjs"],
+    );
+  },
+);
+
+test(
+  "CT-DB-001J job state and checkpoints resume without duplicate effects",
+  { skip: !connectionString },
+  async () => {
+    await runOwnerTests(
+      ["0002 preserves complete durable job state across CT-DB-001J restart cases"],
+      ["tests/Integration/application-migration.test.mjs"],
     );
   },
 );

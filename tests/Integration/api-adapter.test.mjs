@@ -164,6 +164,40 @@ test("PT-UI-002 serves the workbench at the loopback root without application di
   assert.deepEqual(executed, []);
 });
 
+test("loopback HTTP awaits asynchronous Application execution", async (context) => {
+  const origin = "http://127.0.0.1:5173";
+  const server = await startLoopbackApiServer(
+    { allowedOrigins: [origin], bodyLimitBytes: 1_048_576, port: 0 },
+    async (requestJson) => {
+      const request = JSON.parse(requestJson);
+      await Promise.resolve();
+      return Object.freeze({ operation: request.operation, outcome: "Succeeded" });
+    },
+  );
+  context.after(() => new Promise((resolve, reject) => {
+    server.close((error) => error ? reject(error) : resolve());
+  }));
+  const address = server.address();
+  assert.equal(typeof address, "object");
+  const response = await send({
+    port: address.port,
+    method: "GET",
+    path: "/api/v1/readiness",
+    headers: {
+      accept: "application/json",
+      origin,
+      "x-request-id": "29000000-0000-4000-8000-000000000001",
+      "x-correlation-id": "29000000-0000-4000-8000-000000000002",
+      "x-requested-at": "2026-09-22T10:00:00.000Z",
+    },
+  });
+  assert.equal(response.status, 200);
+  assert.deepEqual(JSON.parse(response.body), {
+    operation: "ReadinessGet",
+    outcome: "Succeeded",
+  });
+});
+
 test("CT-API-001A/K serves only loopback HTTP and keeps preflight side-effect free", async (context) => {
   const origin = "http://127.0.0.1:5173";
   const executed = [];

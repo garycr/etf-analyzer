@@ -87,7 +87,7 @@ test("schema manifest emits the exact canonical root and object ordering", () =>
     "roleMemberships",
     "systemExtensions",
   ]);
-  assert.equal(manifest.contractVersion, "1.0.0-candidate.2");
+  assert.equal(manifest.contractVersion, "1.0.0-candidate.3");
   assert.deepEqual(manifest.migrationSequence, [migration]);
   assert.deepEqual(
     manifest.objects.map(({ kind, schema, name }) => ({ kind, schema, name })),

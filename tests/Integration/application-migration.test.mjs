@@ -3,13 +3,21 @@ import test from "node:test";
 
 import pg from "pg";
 
+import { executeApplicationRequestAsync } from "../../dist/Application/application-boundary.js";
+import { createPostgresApplicationReplayStore } from "../../dist/Infrastructure/PostgreSQL/application-replay-store.js";
 import { applyMigration } from "../../dist/Infrastructure/PostgreSQL/migration-runner.js";
 import {
   applicationFunctionNames,
   applicationMigration,
   applicationTableNames,
 } from "../../dist/Infrastructure/PostgreSQL/migrations/application.js";
+import { analyticsEvidenceMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/analytics-evidence.js";
+import { controlledAccessMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/controlled-access.js";
+import { denialBackendVerifierMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/denial-backend-verifier.js";
+import { domainLedgerMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/domain-ledger.js";
+import { fixtureMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/fixtures.js";
 import { foundationMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/foundation.js";
+import { dispatchPostgresJobRestart } from "../../dist/Infrastructure/PostgreSQL/job-restart-owner.js";
 import { projectPostgresSchemaManifest } from "../../dist/Infrastructure/PostgreSQL/postgres-schema-manifest.js";
 import {
   createRoleBootstrapSql,
@@ -39,6 +47,206 @@ async function cleanBootstrap(client) {
     "DO $cleanup$ BEGIN EXECUTE format('GRANT CONNECT, TEMPORARY ON DATABASE %I TO PUBLIC', current_database()); END $cleanup$;",
   );
 }
+
+test(
+  "0002 preserves complete durable job state across CT-DB-001J restart cases",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    const jobIds = {
+      restartable: "21000000-0000-4000-8000-000000000001",
+      running: "21000000-0000-4000-8000-000000000002",
+      notRestartable: "21000000-0000-4000-8000-000000000003",
+      rollback: "21000000-0000-4000-8000-000000000004",
+    };
+    const commandIds = {
+      success: "31000000-0000-4000-8000-000000000001",
+      running: "31000000-0000-4000-8000-000000000002",
+      notRestartable: "31000000-0000-4000-8000-000000000003",
+      rollback: "31000000-0000-4000-8000-000000000004",
+    };
+    await client.connect();
+    await client.query(fixtureLockSql);
+    try {
+      await cleanBootstrap(client);
+      await client.query(createRoleBootstrapSql());
+      const migrations = [
+        foundationMigration,
+        applicationMigration,
+        domainLedgerMigration,
+        fixtureMigration,
+        analyticsEvidenceMigration,
+        controlledAccessMigration,
+        denialBackendVerifierMigration,
+      ];
+      for (const [index, migration] of migrations.entries()) {
+        await applyMigration(
+          client,
+          migration,
+          `2026-09-14T00:0${index}:00.000Z`,
+          projectPostgresSchemaManifest,
+        );
+      }
+
+      for (const [index, jobId] of Object.values(jobIds).entries()) {
+        const running = jobId === jobIds.running;
+        const notRestartable = jobId === jobIds.notRestartable;
+        await client.query(
+          `INSERT INTO etf.jobs (
+             job_id, job_type, status, restartability, attempt, operation,
+             original_command_id, input_identity, created_at, started_at,
+             completed_at, accepted_count, rejected_count, controlling_error
+           ) VALUES (
+             $1, 'FixtureIngestion', $2, $3, 1, 'FixtureIngestionStart', $4,
+             jsonb_build_object(
+               'datasetId', 'release-fixture', 'datasetVersion', '1',
+               'fixturePackageHash', repeat('a', 64)
+             ),
+             '2026-09-14T00:02:00.000Z', $5, $6, 3, 1, $7
+           )`,
+          [
+            jobId,
+            running ? "Running" : "Failed",
+            notRestartable ? "NotRestartable" : "Restartable",
+            `41000000-0000-4000-8000-00000000000${index + 1}`,
+            running ? "2026-09-14T00:02:10.000Z" : null,
+            running ? null : "2026-09-14T00:03:00.000Z",
+            running ? null : { code: "APPLICATION_DEPENDENCY_UNAVAILABLE" },
+          ],
+        );
+        await client.query(
+          `INSERT INTO etf.job_checkpoints (
+             job_id, checkpoint_id, attempt, sequence, committed_at, content_hash,
+             effect_domain, first_effect_identity, last_effect_identity, effect_count
+           ) VALUES ($1, $2, 1, 7, '2026-09-14T00:02:30.000Z', $3,
+                     'FixtureObservation', 'prices:1', 'prices:3', 3)`,
+          [
+            jobId,
+            `51000000-0000-4000-8000-00000000000${index + 1}`,
+            `${index + 1}`.repeat(64),
+          ],
+        );
+      }
+
+      const snapshotState = async () => (await client.query(
+        `SELECT jsonb_build_object(
+           'jobs', (SELECT jsonb_agg(to_jsonb(job) ORDER BY job.job_id) FROM etf.jobs AS job),
+           'checkpoints', (SELECT jsonb_agg(to_jsonb(checkpoint) ORDER BY checkpoint.job_id, checkpoint.attempt, checkpoint.sequence) FROM etf.job_checkpoints AS checkpoint),
+           'replays', (SELECT jsonb_agg(to_jsonb(replay) ORDER BY replay.operation, replay.command_id) FROM etf.application_replays AS replay)
+         ) AS state`,
+      )).rows[0].state;
+      const requestFor = (jobId, commandId, overrides = {}) => JSON.stringify({
+        operation: "JobRestart",
+        requestId: "61000000-0000-4000-8000-000000000001",
+        correlationId: "61000000-0000-4000-8000-000000000002",
+        actorId: "local-user",
+        prototypeCandidate: "v1.0.0-prototype.1",
+        contractVersion: "1.0.0-candidate.2",
+        requestedAt: "2026-09-14T00:04:00.000Z",
+        commandId,
+        payload: { jobId },
+        ...overrides,
+      });
+      const executeRestart = async (request, replayClient = client, ownerCalls) => {
+        await client.query("SET SESSION AUTHORIZATION app_runtime");
+        try {
+          const result = await executeApplicationRequestAsync(request, {
+            replayStore: createPostgresApplicationReplayStore(replayClient),
+            completedAt: () => "2026-09-14T00:04:01.000Z",
+            checkReadiness: () => undefined,
+            ownerDispatch: (definition, payload, context) => {
+              ownerCalls.count += 1;
+              return dispatchPostgresJobRestart(client, definition, payload, context);
+            },
+          });
+          return result;
+        } finally {
+          await client.query("RESET SESSION AUTHORIZATION");
+        }
+      };
+
+      const successRequest = requestFor(jobIds.restartable, commandIds.success);
+      const successCalls = { count: 0 };
+      const success = await executeRestart(successRequest, client, successCalls);
+      assert.equal(success.outcome, "Succeeded", JSON.stringify(success));
+      assert.equal(success.data.job.attempt, "2");
+      assert.equal(success.data.job.status, "Pending");
+      assert.equal(success.data.job.checkpoint.sequence, "7");
+      assert.equal(successCalls.count, 1);
+
+      const committedState = await snapshotState();
+      const replayCalls = { count: 0 };
+      const equivalentReplay = await executeRestart(
+        requestFor(jobIds.restartable, commandIds.success, {
+          requestId: "61000000-0000-4000-8000-000000000003",
+          correlationId: "61000000-0000-4000-8000-000000000004",
+          requestedAt: "2026-09-14T00:05:00.000Z",
+        }),
+        client,
+        replayCalls,
+      );
+      assert.deepEqual(equivalentReplay, success);
+      assert.equal(replayCalls.count, 0);
+      assert.deepEqual(await snapshotState(), committedState);
+
+      const conflictCalls = { count: 0 };
+      const conflict = await executeRestart(
+        requestFor(jobIds.running, commandIds.success),
+        client,
+        conflictCalls,
+      );
+      assert.equal(conflict.error.code, "APPLICATION_IDEMPOTENCY_CONFLICT");
+      assert.equal(conflictCalls.count, 0);
+      assert.deepEqual(await snapshotState(), committedState);
+
+      for (const vector of [
+        [jobIds.running, commandIds.running],
+        [jobIds.notRestartable, commandIds.notRestartable],
+      ]) {
+        const before = await snapshotState();
+        const calls = { count: 0 };
+        const refusal = await executeRestart(requestFor(...vector), client, calls);
+        assert.equal(refusal.error.code, "APPLICATION_JOB_NOT_RESTARTABLE");
+        assert.equal(calls.count, 1);
+        const after = await snapshotState();
+        assert.deepEqual(after.jobs, before.jobs);
+        assert.deepEqual(after.checkpoints, before.checkpoints);
+      }
+
+      const beforeRollback = await snapshotState();
+      const rollbackCalls = { count: 0 };
+      const failingReplayClient = {
+        query: async (sql, values) => {
+          if (sql.includes("application_replay_get_or_put")) {
+            throw new Error("forced replay persistence failure");
+          }
+          return client.query(sql, values);
+        },
+      };
+      const rollback = await executeRestart(
+        requestFor(jobIds.rollback, commandIds.rollback),
+        failingReplayClient,
+        rollbackCalls,
+      );
+      assert.equal(rollback.error.code, "APPLICATION_DEPENDENCY_UNAVAILABLE");
+      assert.equal(rollbackCalls.count, 1);
+      assert.deepEqual(await snapshotState(), beforeRollback);
+
+      const retryCalls = { count: 0 };
+      const committedRetry = await executeRestart(successRequest, client, retryCalls);
+      assert.deepEqual(committedRetry, success);
+      assert.equal(retryCalls.count, 0);
+      assert.deepEqual(await snapshotState(), beforeRollback);
+    } finally {
+      try {
+        await cleanBootstrap(client);
+      } finally {
+        await client.query(fixtureUnlockSql);
+        await client.end();
+      }
+    }
+  },
+);
 
 test(
   "0002 rolls back its complete catalog on manifest failure",
@@ -141,17 +349,17 @@ test(
       );
       assert.equal(
         applicationApplied.contentHash,
-        "ad458453834e72413f644e81e38829ae491a26a44f1ca03deeaf71349552c198",
+        "6ad48f730617fadff8ae80d58171c84707d9159af8f0186e71538861d92d730a",
       );
       assert.equal(
         applicationApplied.schemaManifestHash,
-        "440d618a1a4c5ddd2a147a34c3729d953c1874a54cf0005a3dedeab7420e521c",
+        "c043fad160e0b6690971b6cc4e9ffc8d10ca74a879a43360f86872c1f8eaf8c1",
       );
-      assert.equal(Buffer.byteLength(applicationManifest, "utf8"), 8089);
+      assert.equal(Buffer.byteLength(applicationManifest, "utf8"), 8264);
       const manifest = JSON.parse(applicationManifest);
       assert.equal(manifest.migrationSequence.length, 2);
       assert.equal(manifest.objects.filter(({ kind }) => kind === "table").length, 10);
-      assert.equal(manifest.objects.filter(({ kind }) => kind === "function").length, 5);
+      assert.equal(manifest.objects.filter(({ kind }) => kind === "function").length, 6);
       assert.ok(
         manifest.grants.some(
           (grant) =>
@@ -395,7 +603,7 @@ test(
         jobType: "FixtureIngestion",
         status: "Pending",
         restartability: "Restartable",
-        attempt: 2,
+        attempt: "2",
         operation: "FixtureIngestionStart",
         originalCommandId: "30000000-0000-4000-8000-000000000001",
         inputIdentity: { datasetId: "p0", datasetVersion: "1" },
@@ -404,13 +612,13 @@ test(
         completedAt: null,
         checkpoint: {
           checkpointId: "20000000-0000-4000-8000-000000000002",
-          attempt: 1,
-          sequence: 7,
+          attempt: "1",
+          sequence: "7",
           committedAt: "2026-09-14T00:02:30.000Z",
           contentHash: "a".repeat(64),
         },
-        acceptedCount: 3,
-        rejectedCount: 1,
+        acceptedCount: "3",
+        rejectedCount: "1",
         controllingError: null,
       });
       const committedEffects = await client.query(

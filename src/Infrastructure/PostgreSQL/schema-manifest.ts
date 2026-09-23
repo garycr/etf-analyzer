@@ -171,7 +171,7 @@ function renderSchemaManifest(
   );
 
   return canonicalizeJson({
-    contractVersion: "1.0.0-candidate.2",
+    contractVersion: "1.0.0-candidate.3",
     systemExtensions: source.systemExtensions,
     migrationSequence,
     objects,

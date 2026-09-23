@@ -11,6 +11,8 @@ test("0005 analytics evidence has the exact identity and closed object set", () 
   assert.equal(analyticsEvidenceMigration.sequence, 5);
   assert.equal(analyticsEvidenceMigration.migrationId, "0005-analytics-evidence");
   assert.deepEqual(analyticsEvidenceTableNames, [
+    "analytics_provider_policy_admission",
+    "analytics_capacity_admission",
     "analytics_input_sets",
     "analytics_evidence_bundles",
     "analytics_manifests",
@@ -33,12 +35,23 @@ test("0005 analytics evidence stays inside the physical persistence boundary", (
   const declaredNames = [...sql.matchAll(/(?:CONSTRAINT|CREATE INDEX) ([a-z0-9_]+)/gu)]
     .map((match) => match[1]);
 
-  assert.equal((sql.match(/CREATE TABLE etf\./gu) ?? []).length, 9);
+  assert.equal((sql.match(/CREATE TABLE etf\./gu) ?? []).length, 11);
   assert.equal((sql.match(/CREATE FUNCTION etf\./gu) ?? []).length, 3);
   assert.equal((sql.match(/CREATE INDEX ix_analytics_/gu) ?? []).length, 3);
   assert.doesNotMatch(sql, /CREATE\s+(?:EXTENSION|VIEW|TRIGGER)/iu);
   assert.doesNotMatch(sql, /\b(?:outbox|queue|scheduler|worker|broker|provider)\b/iu);
   assert.doesNotMatch(sql, /\bCOPY\s+etf\./iu);
+  assert.match(sql, /CREATE TABLE etf\.analytics_provider_policy_admission/);
+  assert.match(sql, /provider_policy_reference text COLLATE "C" NOT NULL/);
+  assert.match(sql, /retention_permitted boolean NOT NULL/);
+  assert.match(sql, /VALUES \('fixture-policy-1', true\)/);
+  assert.match(sql, /CREATE TABLE etf\.analytics_capacity_admission/);
+  assert.match(sql, /singleton_key text COLLATE "C" NOT NULL/);
+  assert.match(sql, /managed_bytes bigint NOT NULL/);
+  assert.match(sql, /capacity_bytes bigint NOT NULL/);
+  assert.match(sql, /managed_bytes >= 0 AND managed_bytes <= capacity_bytes/);
+  assert.match(sql, /capacity_bytes = 26843545600/);
+  assert.match(sql, /VALUES \('analytics', 'RET-A-1\.0', 0, 26843545600\)/);
   assert.match(sql, /retention_epoch timestamp\(3\) with time zone NOT NULL/);
   assert.doesNotMatch(sql, /retention_epoch bigint/);
   for (const name of declaredNames) {
@@ -58,7 +71,10 @@ test("0005 evidence commit owns generated retention fields and canonical hashes"
   assert.match(sql, /interval '17520 hours'/);
   assert.match(sql, /interval '43800 hours'/);
   assert.match(sql, /hashtextextended\(\s*'etf:analytics-publication:' \|\| \(payload ->> 'publicationTargetId'\)/);
-  assert.match(sql, /manifest_id := 'manifest-' \|\| substring\(encode\(public\.digest/);
+  assert.match(sql, /WHEN manifest_sequence > 0 THEN\s+'manifest-sequence-' \|\| manifest_sequence::text \|\| '-id-' \|\|\s+encode\(convert_to\(payload ->> 'evidenceId', 'UTF8'\), 'hex'\)/u);
+  assert.match(sql, /WHEN payload ->> 'evidenceId' ~ '\^evidence-/u);
+  assert.match(sql, /THEN\s+'manifest-' \|\| substring\(payload ->> 'evidenceId' FROM 10\)/u);
+  assert.match(sql, /ELSE 'manifest-id-' \|\| encode\(convert_to\(payload ->> 'evidenceId', 'UTF8'\), 'hex'\)/u);
   assert.match(sql, /public\.digest\(convert_to\(etf\._evidence_rfc8785\(/);
   assert.doesNotMatch(sql, /payload ->> 'retentionEpoch'/);
   assert.doesNotMatch(sql, /payload ->> 'bundleHash'/);

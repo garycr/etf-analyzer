@@ -89,6 +89,10 @@ export type ApiApplicationExecutor = (
   requestJson: string,
 ) => Readonly<Record<string, unknown>>;
 
+type LoopbackApiApplicationExecutor = (
+  requestJson: string,
+) => Readonly<Record<string, unknown>> | Promise<Readonly<Record<string, unknown>>>;
+
 export type WorkbenchDocumentProvider = () => WorkbenchDocumentInput;
 
 const corsMethods = Object.freeze(["GET", "POST", "PUT", "DELETE"] as const);
@@ -399,7 +403,7 @@ function preflightResponse(
 
 export function startLoopbackApiServer(
   config: ApiAdapterConfig,
-  execute: ApiApplicationExecutor,
+  execute: LoopbackApiApplicationExecutor,
   provideWorkbenchDocument: WorkbenchDocumentProvider = () => ({ readiness: "Ready" }),
 ): Promise<Server> {
   validateConfig(config);
@@ -519,7 +523,7 @@ export function startLoopbackApiServer(
       }
       chunks.push(chunk);
     });
-    request.on("end", () => {
+    request.on("end", async () => {
       if (!terminateWithoutDispatch()) return;
       if (tooLarge) {
         writeApiResponse(response, problem(
@@ -538,7 +542,7 @@ export function startLoopbackApiServer(
         offset += chunk.length;
       }
       try {
-        writeApiResponse(response, adaptApiRequest({
+        writeApiResponse(response, await adaptApiRequestAsync({
           method: request.method ?? "",
           target: request.url ?? "",
           headers: request.headers,
@@ -657,31 +661,68 @@ export function adaptApiRequest(
   config: ApiAdapterConfig,
   execute: ApiApplicationExecutor,
 ): ApiResponse {
+  return adaptPreparedApiRequest(request, config, execute);
+}
+
+async function adaptApiRequestAsync(
+  request: ApiRequest,
+  config: ApiAdapterConfig,
+  execute: LoopbackApiApplicationExecutor,
+): Promise<ApiResponse> {
+  return adaptPreparedApiRequest(request, config, async (requestJson) =>
+    await execute(requestJson));
+}
+
+function adaptPreparedApiRequest<Result extends Readonly<Record<string, unknown>> | Promise<Readonly<Record<string, unknown>>>>(
+  request: ApiRequest,
+  config: ApiAdapterConfig,
+  execute: (requestJson: string) => Result,
+): Result extends Promise<Readonly<Record<string, unknown>>> ? Promise<ApiResponse> : ApiResponse {
   if (header(request.headers, "host") !== `127.0.0.1:${config.port}`) {
-    return problem(400, "invalid-host", "Invalid Host", "The request Host is not the configured loopback API.");
+    return problem(400, "invalid-host", "Invalid Host", "The request Host is not the configured loopback API.") as never;
   }
   const origin = header(request.headers, "origin");
   if (origin !== undefined && !isAllowedRequestOrigin(origin, config)) {
-    return problem(403, "disallowed-origin", "Disallowed Origin", "The request Origin is not an allowed local workbench origin.");
+    return problem(403, "disallowed-origin", "Disallowed Origin", "The request Origin is not an allowed local workbench origin.") as never;
   }
   const allowedOrigin = origin !== undefined ? origin : undefined;
   const accept = header(request.headers, "accept");
   if (accept !== undefined && accept !== "application/json" && accept !== "*/*") {
-    return problem(406, "unacceptable-response-type", "Not Acceptable", "The API returns only application/json.", allowedOrigin);
+    return problem(406, "unacceptable-response-type", "Not Acceptable", "The API returns only application/json.", allowedOrigin) as never;
   }
   if (request.body.length > config.bodyLimitBytes) {
-    return problem(413, "request-too-large", "Request Too Large", "The request exceeds the configured body limit.", allowedOrigin);
+    return problem(413, "request-too-large", "Request Too Large", "The request exceeds the configured body limit.", allowedOrigin) as never;
   }
 
   const routeDefinition = resolveApiRoute(request.method, request.target);
   if (routeDefinition === undefined) {
-    return problem(400, "malformed-json", "Invalid Request", "The method and path do not identify a reviewed API operation.", allowedOrigin);
+    return problem(400, "malformed-json", "Invalid Request", "The method and path do not identify a reviewed API operation.", allowedOrigin) as never;
   }
+  const buildResponse = (result: Readonly<Record<string, unknown>>): ApiResponse => {
+    const status = applicationStatusForResult(routeDefinition.operation, result);
+    if (status === undefined) return internalServerError(allowedOrigin);
+    const responseHeaders: Record<string, string> = {
+      "cache-control": "no-store",
+      "content-type": "application/json",
+      "x-content-type-options": "nosniff",
+    };
+    if (origin !== undefined) {
+      responseHeaders["access-control-allow-origin"] = origin;
+      responseHeaders.vary = "Origin";
+    }
+    return Object.freeze({
+      status,
+      statusText: status === 201 ? "Created" : status === 200 ? "OK" : "Application Failure",
+      detail: "",
+      headers: Object.freeze(responseHeaders),
+      body: JSON.stringify(result),
+    });
+  };
   if (
     bodyOperations.has(routeDefinition.operation) &&
     header(request.headers, "content-type") !== "application/json"
   ) {
-    return problem(415, "unsupported-media-type", "Unsupported Media Type", "The request body must be UTF-8 application/json.", allowedOrigin);
+    return problem(415, "unsupported-media-type", "Unsupported Media Type", "The request body must be UTF-8 application/json.", allowedOrigin) as never;
   }
 
   const target = parseTarget(request.target);
@@ -689,7 +730,7 @@ export function adaptApiRequest(
     ? undefined
     : buildPayload(routeDefinition, target, request.body);
   if (payload === undefined) {
-    return problem(400, "malformed-json", "Malformed JSON", "The request payload is malformed or does not match its transport fields.", allowedOrigin);
+    return problem(400, "malformed-json", "Malformed JSON", "The request payload is malformed or does not match its transport fields.", allowedOrigin) as never;
   }
 
   const requestId = header(request.headers, "x-request-id");
@@ -702,7 +743,7 @@ export function adaptApiRequest(
     requestedAt === undefined ||
     (commands.has(routeDefinition.operation) ? commandId === undefined : commandId !== undefined)
   ) {
-    return problem(400, "malformed-json", "Invalid Request", "Required request identities are missing, duplicated, or not allowed.", allowedOrigin);
+    return problem(400, "malformed-json", "Invalid Request", "Required request identities are missing, duplicated, or not allowed.", allowedOrigin) as never;
   }
 
   const envelope: Record<string, unknown> = {
@@ -717,24 +758,7 @@ export function adaptApiRequest(
     payload,
   };
   const result = execute(JSON.stringify(envelope));
-  const status = applicationStatusForResult(routeDefinition.operation, result);
-  if (status === undefined) return internalServerError(allowedOrigin);
-  const responseHeaders: Record<string, string> = {
-    "cache-control": "no-store",
-    "content-type": "application/json",
-    "x-content-type-options": "nosniff",
-  };
-  if (origin !== undefined) {
-    responseHeaders["access-control-allow-origin"] = origin;
-    responseHeaders.vary = "Origin";
-  }
-  return Object.freeze({
-    status,
-    statusText: status === 201 ? "Created" : status === 200 ? "OK" : "Application Failure",
-    detail: "",
-    headers: Object.freeze(responseHeaders),
-    body: JSON.stringify(result),
-  });
+  return (result instanceof Promise ? result.then(buildResponse) : buildResponse(result)) as never;
 }
 
 export function resolveApiRoute(

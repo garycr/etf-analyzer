@@ -40,6 +40,7 @@
 | DEC-076 | 2026-09-22 | Paper-order atomicity acceptance | Accept CT-DB-001F after exact success visibility and stale-version, replay-conflict, and transition-guard rollback evidence plus REV-174/175 PASS | Agent (Fully Agentic) | Solo Orchestrator | Accepted; G-J and end-to-end open |
 | DEC-077 | 2026-09-22 | Ledger integrity conformance acceptance | Accept CT-DB-001G after immutable anchored evidence, exact four-failure rollback, append-only reversal, and verified projection evidence plus REV-176/177 PASS | Agent (Fully Agentic) | Solo Orchestrator | Accepted; H-J and end-to-end open |
 | DEC-078 | 2026-09-22 | Fixture integrity conformance acceptance | Accept CT-DB-001H after exact identity, provenance, temporal, integrity, quality, no-mutation, and late transactional rollback evidence plus REV-178/179 PASS | Agent (Fully Agentic) | Solo Orchestrator | Accepted; I-J and end-to-end open |
+| DEC-079 | 2026-09-22 | Analytics admission conformance acceptance | Accept CT-DB-001I after candidate.3 admission, manifest identity, precedence, rollback, exact-hash, and independent review evidence | Agent (Fully Agentic) | Solo Orchestrator | Accepted under REV-180/181; J and end-to-end open |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -78,6 +79,51 @@
 ---
 
 ## Decision Records
+
+### DEC-081: Repair The Bounded PT-E2E-001 Local Composition
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-081 |
+| **Date** | 2026-09-22 |
+| **Category** | PostgreSQL local workflow composition |
+| **Decision** | Complete PT-E2E-001 through the existing loopback HTTP and seven-migration greenfield PostgreSQL path by adding one controlled Job success transition to migration 0002, narrow migration-0006 execute grants, and thin fixture, analytics, and portfolio owner adapters with injected approved local artifacts and one checked-out client |
+| **Policy** | DEC-069; PT-E2E-001; Durable Job Contract; greenfield PostgreSQL candidate.3 boundary; least privilege; one-transaction Application replay; test-first development; no new route, service, role, dependency, migration sequence, or candidate version |
+| **Authority** | Agent under Fully Agentic mode after independent Architect Reviewer PASS; this is not DP-1, DP-25, or DP-26 |
+| **Accountability** | Solo Orchestrator implements the reviewed plan in `wp-8-prototype-workflow-remediation-plan.md`, proves exact lifecycle, grants, transaction affinity, failure replay, and causal workflow assertions, obtains independent Code and Security review, and does not infer WP-8, DP-33, Ring 2, release, deployment, or production closure |
+| **Status** | Accepted under REV-184 and REV-185 for PT-E2E-001 only; WP-8, DP-33, Ring 2, release, deployment, and production remain open or unauthorized |
+
+---
+
+### DEC-080: Bound CT-DB-001J To Existing Restart And Replay Controls
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-080 |
+| **Date** | 2026-09-22 |
+| **Category** | PostgreSQL durable restart conformance boundary |
+| **Decision** | Withdraw the 8.0-hour candidate.4 checkpoint-writer proposal and satisfy CT-DB-001J with a 2.0-hour complete integration owner over existing migration-0002 restart and PostgreSQL application-replay controls; retain checkpoint-range writer hardening outside this release |
+| **Policy** | DEC-069; CT-DB-001J; greenfield PostgreSQL release boundary; application replay and one-transaction restart requirements; test-first development; no migration behavior change without review and reforecast |
+| **Authority** | Agent under Fully Agentic mode; this is not DP-1, DP-25, or DP-26 |
+| **Accountability** | Solo Orchestrator proves all six restart vectors without production SQL, schema, manifest, role, or candidate-version change; requires independent Plan, Code, and Security review before acceptance; and preserves all broader open boundaries |
+| **Status** | Accepted under REV-182 and REV-183 for the bounded CT-DB-001J restart-only checkpoint; PT-E2E-001, WP-8, DP-33, Ring 2, release, deployment, and production remain open or unauthorized |
+
+---
+
+### DEC-079: Accept CT-DB-001I Analytics Admission Conformance
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-079 |
+| **Date** | 2026-09-22 |
+| **Category** | PostgreSQL analytics publication conformance acceptance |
+| **Decision** | Accept CT-DB-001I after candidate.3 adds closed provider-rights and capacity admission projections, injective manifest identity, ranked validation precedence, Complete-versus-Degraded publication semantics, deterministic nine-relation no-mutation snapshots, late transactional rollback, and exact SQL/manifest reconciliation |
+| **Policy** | DEC-069; CT-DB-001I; analytics evidence validation precedence and Degraded evidence semantics; PostgreSQL candidate.3 physical custody; test-first development; exact pinned PostgreSQL evidence; independent Code and Security review |
+| **Authority** | Agent under Fully Agentic mode; this is not DP-1, DP-25, or DP-26 |
+| **Accountability** | Solo Orchestrator preserves GitHub #17 provider-rights ownership, accepted CT-DB-001A-H/K/L checkpoints, and invalidated REV-164 history; advances only to CT-DB-001J and PT-E2E-001; and does not infer WP-8, DP-33, Ring 2, release, deployment, or production closure |
+| **Status** | Accepted under REV-180 and REV-181; CT-DB-001J, PT-E2E-001, WP-8 closure, DP-33, Ring 2 closure, release, deployment, and production remain open or unauthorized |
+
+---
 
 ### DEC-078: Accept CT-DB-001H Fixture Integrity Conformance
 
@@ -225,7 +271,7 @@
 | **Policy** | DEC-023; DEC-028; DEC-030; DEC-039; DEC-068; approved sequential WBS; test-first development; architecture, code, security, and decision review |
 | **Authority** | Agent under Fully Agentic mode following the Workspace Owner directive to continue after WP-7 approval |
 | **Accountability** | Solo Orchestrator keeps one sequential stream, preserves the fixture-only/loopback/no-brokerage boundary, completes DP-33 gap review and stops for Workspace Owner disposition before Ring 3 |
-| **Status** | Active; issue #84 created; REV-157 Plan PASS; REV-158 Architecture PASS; CT-API-001M/N pass; REV-159 Code PASS; REV-160 Security PASS; CT-DB-001L passes under REV-161; REV-164 remains invalidated and superseding CT-DB-001K passes under DEC-072/REV-168; integrated CT-DB-001A-C passes under DEC-073/REV-169; CT-DB-001D passes under DEC-074/REV-170/171; CT-DB-001E passes under DEC-075/REV-172/173; CT-DB-001F passes under DEC-076/REV-174/175; CT-DB-001G passes under DEC-077/REV-176/177; CT-DB-001H passes under DEC-078/REV-178/179; CT-DB-001I/J and end-to-end evidence remain pending |
+| **Status** | Active; issue #84 created; REV-157 Plan PASS; REV-158 Architecture PASS; CT-API-001M/N pass; REV-159 Code PASS; REV-160 Security PASS; CT-DB-001L passes under REV-161; REV-164 remains invalidated and superseding CT-DB-001K passes under DEC-072/REV-168; integrated CT-DB-001A-C passes under DEC-073/REV-169; CT-DB-001D passes under DEC-074/REV-170/171; CT-DB-001E passes under DEC-075/REV-172/173; CT-DB-001F passes under DEC-076/REV-174/175; CT-DB-001G passes under DEC-077/REV-176/177; CT-DB-001H passes under DEC-078/REV-178/179; CT-DB-001I passes under DEC-079/REV-180/181; CT-DB-001J passes under DEC-080/REV-182/183; PT-E2E-001 and end-to-end evidence remain pending |
 
 ---
 

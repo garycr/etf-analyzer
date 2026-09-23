@@ -1,6 +1,8 @@
 import type { MigrationArtifact } from "../migration-set.js";
 
 export const analyticsEvidenceTableNames = [
+  "analytics_provider_policy_admission",
+  "analytics_capacity_admission",
   "analytics_input_sets",
   "analytics_evidence_bundles",
   "analytics_manifests",
@@ -21,6 +23,28 @@ export const analyticsEvidenceFunctionNames = [
 const sql = `SET LOCAL ROLE schema_owner;
 GRANT USAGE, CREATE ON SCHEMA etf TO evidence_writer_owner;
 SET LOCAL ROLE evidence_writer_owner;
+
+CREATE TABLE etf.analytics_provider_policy_admission (
+  provider_policy_reference text COLLATE "C" NOT NULL,
+  retention_permitted boolean NOT NULL,
+  CONSTRAINT pk_analytics_provider_policy_admission PRIMARY KEY (provider_policy_reference),
+  CONSTRAINT ck_analytics_provider_policy_admission__identity CHECK (provider_policy_reference ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$')
+);
+
+CREATE TABLE etf.analytics_capacity_admission (
+  singleton_key text COLLATE "C" NOT NULL,
+  retention_policy_version text COLLATE "C" NOT NULL,
+  managed_bytes bigint NOT NULL,
+  capacity_bytes bigint NOT NULL,
+  CONSTRAINT pk_analytics_capacity_admission PRIMARY KEY (singleton_key),
+  CONSTRAINT ck_analytics_capacity_admission__singleton CHECK (singleton_key = 'analytics'),
+  CONSTRAINT ck_analytics_capacity_admission__policy CHECK (retention_policy_version = 'RET-A-1.0'),
+  CONSTRAINT ck_analytics_capacity_admission__usage CHECK (managed_bytes >= 0 AND managed_bytes <= capacity_bytes),
+  CONSTRAINT ck_analytics_capacity_admission__capacity CHECK (capacity_bytes = 26843545600)
+);
+
+INSERT INTO etf.analytics_provider_policy_admission VALUES ('fixture-policy-1', true);
+INSERT INTO etf.analytics_capacity_admission VALUES ('analytics', 'RET-A-1.0', 0, 26843545600);
 
 CREATE TABLE etf.analytics_input_sets (
   input_set_id text COLLATE "C" NOT NULL,
@@ -218,6 +242,8 @@ SET search_path = pg_catalog, etf
 AS $function$
 DECLARE
   canonical_content jsonb;
+  supplied_canonical_input jsonb;
+  supplied_canonical_configuration jsonb;
   replay_record record;
   retention_epoch timestamp(3) with time zone;
   retention_epoch_text text;
@@ -240,6 +266,8 @@ DECLARE
   item_index integer;
   decimal_value text;
   supplied_hash text;
+  supplied_input_hash text;
+  supplied_configuration_hash text;
 BEGIN
   IF jsonb_typeof(payload) <> 'object'
      OR NOT (payload ?& ARRAY[
@@ -291,6 +319,20 @@ BEGIN
      OR jsonb_typeof(payload -> 'canonicalResult') IS DISTINCT FROM 'object' THEN
     RAISE EXCEPTION 'ANALYTICS_INTEGRITY_FAILED' USING ERRCODE = '22023';
   END IF;
+  supplied_canonical_input := payload -> 'canonicalInput';
+  supplied_canonical_configuration := payload -> 'canonicalConfiguration';
+  IF payload ->> 'baselineVersion' <> 'v1.0.0'
+     OR payload ->> 'retentionPolicyVersion' <> 'RET-A-1.0'
+     OR payload ->> 'evaluationAt' !~ '^[0-9]{4}-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]\.[0-9]{3}Z$'
+     OR payload ->> 'reproducibilityStatus' NOT IN ('Complete', 'Degraded')
+     OR (payload ->> 'reproducibilityStatus' = 'Complete' AND
+         payload -> 'reproducibilityReason' <> 'null'::jsonb)
+     OR (payload ->> 'reproducibilityStatus' = 'Degraded' AND (
+         jsonb_typeof(payload -> 'reproducibilityReason') IS DISTINCT FROM 'string'
+         OR payload ->> 'reproducibilityReason' !~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'
+       )) THEN
+    RAISE EXCEPTION 'ANALYTICS_INPUT_INCOMPLETE' USING ERRCODE = '22023';
+  END IF;
   IF jsonb_typeof(payload -> 'canonicalInput' -> 'economicVintages') IS DISTINCT FROM 'array'
      OR jsonb_typeof(payload -> 'canonicalInput' -> 'marketObservations') IS DISTINCT FROM 'array'
      OR jsonb_typeof(payload -> 'canonicalInput' -> 'transformationLineage') IS DISTINCT FROM 'array'
@@ -302,17 +344,8 @@ BEGIN
     RAISE EXCEPTION 'ANALYTICS_INTEGRITY_FAILED' USING ERRCODE = '22023';
   END IF;
 
-  IF jsonb_typeof(payload -> 'canonicalInput') = 'object'
-     AND jsonb_typeof(payload -> 'canonicalConfiguration') = 'object'
-     AND jsonb_typeof(payload -> 'canonicalResult') = 'object'
-     AND (
-       payload -> 'canonicalConfiguration' ->> 'inputHash' <>
-         encode(public.digest(convert_to(etf._evidence_rfc8785(payload -> 'canonicalInput'), 'UTF8'), 'sha256'), 'hex')
-       OR payload -> 'canonicalResult' ->> 'configurationHash' <>
-         encode(public.digest(convert_to(etf._evidence_rfc8785(payload -> 'canonicalConfiguration'), 'UTF8'), 'sha256'), 'hex')
-     ) THEN
-    RAISE EXCEPTION 'ANALYTICS_INTEGRITY_FAILED' USING ERRCODE = '22023';
-  END IF;
+  supplied_input_hash := payload -> 'canonicalConfiguration' ->> 'inputHash';
+  supplied_configuration_hash := payload -> 'canonicalResult' ->> 'configurationHash';
 
   FOREACH decimal_value IN ARRAY ARRAY['costRate', 'slippageRate'] LOOP
     IF payload #>> ARRAY['canonicalConfiguration', 'assumptions', decimal_value] ~ '^-0\.0{12}$' THEN
@@ -332,18 +365,11 @@ BEGIN
     END IF;
   END LOOP;
   FOR item_index IN 0..jsonb_array_length(coalesce(payload #> '{canonicalInput,transformationLineage}', '[]'::jsonb)) - 1 LOOP
-    supplied_hash := payload #>> ARRAY['canonicalInput', 'transformationLineage', item_index::text, 'outputHash'];
     decimal_value := payload #>> ARRAY['canonicalInput', 'transformationLineage', item_index::text, 'outputValue'];
     IF decimal_value ~ '^-0\.0+$' THEN
       payload := jsonb_set(payload,
         ARRAY['canonicalInput', 'transformationLineage', item_index::text, 'outputValue'],
         to_jsonb(regexp_replace(decimal_value, '^-', '')::text), false);
-    END IF;
-    IF supplied_hash <> encode(public.digest(convert_to(etf._evidence_rfc8785(
-        (payload #> ARRAY['canonicalInput', 'transformationLineage', item_index::text]) - 'outputHash' ||
-          jsonb_build_object('domain', 'etf.analytics.transformation.v1')
-      ), 'UTF8'), 'sha256'), 'hex') THEN
-      RAISE EXCEPTION 'ANALYTICS_INTEGRITY_FAILED' USING ERRCODE = '22023';
     END IF;
   END LOOP;
   FOR item_index IN 0..jsonb_array_length(coalesce(payload #> '{canonicalResult,signals}', '[]'::jsonb)) - 1 LOOP
@@ -375,39 +401,6 @@ BEGIN
     payload := jsonb_set(payload, '{canonicalResult,configurationHash}', to_jsonb(
       encode(public.digest(convert_to(etf._evidence_rfc8785(payload -> 'canonicalConfiguration'), 'UTF8'), 'sha256'), 'hex')
     ), false);
-  END IF;
-  canonical_content := payload - 'expectedPublicationVersion';
-
-  PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(
-    'etf:analytics-replay:' || (payload ->> 'evidenceId') || ':' ||
-      (payload ->> 'evidenceCommitCommandId'), 0
-  ));
-
-  SELECT replay.canonical_content, replay.result INTO replay_record
-    FROM etf.analytics_evidence_replays AS replay
-   WHERE replay.evidence_id = payload ->> 'evidenceId'
-     AND replay.evidence_commit_command_id = (payload ->> 'evidenceCommitCommandId')::uuid;
-  IF FOUND THEN
-    IF replay_record.canonical_content = canonical_content THEN
-      RETURN replay_record.result;
-    END IF;
-    RAISE EXCEPTION 'ANALYTICS_IDEMPOTENCY_CONFLICT' USING ERRCODE = '23505';
-  END IF;
-
-  IF payload ->> 'baselineVersion' <> 'v1.0.0'
-     OR payload ->> 'retentionPolicyVersion' <> 'RET-A-1.0'
-      OR payload ->> 'evaluationAt' !~ '^[0-9]{4}-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]\.[0-9]{3}Z$'
-     OR jsonb_typeof(payload -> 'canonicalInput') <> 'object'
-     OR jsonb_typeof(payload -> 'canonicalConfiguration') <> 'object'
-     OR jsonb_typeof(payload -> 'canonicalResult') <> 'object'
-     OR payload ->> 'reproducibilityStatus' NOT IN ('Complete', 'Degraded')
-     OR (payload ->> 'reproducibilityStatus' = 'Complete' AND
-         payload -> 'reproducibilityReason' <> 'null'::jsonb)
-     OR (payload ->> 'reproducibilityStatus' = 'Degraded' AND (
-         jsonb_typeof(payload -> 'reproducibilityReason') IS DISTINCT FROM 'string'
-         OR payload ->> 'reproducibilityReason' !~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'
-       )) THEN
-    RAISE EXCEPTION 'ANALYTICS_INPUT_INCOMPLETE' USING ERRCODE = '22023';
   END IF;
 
   IF NOT (payload -> 'canonicalInput' ?& ARRAY[
@@ -842,15 +835,54 @@ BEGIN
     RAISE EXCEPTION 'ANALYTICS_NUMERIC_CLASS_INVALID' USING ERRCODE = '22023';
   END IF;
 
-  input_hash := encode(public.digest(convert_to(etf._evidence_rfc8785(payload -> 'canonicalInput'), 'UTF8'), 'sha256'), 'hex');
-  IF payload -> 'canonicalConfiguration' ->> 'inputHash' <> input_hash THEN
-    RAISE EXCEPTION 'ANALYTICS_INTEGRITY_FAILED' USING ERRCODE = '22023';
-  END IF;
-  configuration_hash := encode(public.digest(convert_to(etf._evidence_rfc8785(payload -> 'canonicalConfiguration'), 'UTF8'), 'sha256'), 'hex');
-  IF payload -> 'canonicalResult' ->> 'configurationHash' <> configuration_hash THEN
-    RAISE EXCEPTION 'ANALYTICS_INTEGRITY_FAILED' USING ERRCODE = '22023';
-  END IF;
-  result_hash := encode(public.digest(convert_to(etf._evidence_rfc8785(payload -> 'canonicalResult'), 'UTF8'), 'sha256'), 'hex');
+    canonical_content := payload - 'expectedPublicationVersion';
+    PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(
+      'etf:analytics-replay:' || (payload ->> 'evidenceId') || ':' ||
+        (payload ->> 'evidenceCommitCommandId'), 0
+    ));
+    SELECT replay.canonical_content, replay.result INTO replay_record
+      FROM etf.analytics_evidence_replays AS replay
+     WHERE replay.evidence_id = payload ->> 'evidenceId'
+       AND replay.evidence_commit_command_id = (payload ->> 'evidenceCommitCommandId')::uuid;
+    IF FOUND THEN
+      IF replay_record.canonical_content = canonical_content THEN
+        RETURN replay_record.result;
+      END IF;
+      RAISE EXCEPTION 'ANALYTICS_IDEMPOTENCY_CONFLICT' USING ERRCODE = '23505';
+    END IF;
+
+    PERFORM 1
+      FROM etf.analytics_capacity_admission AS capacity
+     WHERE capacity.singleton_key = 'analytics'
+       AND capacity.retention_policy_version = 'RET-A-1.0'
+       AND capacity.managed_bytes < capacity.capacity_bytes;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'ANALYTICS_CAPACITY_BLOCKED' USING ERRCODE = '53100';
+    END IF;
+
+    IF payload ->> 'reproducibilityStatus' = 'Complete' AND EXISTS (
+      SELECT 1
+        FROM jsonb_array_elements_text(
+          payload -> 'canonicalConfiguration' -> 'providerPolicyReferences'
+        ) AS requested(reference)
+        LEFT JOIN etf.analytics_provider_policy_admission AS policy
+          ON policy.provider_policy_reference = requested.reference
+       WHERE policy.provider_policy_reference IS NULL OR NOT policy.retention_permitted
+    ) THEN
+      RAISE EXCEPTION 'ANALYTICS_RIGHTS_RESTRICTED' USING ERRCODE = '42501';
+    END IF;
+    IF payload ->> 'reproducibilityStatus' = 'Degraded' AND NOT EXISTS (
+      SELECT 1
+        FROM jsonb_array_elements_text(
+          payload -> 'canonicalConfiguration' -> 'providerPolicyReferences'
+        ) AS requested(reference)
+        JOIN etf.analytics_provider_policy_admission AS policy
+          ON policy.provider_policy_reference = requested.reference
+       WHERE NOT policy.retention_permitted
+         AND requested.reference = payload ->> 'reproducibilityReason'
+    ) THEN
+      RAISE EXCEPTION 'ANALYTICS_RIGHTS_RESTRICTED' USING ERRCODE = '42501';
+    END IF;
 
   IF payload ->> 'reproducibilityStatus' = 'Complete' THEN
     PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(
@@ -872,6 +904,29 @@ BEGIN
     next_version := COALESCE(current_version, 0);
   END IF;
 
+  FOR item_index IN 0..jsonb_array_length(payload #> '{canonicalInput,transformationLineage}') - 1 LOOP
+    supplied_hash := supplied_canonical_input #>> ARRAY['transformationLineage', item_index::text, 'outputHash'];
+    IF supplied_hash <> encode(public.digest(convert_to(etf._evidence_rfc8785(
+        (supplied_canonical_input #> ARRAY['transformationLineage', item_index::text]) - 'outputHash' ||
+          jsonb_build_object('domain', 'etf.analytics.transformation.v1')
+      ), 'UTF8'), 'sha256'), 'hex') THEN
+      RAISE EXCEPTION 'ANALYTICS_INTEGRITY_FAILED' USING ERRCODE = '22023';
+    END IF;
+  END LOOP;
+  input_hash := encode(public.digest(convert_to(etf._evidence_rfc8785(payload -> 'canonicalInput'), 'UTF8'), 'sha256'), 'hex');
+  IF supplied_input_hash <> encode(public.digest(
+    convert_to(etf._evidence_rfc8785(supplied_canonical_input), 'UTF8'), 'sha256'
+  ), 'hex') THEN
+    RAISE EXCEPTION 'ANALYTICS_INTEGRITY_FAILED' USING ERRCODE = '22023';
+  END IF;
+  configuration_hash := encode(public.digest(convert_to(etf._evidence_rfc8785(payload -> 'canonicalConfiguration'), 'UTF8'), 'sha256'), 'hex');
+  IF supplied_configuration_hash <> encode(public.digest(
+    convert_to(etf._evidence_rfc8785(supplied_canonical_configuration), 'UTF8'), 'sha256'
+  ), 'hex') THEN
+    RAISE EXCEPTION 'ANALYTICS_INTEGRITY_FAILED' USING ERRCODE = '22023';
+  END IF;
+  result_hash := encode(public.digest(convert_to(etf._evidence_rfc8785(payload -> 'canonicalResult'), 'UTF8'), 'sha256'), 'hex');
+
   PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('etf:analytics-manifest', 0));
   SELECT existing.manifest_sequence, existing.manifest_hash
     INTO manifest_sequence, previous_manifest_hash
@@ -879,9 +934,16 @@ BEGIN
    ORDER BY existing.manifest_sequence DESC
    LIMIT 1;
   manifest_sequence := COALESCE(manifest_sequence + 1, 0);
-  manifest_id := 'manifest-' || substring(encode(public.digest(
-    convert_to(payload ->> 'evidenceId', 'UTF8'), 'sha256'
-  ), 'hex') FROM 1 FOR 54);
+  manifest_id := CASE
+    WHEN manifest_sequence > 0 THEN
+      'manifest-sequence-' || manifest_sequence::text || '-id-' ||
+        encode(convert_to(payload ->> 'evidenceId', 'UTF8'), 'hex')
+    WHEN payload ->> 'evidenceId' ~ '^evidence-[A-Za-z0-9][A-Za-z0-9._:-]{0,118}$'
+      AND substring(payload ->> 'evidenceId' FROM 10) NOT LIKE 'id-%'
+      AND substring(payload ->> 'evidenceId' FROM 10) NOT LIKE 'sequence-%' THEN
+      'manifest-' || substring(payload ->> 'evidenceId' FROM 10)
+    ELSE 'manifest-id-' || encode(convert_to(payload ->> 'evidenceId', 'UTF8'), 'hex')
+  END;
 
   retention_epoch := date_trunc('milliseconds', clock_timestamp());
   retention_epoch_text := to_char(retention_epoch AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');
@@ -1024,7 +1086,9 @@ EXCEPTION
       'ANALYTICS_INTEGRITY_FAILED',
       'ANALYTICS_IDEMPOTENCY_CONFLICT',
       'ANALYTICS_PUBLICATION_VERSION_CONFLICT',
-      'ANALYTICS_NUMERIC_CLASS_INVALID'
+      'ANALYTICS_NUMERIC_CLASS_INVALID',
+      'ANALYTICS_RIGHTS_RESTRICTED',
+      'ANALYTICS_CAPACITY_BLOCKED'
     ) THEN
       RAISE;
     END IF;

@@ -13,6 +13,7 @@ export const applicationFunctionNames = [
   "application_replay_get_or_put",
   "watchlist_write",
   "job_start",
+  "job_succeed",
   "job_restart",
   "readiness_append",
 ] as const;
@@ -402,6 +403,118 @@ END;
 $function$;
 REVOKE ALL ON FUNCTION etf.job_start(jsonb) FROM PUBLIC;
 
+CREATE FUNCTION etf.job_succeed(payload jsonb) RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+PARALLEL UNSAFE
+SECURITY DEFINER
+SET search_path = pg_catalog, etf
+AS $function$
+DECLARE
+  completed_job etf.jobs%ROWTYPE;
+  checkpoint_value jsonb;
+  requested_accepted_count numeric;
+  requested_rejected_count numeric;
+  requested_started_at timestamp(3) with time zone;
+  requested_completed_at timestamp(3) with time zone;
+BEGIN
+  IF session_user <> 'app_runtime' THEN
+    RAISE EXCEPTION 'permission denied' USING ERRCODE = '42501';
+  END IF;
+  IF payload IS NULL
+     OR jsonb_typeof(payload) <> 'object'
+     OR NOT payload ?& ARRAY['jobId', 'originalCommandId', 'operation', 'acceptedCount', 'rejectedCount', 'startedAt', 'completedAt']
+     OR payload - ARRAY['jobId', 'originalCommandId', 'operation', 'acceptedCount', 'rejectedCount', 'startedAt', 'completedAt']::text[] <> '{}'::jsonb
+     OR payload ->> 'jobId' !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+     OR payload ->> 'originalCommandId' !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+     OR payload ->> 'operation' NOT IN ('FixtureIngestionStart', 'AnalyticsRun')
+     OR payload ->> 'acceptedCount' !~ '^(0|[1-9][0-9]*)$'
+     OR payload ->> 'rejectedCount' !~ '^(0|[1-9][0-9]*)$'
+     OR payload ->> 'startedAt' !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$'
+     OR payload ->> 'completedAt' !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$' THEN
+    RAISE EXCEPTION 'APPLICATION_REQUEST_INVALID' USING ERRCODE = '22023';
+  END IF;
+    requested_accepted_count := (payload ->> 'acceptedCount')::numeric;
+    requested_rejected_count := (payload ->> 'rejectedCount')::numeric;
+    requested_started_at := (payload ->> 'startedAt')::timestamp(3) with time zone;
+    requested_completed_at := (payload ->> 'completedAt')::timestamp(3) with time zone;
+    IF requested_accepted_count = 0
+      OR requested_accepted_count > 9007199254740991
+      OR requested_rejected_count > 9007199254740991
+      OR requested_started_at > requested_completed_at THEN
+    RAISE EXCEPTION 'APPLICATION_REQUEST_INVALID' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT * INTO completed_job
+    FROM etf.jobs
+   WHERE job_id = (payload ->> 'jobId')::uuid
+   FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'APPLICATION_JOB_NOT_FOUND' USING ERRCODE = 'P0002';
+  END IF;
+  IF completed_job.original_command_id <> (payload ->> 'originalCommandId')::uuid
+     OR completed_job.operation <> payload ->> 'operation'
+     OR completed_job.job_type <> (CASE payload ->> 'operation'
+       WHEN 'FixtureIngestionStart' THEN 'FixtureIngestion'
+       ELSE 'Analytics'
+     END) THEN
+    RAISE EXCEPTION 'APPLICATION_JOB_MISMATCH' USING ERRCODE = 'P0001';
+  END IF;
+  IF completed_job.status <> 'Pending' THEN
+    RAISE EXCEPTION 'APPLICATION_JOB_NOT_COMPLETABLE' USING ERRCODE = 'P0001';
+  END IF;
+
+  UPDATE etf.jobs
+     SET status = 'Running',
+       started_at = requested_started_at
+   WHERE job_id = completed_job.job_id;
+  UPDATE etf.jobs
+     SET status = 'Succeeded',
+       completed_at = requested_completed_at,
+       accepted_count = requested_accepted_count::bigint,
+       rejected_count = requested_rejected_count::bigint,
+         controlling_error = NULL
+   WHERE job_id = completed_job.job_id
+     AND status = 'Running'
+   RETURNING * INTO completed_job;
+
+  SELECT jsonb_build_object(
+           'checkpointId', checkpoint.checkpoint_id,
+           'attempt', checkpoint.attempt::text,
+           'sequence', checkpoint.sequence::text,
+           'committedAt', to_char(checkpoint.committed_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+           'contentHash', checkpoint.content_hash
+         )
+    INTO checkpoint_value
+    FROM etf.job_checkpoints AS checkpoint
+   WHERE checkpoint.job_id = completed_job.job_id
+     AND checkpoint.attempt <= completed_job.attempt
+   ORDER BY checkpoint.attempt DESC, checkpoint.sequence DESC
+   LIMIT 1;
+  RETURN jsonb_build_object(
+    'jobId', completed_job.job_id,
+    'jobType', completed_job.job_type,
+    'status', completed_job.status,
+    'restartability', completed_job.restartability,
+    'attempt', completed_job.attempt::text,
+    'operation', completed_job.operation,
+    'originalCommandId', completed_job.original_command_id,
+    'inputIdentity', completed_job.input_identity,
+    'createdAt', to_char(completed_job.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+    'startedAt', to_char(completed_job.started_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+    'completedAt', to_char(completed_job.completed_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+    'checkpoint', checkpoint_value,
+    'acceptedCount', completed_job.accepted_count::text,
+    'rejectedCount', completed_job.rejected_count::text,
+    'controllingError', NULL
+  );
+EXCEPTION
+  WHEN invalid_text_representation OR datetime_field_overflow OR numeric_value_out_of_range THEN
+    RAISE EXCEPTION 'APPLICATION_REQUEST_INVALID' USING ERRCODE = '22023';
+END;
+$function$;
+REVOKE ALL ON FUNCTION etf.job_succeed(jsonb) FROM PUBLIC;
+
 CREATE FUNCTION etf.job_restart(payload jsonb) RETURNS jsonb
 LANGUAGE plpgsql
 VOLATILE
@@ -440,8 +553,8 @@ BEGIN
    RETURNING * INTO restarted_job;
   SELECT jsonb_build_object(
            'checkpointId', checkpoint.checkpoint_id,
-           'attempt', checkpoint.attempt,
-           'sequence', checkpoint.sequence,
+           'attempt', checkpoint.attempt::text,
+           'sequence', checkpoint.sequence::text,
            'committedAt', to_char(checkpoint.committed_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
            'contentHash', checkpoint.content_hash
          )
@@ -456,7 +569,7 @@ BEGIN
     'jobType', restarted_job.job_type,
     'status', restarted_job.status,
     'restartability', restarted_job.restartability,
-    'attempt', restarted_job.attempt,
+    'attempt', restarted_job.attempt::text,
     'operation', restarted_job.operation,
     'originalCommandId', restarted_job.original_command_id,
     'inputIdentity', restarted_job.input_identity,
@@ -464,8 +577,8 @@ BEGIN
     'startedAt', NULL,
     'completedAt', NULL,
     'checkpoint', checkpoint_value,
-    'acceptedCount', restarted_job.accepted_count,
-    'rejectedCount', restarted_job.rejected_count,
+    'acceptedCount', restarted_job.accepted_count::text,
+    'rejectedCount', restarted_job.rejected_count::text,
     'controllingError', NULL
   );
 EXCEPTION

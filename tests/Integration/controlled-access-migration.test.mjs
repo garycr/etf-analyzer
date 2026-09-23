@@ -44,8 +44,8 @@ const lockSql =
   "SELECT pg_catalog.pg_advisory_lock(pg_catalog.hashtextextended('etf:test:role-bootstrap', 0))";
 const unlockSql =
   "SELECT pg_catalog.pg_advisory_unlock(pg_catalog.hashtextextended('etf:test:role-bootstrap', 0))";
-const controlledAccessContentHash = "609dcf7bd1faa472e850b7ed1cd32511987a596e7f52403ede1b832fc1e4e8dc";
-const controlledAccessManifestHash = "5435948ea8d2f55ac11a2a2db9378466d4d6dc64be7ba1c2eac615471e15de51";
+const controlledAccessContentHash = "d8ad459296b049ce681a216573159b09d3f95be9297af727f1335b6da75c738a";
+const controlledAccessManifestHash = "9ec929080517cdf491139537eb9501d701b6c973c77ff8473c2bd2cee548b3d0";
 
 async function cleanBootstrap(client) {
   await client.query("ROLLBACK").catch(() => undefined);
@@ -498,7 +498,7 @@ test(
           objectType,
           catalog.rows.filter(({ object_type }) => object_type === objectType).length,
         ])),
-        { table: 43, function: 22, trigger: 102, index: 69 },
+        { table: 45, function: 23, trigger: 105, index: 71 },
       );
 
       assert.deepEqual(
@@ -511,13 +511,13 @@ test(
       assert.deepEqual(
         migrations.rows,
         [
-          { sequence: 1, migration_id: "0001-foundation", content_hash: "a604802a67bed66c6ce79d2f2f856b48e184ae5b4f76803ab8ead3a135c85291", schema_manifest_hash: "87ea9ff557792b72510ea30a937f829d7ad01586ffb928b9354c8e79ad7d8003" },
-          { sequence: 2, migration_id: "0002-application", content_hash: "ad458453834e72413f644e81e38829ae491a26a44f1ca03deeaf71349552c198", schema_manifest_hash: "440d618a1a4c5ddd2a147a34c3729d953c1874a54cf0005a3dedeab7420e521c" },
-          { sequence: 3, migration_id: "0003-domain-ledger", content_hash: "c5da21109969595e17dfb7b31e5c45296324b6d20caf1f1debdb1a70ea84a496", schema_manifest_hash: "94185f0d11619a22c67302802f983dae3e11c17f1eb6a9ab0ef5f6835ffff060" },
-          { sequence: 4, migration_id: "0004-fixtures", content_hash: "9bf81885aab5fafe8bcac9b372d7bbd0bec601fc29e0cdbc234a65fc3d5489f1", schema_manifest_hash: "bc0e77af221c697b287d6e82e70a2400d569d56b371b42686ad5398c909db4c3" },
-          { sequence: 5, migration_id: "0005-analytics-evidence", content_hash: "638fdcb40695be04a30c56807e529f753fd37c80ccfdcd6ad58f04e603287cc4", schema_manifest_hash: "089df576fc69615023861fbb3909b36ee06359db19a4f8637cedd455de2fb8f2" },
-          { sequence: 6, migration_id: "0006-controlled-access", content_hash: "609dcf7bd1faa472e850b7ed1cd32511987a596e7f52403ede1b832fc1e4e8dc", schema_manifest_hash: "5435948ea8d2f55ac11a2a2db9378466d4d6dc64be7ba1c2eac615471e15de51" },
-          { sequence: 7, migration_id: "0007-denial-backend-verifier", content_hash: "0d07358c3056885e15ba190681402a381ed71485beb35e3b9088cc8d107b1340", schema_manifest_hash: "915d698edc5d95ef648d38d754ed5754dc46fffa8a9d6272304eaf58cf274c2e" },
+          { sequence: 1, migration_id: "0001-foundation", content_hash: "a604802a67bed66c6ce79d2f2f856b48e184ae5b4f76803ab8ead3a135c85291", schema_manifest_hash: "f488702c6e34dac01152ddc3f94f3856bf64156dfba3f1e0a81811db1052e0d6" },
+          { sequence: 2, migration_id: "0002-application", content_hash: "6ad48f730617fadff8ae80d58171c84707d9159af8f0186e71538861d92d730a", schema_manifest_hash: "c043fad160e0b6690971b6cc4e9ffc8d10ca74a879a43360f86872c1f8eaf8c1" },
+          { sequence: 3, migration_id: "0003-domain-ledger", content_hash: "c5da21109969595e17dfb7b31e5c45296324b6d20caf1f1debdb1a70ea84a496", schema_manifest_hash: "50fb07d7aeb7a51f8b985c6c53f8c1a2ef5707220032355bcd62769856076f13" },
+          { sequence: 4, migration_id: "0004-fixtures", content_hash: "9bf81885aab5fafe8bcac9b372d7bbd0bec601fc29e0cdbc234a65fc3d5489f1", schema_manifest_hash: "b19029387e1aae294efc28e8985573bf0bff9872ff05968228a0a70452915cf7" },
+          { sequence: 5, migration_id: "0005-analytics-evidence", content_hash: "2a848c629d66a7e3e2621ea065f684a94fc82acb9b7e85477a228c30c8ed8001", schema_manifest_hash: "9cec7c53e45b418d389abe4a8f85ad8a1e7930e253e7ac9580a1e15b3bb87e64" },
+          { sequence: 6, migration_id: "0006-controlled-access", content_hash: "d8ad459296b049ce681a216573159b09d3f95be9297af727f1335b6da75c738a", schema_manifest_hash: "9ec929080517cdf491139537eb9501d701b6c973c77ff8473c2bd2cee548b3d0" },
+          { sequence: 7, migration_id: "0007-denial-backend-verifier", content_hash: "0d07358c3056885e15ba190681402a381ed71485beb35e3b9088cc8d107b1340", schema_manifest_hash: "e6791ce150824592fcfb288c05c11342c61dfeb9f7bb3dda72e1a3a85930ee38" },
         ],
       );
     } finally {
@@ -875,6 +875,72 @@ test(
         granted === (privilege === "SELECT" && readableProjectionColumns.get(table_name).has(column_name))));
 
       await client.query("SET SESSION AUTHORIZATION app_runtime");
+      for (const signature of ["etf.job_start(jsonb)", "etf.job_succeed(jsonb)", "etf.job_restart(jsonb)"]) {
+        assert.equal((await client.query(
+          "SELECT pg_catalog.has_function_privilege(session_user, $1, 'EXECUTE') AS granted",
+          [signature],
+        )).rows[0].granted, true);
+      }
+      const completedJobId = "39000000-0000-4000-8000-000000000001";
+      const completedCommandId = "39000000-0000-4000-8000-000000000002";
+      await client.query("SELECT etf.job_start($1::jsonb)", [{
+        jobId: completedJobId,
+        jobType: "FixtureIngestion",
+        restartability: "Restartable",
+        operation: "FixtureIngestionStart",
+        originalCommandId: completedCommandId,
+        inputIdentity: {
+          datasetId: "pt-e2e",
+          datasetVersion: "1",
+          fixturePackageHash: "a".repeat(64),
+        },
+        createdAt: "2026-09-17T11:00:00.000Z",
+      }]);
+      const completed = await client.query(
+        "SELECT etf.job_succeed($1::jsonb) AS result",
+        [{
+          jobId: completedJobId,
+          originalCommandId: completedCommandId,
+          operation: "FixtureIngestionStart",
+          acceptedCount: "2",
+          rejectedCount: "0",
+          startedAt: "2026-09-17T11:00:01.000Z",
+          completedAt: "2026-09-17T11:00:02.000Z",
+        }],
+      );
+      assert.deepEqual(completed.rows[0].result, {
+        jobId: completedJobId,
+        jobType: "FixtureIngestion",
+        status: "Succeeded",
+        restartability: "Restartable",
+        attempt: "1",
+        operation: "FixtureIngestionStart",
+        originalCommandId: completedCommandId,
+        inputIdentity: {
+          datasetId: "pt-e2e",
+          datasetVersion: "1",
+          fixturePackageHash: "a".repeat(64),
+        },
+        createdAt: "2026-09-17T11:00:00.000Z",
+        startedAt: "2026-09-17T11:00:01.000Z",
+        completedAt: "2026-09-17T11:00:02.000Z",
+        checkpoint: null,
+        acceptedCount: "2",
+        rejectedCount: "0",
+        controllingError: null,
+      });
+      await assert.rejects(
+        client.query("SELECT etf.job_succeed($1::jsonb)", [{
+          jobId: completedJobId,
+          originalCommandId: completedCommandId,
+          operation: "FixtureIngestionStart",
+          acceptedCount: "2",
+          rejectedCount: "0",
+          startedAt: "2026-09-17T11:00:01.000Z",
+          completedAt: "2026-09-17T11:00:02.000Z",
+        }]),
+        (error) => error.code === "P0001" && error.message === "APPLICATION_JOB_NOT_COMPLETABLE",
+      );
       for (const viewName of controlledAccessViewNames) {
         await client.query(`SELECT * FROM etf.${viewName}`);
       }
@@ -892,7 +958,7 @@ test(
       const portfolio = await client.query(
         "SELECT etf.portfolio_get('30000000-0000-0000-0000-000000000001', '2026-09-14T00:05:00.000Z') AS result",
       );
-      assert.equal(portfolio.rows[0].result.portfolio.portfolioVersion, 1);
+      assert.equal(portfolio.rows[0].result.portfolio.portfolioVersion, "1");
       assert.equal(portfolio.rows[0].result.portfolio.valuationSnapshotId, "30000000-0000-0000-0000-000000000004");
       assert.equal(portfolio.rows[0].result.portfolio.asOf, "2026-09-14T00:04:00.000Z");
       assert.equal(portfolio.rows[0].result.portfolio.cash, "100.00000000");
@@ -916,6 +982,12 @@ test(
       await client.query("RESET SESSION AUTHORIZATION");
       for (const runtimeRole of ["projection_runtime", "audit_runtime", "key_injector"]) {
         await client.query(`SET SESSION AUTHORIZATION ${runtimeRole}`);
+        for (const signature of ["etf.job_start(jsonb)", "etf.job_succeed(jsonb)", "etf.job_restart(jsonb)"]) {
+          assert.equal((await client.query(
+            "SELECT pg_catalog.has_function_privilege(session_user, $1, 'EXECUTE') AS granted",
+            [signature],
+          )).rows[0].granted, false);
+        }
         await assert.rejects(
           client.query("SELECT etf.job_get('10000000-0000-0000-0000-000000000001')"),
           (error) => error.code === "42501",

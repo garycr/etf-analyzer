@@ -53,6 +53,7 @@ test("0006 controlled access has the exact identity and closed object set", () =
     "market_observations",
     "economic_observations",
     "fixture_ingestion_replays",
+    "analytics_provider_policy_admission",
     "analytics_input_sets",
     "analytics_evidence_bundles",
     "analytics_manifests",
@@ -67,7 +68,7 @@ test("0006 controlled access has the exact identity and closed object set", () =
 test("0006 installs exact immutable statement guards", () => {
   const { sql } = controlledAccessMigration;
 
-  assert.equal((sql.match(/CREATE TRIGGER trg_/gu) ?? []).length, 102);
+  assert.equal((sql.match(/CREATE TRIGGER trg_/gu) ?? []).length, 105);
   for (const tableName of controlledAccessImmutableTableNames) {
     for (const event of ["update", "delete", "truncate"]) {
       assert.match(
@@ -76,6 +77,7 @@ test("0006 installs exact immutable statement guards", () => {
       );
     }
   }
+  assert.doesNotMatch(sql, /trg_analytics_capacity_admission__reject_/u);
   assert.match(sql, /RAISE EXCEPTION 'IMMUTABLE_RELATION_CHANGE_REJECTED' USING ERRCODE = '55000'/u);
 });
 
@@ -98,7 +100,7 @@ test("0006 closes the read and authority surface without new storage", () => {
   assert.match(sql, /GRANT SELECT ON etf\.current_watchlist, etf\.current_jobs, etf\.current_paper_orders, etf\.current_portfolios, etf\.current_analytics_publications TO app_runtime/u);
   assert.match(sql, /GRANT EXECUTE ON FUNCTION etf\.paper_order_transition\(jsonb\) TO app_runtime/u);
   assert.match(sql, /GRANT EXECUTE ON FUNCTION etf\.application_replay_get\(text, uuid, text\), etf\.application_replay_get_or_put\(text, uuid, text, text\) TO app_runtime/u);
-  assert.match(sql, /GRANT EXECUTE ON FUNCTION etf\.job_get\(uuid\), etf\.paper_order_get\(uuid\), etf\.paper_order_command_get\(uuid, uuid\) TO app_runtime/u);
+  assert.match(sql, /GRANT EXECUTE ON FUNCTION etf\.job_start\(jsonb\), etf\.job_succeed\(jsonb\), etf\.job_restart\(jsonb\), etf\.job_get\(uuid\), etf\.paper_order_get\(uuid\), etf\.paper_order_command_get\(uuid, uuid\) TO app_runtime/u);
   assert.match(sql, /GRANT EXECUTE ON FUNCTION etf\.portfolio_get\(uuid, timestamp with time zone\) TO app_runtime/u);
   assert.match(sql, /REVOKE ALL ON FUNCTION etf\.job_get\(uuid\) FROM PUBLIC/u);
   assert.match(sql, /REVOKE ALL ON FUNCTION etf\.application_replay_get\(text, uuid, text\) FROM PUBLIC/u);

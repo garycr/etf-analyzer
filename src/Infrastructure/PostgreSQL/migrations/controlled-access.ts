@@ -44,6 +44,7 @@ export const controlledAccessImmutableTableNames = [
   "market_observations",
   "economic_observations",
   "fixture_ingestion_replays",
+  "analytics_provider_policy_admission",
   "analytics_input_sets",
   "analytics_evidence_bundles",
   "analytics_manifests",
@@ -87,6 +88,7 @@ const immutableOwners: Readonly<Record<ImmutableOwner, readonly string[]>> = {
     "audit_commitments",
   ],
   evidence_writer_owner: [
+    "analytics_provider_policy_admission",
     "analytics_input_sets",
     "analytics_evidence_bundles",
     "analytics_manifests",
@@ -375,7 +377,7 @@ BEGIN
   END IF;
   RETURN jsonb_build_object('portfolio', jsonb_build_object(
     'portfolioId', portfolio_row.portfolio_id,
-    'portfolioVersion', projection_row.portfolio_version,
+    'portfolioVersion', projection_row.portfolio_version::text,
     'asOf', to_char(projection_row.as_of AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
     'valuationSnapshotId', projection_row.valuation_snapshot_id,
     'precisionPolicyVersion', portfolio_row.precision_policy_version,
@@ -417,7 +419,7 @@ GRANT SELECT ON etf.current_watchlist, etf.current_jobs, etf.current_paper_order
 SET LOCAL ROLE application_writer_owner;
 GRANT EXECUTE ON FUNCTION etf.paper_order_transition(jsonb) TO app_runtime;
 GRANT EXECUTE ON FUNCTION etf.application_replay_get(text, uuid, text), etf.application_replay_get_or_put(text, uuid, text, text) TO app_runtime;
-GRANT EXECUTE ON FUNCTION etf.job_get(uuid), etf.paper_order_get(uuid), etf.paper_order_command_get(uuid, uuid) TO app_runtime;
+GRANT EXECUTE ON FUNCTION etf.job_start(jsonb), etf.job_succeed(jsonb), etf.job_restart(jsonb), etf.job_get(uuid), etf.paper_order_get(uuid), etf.paper_order_command_get(uuid, uuid) TO app_runtime;
 SET LOCAL ROLE ledger_writer_owner;
 GRANT EXECUTE ON FUNCTION etf.ledger_append(jsonb) TO app_runtime;
 SET LOCAL ROLE projection_owner;

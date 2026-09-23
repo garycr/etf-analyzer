@@ -2352,6 +2352,22 @@ test("WP-3 composes command and query admission into complete result envelopes",
   assert.equal(unknownOwnerCode.error.code, "APPLICATION_DEPENDENCY_UNAVAILABLE");
   assert.equal(JSON.stringify(unknownOwnerCode).includes("must not escape"), false);
 
+  const jobRestartJson = JSON.stringify(commandEnvelope(
+    "JobRestart",
+    { jobId: "75000000-0000-4000-8000-000000000004" },
+    { commandId: "75000000-0000-4000-8000-000000000005" },
+  ));
+  const jobOwnerFailure = executeApplicationRequest(jobRestartJson, {
+    ...dependencies,
+    ownerDispatch: () => {
+      throw Object.assign(new Error("must not escape"), {
+        code: "APPLICATION_JOB_NOT_RESTARTABLE",
+      });
+    },
+  });
+  assert.equal(jobOwnerFailure.error.code, "APPLICATION_JOB_NOT_RESTARTABLE");
+  assert.equal(JSON.stringify(jobOwnerFailure).includes("must not escape"), false);
+
   const analyticsQueryJson = JSON.stringify({
     ...JSON.parse(queryJson),
     operation: "AnalyticsResultGet",

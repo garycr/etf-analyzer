@@ -28,8 +28,8 @@ const lockSql =
   "SELECT pg_catalog.pg_advisory_lock(pg_catalog.hashtextextended('etf:test:role-bootstrap', 0))";
 const unlockSql =
   "SELECT pg_catalog.pg_advisory_unlock(pg_catalog.hashtextextended('etf:test:role-bootstrap', 0))";
-const analyticsEvidenceContentHash = "638fdcb40695be04a30c56807e529f753fd37c80ccfdcd6ad58f04e603287cc4";
-const analyticsEvidenceManifestHash = "089df576fc69615023861fbb3909b36ee06359db19a4f8637cedd455de2fb8f2";
+const analyticsEvidenceContentHash = "2a848c629d66a7e3e2621ea065f684a94fc82acb9b7e85477a228c30c8ed8001";
+const analyticsEvidenceManifestHash = "9cec7c53e45b418d389abe4a8f85ad8a1e7930e253e7ac9580a1e15b3bb87e64";
 
 async function cleanBootstrap(client) {
   await client.query("ROLLBACK").catch(() => undefined);
@@ -156,6 +156,45 @@ async function commitEvidence(client, payload) {
   } finally {
     await client.query("RESET SESSION AUTHORIZATION");
   }
+}
+
+async function analyticsEvidenceCounts(client) {
+  const result = await client.query(
+    `SELECT (SELECT count(*)::integer FROM etf.analytics_input_sets) AS inputs,
+            (SELECT count(*)::integer FROM etf.analytics_evidence_bundles) AS bundles,
+            (SELECT count(*)::integer FROM etf.analytics_manifests) AS manifests,
+            (SELECT count(*)::integer FROM etf.analytics_lifecycle_references) AS lifecycle,
+            (SELECT count(*)::integer FROM etf.analytics_deletion_links) AS deletion_links,
+            (SELECT count(*)::integer FROM etf.analytics_retention_bindings) AS retention,
+            (SELECT count(*)::integer FROM etf.analytics_evidence_replays) AS replays,
+            (SELECT count(*)::integer FROM etf.analytics_audit) AS audit,
+            (SELECT count(*)::integer FROM etf.analytics_publications) AS publications`,
+  );
+  return result.rows[0];
+}
+
+const protectedAnalyticsTables = [
+  "analytics_input_sets",
+  "analytics_evidence_bundles",
+  "analytics_manifests",
+  "analytics_lifecycle_references",
+  "analytics_deletion_links",
+  "analytics_retention_bindings",
+  "analytics_evidence_replays",
+  "analytics_audit",
+  "analytics_publications",
+];
+
+async function snapshotAnalyticsEvidence(client) {
+  const snapshot = {};
+  for (const tableName of protectedAnalyticsTables) {
+    const result = await client.query(
+      `SELECT COALESCE(jsonb_agg(row_data ORDER BY row_data::text), '[]'::jsonb) AS rows
+         FROM (SELECT to_jsonb(stored) AS row_data FROM etf.${tableName} AS stored) AS snapshot_rows`,
+    );
+    snapshot[tableName] = canonicalizeJson(result.rows[0].rows);
+  }
+  return snapshot;
 }
 
 test(
@@ -296,6 +335,91 @@ test(
       } finally {
         await client.query("RESET ROLE");
       }
+    } finally {
+      try {
+        await cleanBootstrap(client);
+      } finally {
+        await client.query(unlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
+  "0005 enforces capacity and provider-rights admission without runtime table authority",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    await client.connect();
+    await client.query(lockSql);
+    try {
+      await cleanBootstrap(client);
+      await applyPrerequisites(client);
+      await applyMigration(
+        client,
+        analyticsEvidenceMigration,
+        "2026-09-14T00:04:00.000Z",
+        projectPostgresSchemaManifest,
+      );
+      await client.query("GRANT USAGE ON SCHEMA etf TO app_runtime");
+
+      const runtimeAuthority = await client.query(
+        `SELECT pg_catalog.has_table_privilege('app_runtime', table_name, 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE') AS app_runtime,
+                pg_catalog.has_table_privilege('projection_runtime', table_name, 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE') AS projection_runtime,
+                pg_catalog.has_table_privilege('audit_runtime', table_name, 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE') AS audit_runtime
+           FROM unnest(ARRAY['etf.analytics_provider_policy_admission', 'etf.analytics_capacity_admission']) AS admission(table_name)
+          ORDER BY table_name`,
+      );
+      assert.ok(runtimeAuthority.rows.every((row) =>
+        !row.app_runtime && !row.projection_runtime && !row.audit_runtime));
+
+      const unchanged = await analyticsEvidenceCounts(client);
+      await client.query("SET ROLE evidence_writer_owner");
+      await client.query(
+        "UPDATE etf.analytics_capacity_admission SET managed_bytes = capacity_bytes WHERE singleton_key = 'analytics'",
+      );
+      await client.query("RESET ROLE");
+      await assert.rejects(
+        () => commitEvidence(client, evidencePayload()),
+        /ANALYTICS_CAPACITY_BLOCKED/,
+      );
+      assert.deepEqual(await analyticsEvidenceCounts(client), unchanged);
+
+      await client.query("SET ROLE evidence_writer_owner");
+      await client.query(
+        `UPDATE etf.analytics_capacity_admission SET managed_bytes = 0 WHERE singleton_key = 'analytics';
+         UPDATE etf.analytics_provider_policy_admission SET retention_permitted = false WHERE provider_policy_reference = 'fixture-policy-1';`,
+      );
+      await client.query("RESET ROLE");
+      await assert.rejects(
+        () => commitEvidence(client, evidencePayload()),
+        /ANALYTICS_RIGHTS_RESTRICTED/,
+      );
+      assert.deepEqual(await analyticsEvidenceCounts(client), unchanged);
+
+      const degradedPayload = evidencePayload({
+        evidenceId: "evidence-degraded-rights",
+        evidenceCommitCommandId: "50000000-0000-4000-8000-000000000051",
+        inputSetId: "input-degraded-rights",
+        publicationTargetId: "blocked-degraded-rights",
+        reproducibilityStatus: "Degraded",
+        reproducibilityReason: "fixture-policy-1",
+      });
+      const degraded = await commitEvidence(client, degradedPayload);
+      assert.equal(degraded.publicationVersion, 0);
+      const stored = await client.query(
+        `SELECT bundle.reproducibility_status, bundle.reason,
+                EXISTS (SELECT 1 FROM etf.analytics_publications AS publication WHERE publication.evidence_id = bundle.evidence_id) AS published
+           FROM etf.analytics_evidence_bundles AS bundle
+          WHERE bundle.evidence_id = $1`,
+        [degradedPayload.evidenceId],
+      );
+      assert.deepEqual(stored.rows, [{
+        reproducibility_status: "Degraded",
+        reason: "fixture-policy-1",
+        published: false,
+      }]);
     } finally {
       try {
         await cleanBootstrap(client);
@@ -815,7 +939,13 @@ test(
       );
       assert.equal(storedNormalized.rows[0].cost_rate, "0.000000000000");
       assert.equal(storedNormalized.rows[0].score, "0.000000000000");
-      const degradedPayload = evidencePayload({
+      await client.query("SET ROLE evidence_writer_owner");
+      await client.query(
+        "INSERT INTO etf.analytics_provider_policy_admission VALUES ('rights-policy-1', false)",
+      );
+      await client.query("RESET ROLE");
+      const degradedBase = evidencePayload();
+      const degradedPayload = rehashEvidence(degradedBase, {
         evidenceId: "evidence-degraded",
         evidenceCommitCommandId: "50000000-0000-4000-8000-000000000039",
         publicationTargetId: "blocked-degraded-publication",
@@ -823,6 +953,10 @@ test(
         expectedPublicationVersion: 99,
         reproducibilityStatus: "Degraded",
         reproducibilityReason: "rights-policy-1",
+        canonicalConfiguration: {
+          ...degradedBase.canonicalConfiguration,
+          providerPolicyReferences: ["rights-policy-1"],
+        },
       });
       const degraded = await commitEvidence(client, degradedPayload);
       assert.equal(degraded.publicationVersion, 0);
@@ -1076,6 +1210,249 @@ test(
         audit: 0,
         replays: 0,
       });
+    } finally {
+      try {
+        await cleanBootstrap(client);
+      } finally {
+        await client.query(unlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
+  "0005 preserves complete analytics state across CT-DB-001I failures",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    await client.connect();
+    await client.query(lockSql);
+    try {
+      await cleanBootstrap(client);
+      await applyPrerequisites(client);
+      await applyMigration(
+        client,
+        analyticsEvidenceMigration,
+        "2026-09-14T00:04:00.000Z",
+        projectPostgresSchemaManifest,
+      );
+      await client.query("GRANT USAGE ON SCHEMA etf TO app_runtime");
+
+      const baselinePayload = evidencePayload();
+      const committed = await commitEvidence(client, baselinePayload);
+      assert.equal(committed.manifestId, "manifest-fixture-1");
+      const readback = await client.query(
+        `SELECT input.input_set_id, bundle.evidence_id, manifest.manifest_id
+           FROM etf.analytics_input_sets AS input
+           JOIN etf.analytics_evidence_bundles AS bundle USING (input_set_id)
+           JOIN etf.analytics_manifests AS manifest USING (evidence_id)`,
+      );
+      assert.deepEqual(readback.rows, [{
+        input_set_id: "input-fixture-1",
+        evidence_id: "evidence-fixture-1",
+        manifest_id: "manifest-fixture-1",
+      }]);
+      const unchanged = await snapshotAnalyticsEvidence(client);
+
+      const integrityFailure = evidencePayload({
+        evidenceId: "evidence-i-integrity",
+        evidenceCommitCommandId: "50000000-0000-4000-8000-000000000061",
+        inputSetId: "input-i-integrity",
+        publicationTargetId: "i-integrity",
+      });
+      integrityFailure.canonicalResult = {
+        ...integrityFailure.canonicalResult,
+        configurationHash: "0".repeat(64),
+      };
+      await assert.rejects(
+        () => commitEvidence(client, integrityFailure),
+        (error) => /ANALYTICS_INTEGRITY_FAILED/.test(error.message) &&
+          !/ANALYTICS_PUBLICATION_BLOCKED/.test(error.message),
+      );
+      assert.deepEqual(await snapshotAnalyticsEvidence(client), unchanged);
+
+      const incomplete = evidencePayload({
+        evidenceId: "evidence-i-incomplete",
+        evidenceCommitCommandId: "50000000-0000-4000-8000-000000000062",
+        inputSetId: "input-i-incomplete",
+        publicationTargetId: "i-incomplete",
+      });
+      delete incomplete.canonicalInput;
+      await assert.rejects(
+        () => commitEvidence(client, incomplete),
+        (error) => /ANALYTICS_INPUT_INCOMPLETE/.test(error.message) &&
+          !/ANALYTICS_PUBLICATION_BLOCKED/.test(error.message),
+      );
+      assert.deepEqual(await snapshotAnalyticsEvidence(client), unchanged);
+
+      await client.query("SET ROLE evidence_writer_owner");
+      await client.query(
+        "UPDATE etf.analytics_provider_policy_admission SET retention_permitted = false WHERE provider_policy_reference = 'fixture-policy-1'",
+      );
+      await client.query("RESET ROLE");
+      await assert.rejects(
+        () => commitEvidence(client, evidencePayload({
+          evidenceId: "evidence-i-rights",
+          evidenceCommitCommandId: "50000000-0000-4000-8000-000000000063",
+          inputSetId: "input-i-rights",
+          publicationTargetId: "i-rights",
+        })),
+        (error) => /ANALYTICS_RIGHTS_RESTRICTED/.test(error.message) &&
+          !/ANALYTICS_PUBLICATION_BLOCKED/.test(error.message),
+      );
+      assert.deepEqual(await snapshotAnalyticsEvidence(client), unchanged);
+
+      await client.query("SET ROLE evidence_writer_owner");
+      await client.query(`
+        UPDATE etf.analytics_provider_policy_admission
+           SET retention_permitted = true
+         WHERE provider_policy_reference = 'fixture-policy-1';
+        UPDATE etf.analytics_capacity_admission
+           SET managed_bytes = capacity_bytes
+         WHERE singleton_key = 'analytics';
+      `);
+      await client.query("RESET ROLE");
+      await assert.rejects(
+        () => commitEvidence(client, evidencePayload({
+          evidenceId: "evidence-i-capacity",
+          evidenceCommitCommandId: "50000000-0000-4000-8000-000000000064",
+          inputSetId: "input-i-capacity",
+          publicationTargetId: "i-capacity",
+        })),
+        (error) => /ANALYTICS_CAPACITY_BLOCKED/.test(error.message) &&
+          !/ANALYTICS_PUBLICATION_BLOCKED/.test(error.message),
+      );
+      assert.deepEqual(await snapshotAnalyticsEvidence(client), unchanged);
+
+      await client.query("SET ROLE evidence_writer_owner");
+      await client.query(
+        "UPDATE etf.analytics_capacity_admission SET managed_bytes = 0 WHERE singleton_key = 'analytics'",
+      );
+      await client.query("RESET ROLE");
+      await assert.rejects(
+        () => commitEvidence(client, evidencePayload({
+          evidenceId: "evidence-i-stale",
+          evidenceCommitCommandId: "50000000-0000-4000-8000-000000000065",
+          inputSetId: "input-i-stale",
+          publicationTargetId: baselinePayload.publicationTargetId,
+          expectedPublicationVersion: 0,
+        })),
+        (error) => /ANALYTICS_PUBLICATION_VERSION_CONFLICT/.test(error.message) &&
+          !/ANALYTICS_PUBLICATION_BLOCKED/.test(error.message),
+      );
+      assert.deepEqual(await snapshotAnalyticsEvidence(client), unchanged);
+
+      await client.query(`
+        CREATE FUNCTION etf.reject_analytics_audit_i() RETURNS trigger
+        LANGUAGE plpgsql AS $function$
+        BEGIN
+          RAISE EXCEPTION 'forced CT-DB-001I late audit failure';
+        END;
+        $function$;
+        CREATE TRIGGER reject_analytics_audit_i
+        BEFORE INSERT ON etf.analytics_audit
+        FOR EACH ROW EXECUTE FUNCTION etf.reject_analytics_audit_i();
+      `);
+      await assert.rejects(
+        () => commitEvidence(client, evidencePayload({
+          evidenceId: "evidence-i-persistence",
+          evidenceCommitCommandId: "50000000-0000-4000-8000-000000000066",
+          inputSetId: "input-i-persistence",
+          publicationTargetId: "i-persistence",
+        })),
+        (error) => /ANALYTICS_EVIDENCE_COMMIT_FAILED/.test(error.message) &&
+          !/ANALYTICS_PUBLICATION_BLOCKED/.test(error.message),
+      );
+      assert.deepEqual(await snapshotAnalyticsEvidence(client), unchanged);
+    } finally {
+      try {
+        await cleanBootstrap(client);
+      } finally {
+        await client.query(unlockSql);
+        await client.end();
+      }
+    }
+  },
+);
+
+test(
+  "0005 applies analytics validation precedence before publication persistence",
+  { skip: !connectionString },
+  async () => {
+    const client = new pg.Client({ connectionString });
+    await client.connect();
+    await client.query(lockSql);
+    try {
+      await cleanBootstrap(client);
+      await applyPrerequisites(client);
+      await applyMigration(
+        client,
+        analyticsEvidenceMigration,
+        "2026-09-14T00:04:00.000Z",
+        projectPostgresSchemaManifest,
+      );
+      await client.query("GRANT USAGE ON SCHEMA etf TO app_runtime");
+      const baseline = evidencePayload();
+      const committed = await commitEvidence(client, baseline);
+
+      await assert.rejects(
+        () => commitEvidence(client, {
+          ...baseline,
+          baselineVersion: "invalid",
+          publicationTargetId: "changed-replay-content",
+        }),
+        /ANALYTICS_INPUT_INCOMPLETE/,
+      );
+
+      await client.query("SET ROLE evidence_writer_owner");
+      await client.query(
+        "UPDATE etf.analytics_capacity_admission SET managed_bytes = capacity_bytes WHERE singleton_key = 'analytics'",
+      );
+      await client.query("RESET ROLE");
+      assert.deepEqual(await commitEvidence(client, baseline), committed);
+
+      await client.query("SET ROLE evidence_writer_owner");
+      await client.query(`
+        UPDATE etf.analytics_capacity_admission SET managed_bytes = 0 WHERE singleton_key = 'analytics';
+        UPDATE etf.analytics_provider_policy_admission SET retention_permitted = false WHERE provider_policy_reference = 'fixture-policy-1';
+      `);
+      await client.query("RESET ROLE");
+      const rightsBeforeIntegrity = evidencePayload({
+        evidenceId: "evidence-precedence-rights",
+        evidenceCommitCommandId: "50000000-0000-4000-8000-000000000071",
+        inputSetId: "input-precedence-rights",
+        publicationTargetId: "precedence-rights",
+      });
+      rightsBeforeIntegrity.canonicalResult = {
+        ...rightsBeforeIntegrity.canonicalResult,
+        configurationHash: "0".repeat(64),
+      };
+      await assert.rejects(
+        () => commitEvidence(client, rightsBeforeIntegrity),
+        /ANALYTICS_RIGHTS_RESTRICTED/,
+      );
+
+      await client.query("SET ROLE evidence_writer_owner");
+      await client.query(
+        "UPDATE etf.analytics_provider_policy_admission SET retention_permitted = true WHERE provider_policy_reference = 'fixture-policy-1'",
+      );
+      await client.query("RESET ROLE");
+      const versionBeforeIntegrity = evidencePayload({
+        evidenceId: "evidence-precedence-version",
+        evidenceCommitCommandId: "50000000-0000-4000-8000-000000000072",
+        inputSetId: "input-precedence-version",
+        publicationTargetId: baseline.publicationTargetId,
+        expectedPublicationVersion: 0,
+      });
+      versionBeforeIntegrity.canonicalResult = {
+        ...versionBeforeIntegrity.canonicalResult,
+        configurationHash: "0".repeat(64),
+      };
+      await assert.rejects(
+        () => commitEvidence(client, versionBeforeIntegrity),
+        /ANALYTICS_PUBLICATION_VERSION_CONFLICT/,
+      );
     } finally {
       try {
         await cleanBootstrap(client);

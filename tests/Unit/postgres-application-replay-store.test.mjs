@@ -68,6 +68,35 @@ test("WP-6 PostgreSQL replay store returns durable results without owner dispatc
   ]);
 });
 
+test("PostgreSQL replay store caches a mapped owner refusal after savepoint recovery", async () => {
+  const statements = [];
+  const refusal = Object.freeze({
+    outcome: "Failed",
+    error: Object.freeze({ code: "APPLICATION_JOB_NOT_RESTARTABLE" }),
+  });
+  const client = {
+    async query(sql) {
+      statements.push(sql);
+      if (sql.includes("application_replay_get(")) return { rows: [{ result: null }] };
+      if (sql.includes("application_replay_get_or_put(")) return { rows: [{ result: refusal }] };
+      return { rows: [] };
+    },
+  };
+  const store = createPostgresApplicationReplayStore(client);
+
+  const actual = await store.executeAsync(key, canonicalContent, async () => refusal);
+
+  assert.equal(actual, refusal);
+  assert.deepEqual(statements, [
+    "BEGIN",
+    "SELECT etf.application_replay_get($1::text, $2::uuid, $3::text) AS result",
+    "SAVEPOINT application_owner",
+    "ROLLBACK TO SAVEPOINT application_owner",
+    "SELECT etf.application_replay_get_or_put($1::text, $2::uuid, $3::text, $4::text) AS result",
+    "COMMIT",
+  ]);
+});
+
 test("WP-6 PostgreSQL replay store rolls back conflicting content", async () => {
   const statements = [];
   const client = {

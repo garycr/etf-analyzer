@@ -438,12 +438,12 @@ test(
       );
       assert.equal(
         applied.schemaManifestHash,
-        "94185f0d11619a22c67302802f983dae3e11c17f1eb6a9ab0ef5f6835ffff060",
+        "50fb07d7aeb7a51f8b985c6c53f8c1a2ef5707220032355bcd62769856076f13",
       );
-      assert.equal(Buffer.byteLength(manifestJson, "utf8"), 16193);
+      assert.equal(Buffer.byteLength(manifestJson, "utf8"), 16368);
       assert.equal(manifest.migrationSequence.length, 3);
       assert.equal(manifest.objects.filter(({ kind }) => kind === "table").length, 28);
-      assert.equal(manifest.objects.filter(({ kind }) => kind === "function").length, 11);
+      assert.equal(manifest.objects.filter(({ kind }) => kind === "function").length, 12);
       const owners = await client.query(
         `SELECT relation.relname AS name, owner.rolname AS owner
            FROM pg_catalog.pg_class AS relation

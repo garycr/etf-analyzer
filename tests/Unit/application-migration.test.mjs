@@ -23,12 +23,13 @@ test("0002 application has the exact identity and closed table set", () => {
     "application_replay_get_or_put",
     "watchlist_write",
     "job_start",
+    "job_succeed",
     "job_restart",
     "readiness_append",
   ]);
   assert.equal(
     createHash("sha256").update(applicationMigration.sql, "utf8").digest("hex"),
-    "ad458453834e72413f644e81e38829ae491a26a44f1ca03deeaf71349552c198",
+    "6ad48f730617fadff8ae80d58171c84707d9159af8f0186e71538861d92d730a",
   );
 });
 
@@ -60,15 +61,15 @@ test("0002 application creates only application-writer-owned tables", () => {
 test("0002 application creates the exact deny-by-default controlled functions", () => {
   const { sql } = applicationMigration;
 
-  assert.equal((sql.match(/CREATE FUNCTION etf\./gu) ?? []).length, 5);
+  assert.equal((sql.match(/CREATE FUNCTION etf\./gu) ?? []).length, 6);
   for (const functionName of applicationFunctionNames) {
     assert.match(sql, new RegExp(`CREATE FUNCTION etf\\.${functionName}\\(`));
   }
-  assert.equal((sql.match(/SECURITY DEFINER/gu) ?? []).length, 5);
-  assert.equal((sql.match(/VOLATILE/gu) ?? []).length, 5);
-  assert.equal((sql.match(/PARALLEL UNSAFE/gu) ?? []).length, 5);
-  assert.equal((sql.match(/SET search_path = pg_catalog, etf/gu) ?? []).length, 5);
-  assert.equal((sql.match(/REVOKE ALL ON FUNCTION etf\./gu) ?? []).length, 5);
+  assert.equal((sql.match(/SECURITY DEFINER/gu) ?? []).length, 6);
+  assert.equal((sql.match(/VOLATILE/gu) ?? []).length, 6);
+  assert.equal((sql.match(/PARALLEL UNSAFE/gu) ?? []).length, 6);
+  assert.equal((sql.match(/SET search_path = pg_catalog, etf/gu) ?? []).length, 6);
+  assert.equal((sql.match(/REVOKE ALL ON FUNCTION etf\./gu) ?? []).length, 6);
 });
 
 test("0002 application enforces replay, job, checkpoint, and readiness invariants", () => {
@@ -86,6 +87,14 @@ test("0002 application enforces replay, job, checkpoint, and readiness invariant
   assert.match(sql, /CHECK \(attempt >= 1\)/);
   assert.match(sql, /CHECK \(accepted_count >= 0\)/);
   assert.match(sql, /CHECK \(rejected_count >= 0\)/);
+  assert.match(sql, /CREATE FUNCTION etf\.job_succeed\(payload jsonb\) RETURNS jsonb/);
+  assert.match(sql, /IF session_user <> 'app_runtime'/);
+  assert.match(sql, /accepted_count > 9007199254740991/);
+  assert.match(sql, /rejected_count > 9007199254740991/);
+  assert.match(sql, /SET status = 'Running'/);
+  assert.match(sql, /SET status = 'Succeeded'/);
+  assert.match(sql, /APPLICATION_JOB_MISMATCH/);
+  assert.match(sql, /APPLICATION_JOB_NOT_COMPLETABLE/);
   assert.match(sql, /UNIQUE \(job_id, attempt, sequence\)/);
   assert.match(
     sql,

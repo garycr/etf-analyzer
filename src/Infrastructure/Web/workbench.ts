@@ -411,7 +411,7 @@ export function renderWorkbenchDocument(
     input, button { min-height: 2.75rem; font: inherit; }
     input { max-width: 100%; border: 1px solid var(--line); padding: .5rem; }
     button { border: 1px solid var(--forest); padding: .45rem .75rem; color: var(--forest); background: var(--surface); }
-    button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+    button:focus-visible, input:focus-visible, #order-status.restored-focus { outline: 3px solid var(--focus); outline-offset: 2px; }
     button:disabled { color: var(--muted); border-color: var(--line); }
     #watchlist-items li { display: grid; gap: .4rem; margin-block: 1rem; }
     .warning {

@@ -42,6 +42,7 @@
 | DEC-078 | 2026-09-22 | Fixture integrity conformance acceptance | Accept CT-DB-001H after exact identity, provenance, temporal, integrity, quality, no-mutation, and late transactional rollback evidence plus REV-178/179 PASS | Agent (Fully Agentic) | Solo Orchestrator | Accepted; I-J and end-to-end open |
 | DEC-079 | 2026-09-22 | Analytics admission conformance acceptance | Accept CT-DB-001I after candidate.3 admission, manifest identity, precedence, rollback, exact-hash, and independent review evidence | Agent (Fully Agentic) | Solo Orchestrator | Accepted under REV-180/181; J and end-to-end open |
 | DEC-083 | 2026-09-23 | Coverage acceptance | Accept PT-COVERAGE-001 after exhaustive Domain/Application line and exact 16-route behavioral gates passed | Agent (Fully Agentic) | Solo Orchestrator | Accepted under REV-188/189; WP-8 remains open |
+| DEC-084 | 2026-09-23 | Accessibility acceptance | Accept PT-A11Y-002 after digest-pinned axe, natural keyboard, visible focus, and reflow gates passed at all required viewports | Agent (Fully Agentic) | Solo Orchestrator | Accepted under REV-190/191; WP-8 remains open |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -80,6 +81,21 @@
 ---
 
 ## Decision Records
+
+### DEC-084: Accept Bounded PT-A11Y-002 Evidence
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-084 |
+| **Date** | 2026-09-23 |
+| **Category** | Workflow accessibility evidence |
+| **Decision** | Accept PT-A11Y-002 after the immutable Playwright browser suite passed full-document axe, natural keyboard traversal, visible and authoritative focus recovery, and reflow checks at 1280x720, 768x1024, and 320x568 with zero skips |
+| **Policy** | DEC-069; PT-A11Y-002; WCAG 2.1 Level AA expectations; keyboard access; assistive technology; perceivable state; plain recovery; digest-pinned browser execution |
+| **Authority** | Agent under Fully Agentic mode after independent Accessibility and Code Reviewer PASS; this is not DP-1, DP-25, or DP-26 |
+| **Accountability** | Solo Orchestrator preserves per-viewport natural-keyboard, axe, focus, and reflow evidence, advances only to PT-SEC-001, and does not infer WP-8, DP-33, Ring 2, release, deployment, or production closure |
+| **Status** | Accepted under REV-190 and REV-191 for PT-A11Y-002 only; WP-8, DP-33, Ring 2, release, deployment, and production remain open or unauthorized |
+
+---
 
 ### DEC-083: Accept Bounded PT-COVERAGE-001 Evidence
 

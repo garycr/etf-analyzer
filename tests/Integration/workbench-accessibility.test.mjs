@@ -116,7 +116,26 @@ async function browserWorkbench(context, initialModel) {
         return { operation: request.operation, outcome: "Succeeded", data: model.watchlist };
       }
       if (request.operation === "PaperOrderTransition") {
-        model = { ...model, paperOrder: { ...model.paperOrder, state: "Submitted", confirmationRequired: null } };
+        model = {
+          ...model,
+          paperOrder: {
+            ...model.paperOrder,
+            state: "Submitted",
+            statePresentation: {
+              canonicalValue: "Submitted",
+              visibleText: "Submitted",
+              accessibleText: "Submitted",
+            },
+            aggregateVersion: "5",
+            confirmationRequired: null,
+            transitionHistory: [{
+              transition: "OT-02",
+              sourceState: "Draft",
+              targetState: "Submitted",
+              occurredAt: confirmedAt,
+            }],
+          },
+        };
         return { operation: request.operation, outcome: "Succeeded", data: { order: model.paperOrder } };
       }
       return { operation: request.operation, outcome: "Failed", error: { code: "APPLICATION_REQUEST_INVALID" } };
@@ -156,6 +175,22 @@ async function browserWorkbench(context, initialModel) {
     requests,
     setModel: (value) => { model = value; },
   };
+}
+
+async function tabTo(page, locator, accessibleName) {
+  for (let index = 0; index < 40; index += 1) {
+    await page.keyboard.press("Tab");
+    if (await locator.evaluate((element) => element === document.activeElement)) {
+      assert.equal(await locator.evaluate((element) => (
+        element.getAttribute("aria-label")
+        ?? element.labels?.[0]?.textContent?.trim()
+        ?? element.textContent?.trim()
+        ?? ""
+      )), accessibleName);
+      return;
+    }
+  }
+  assert.fail(`Keyboard focus did not reach ${accessibleName}`);
 }
 
 test("PT-UI-008 announces invalid transitions conflicts and recovery outcomes", async () => {
@@ -308,61 +343,111 @@ test("PT-ANA-A11Y-001 exposes blocked denied quarantined and no-signal analytics
   }
 });
 
-test("PT-UI-009 completes keyboard workflows without overflow at required viewports", async (context) => {
-  const harness = await browserWorkbench(context, {
+test("PT-A11Y-002 retains WP-8 workflow accessibility", async (context) => {
+  const initialModel = {
     readiness: "Ready",
     watchlist: watchlist(),
     paperOrder: draftOrder(),
-  });
-  const page = await harness.newPage({ viewport: { width: 1280, height: 720 } });
-  page.on("dialog", (dialog) => dialog.accept());
-  await page.goto(harness.origin);
-
-  await page.keyboard.press("Tab");
-  assert.equal(await page.evaluate(() => document.activeElement?.textContent), "Skip to content");
-  await page.keyboard.press("Enter");
-  assert.equal(new URL(page.url()).hash, "#main-content");
-
-  await page.getByLabel("Instrument ID").fill("ETF-C");
-  await page.getByLabel("Display name").fill("Gamma ETF");
-  await page.getByRole("button", { name: "Add or update" }).focus();
-  await page.keyboard.press("Enter");
-  await page.getByRole("status").filter({ hasText: "Watchlist updated." }).waitFor();
-  await assert.doesNotReject(() => page.getByText("Gamma ETF", { exact: true }).waitFor());
-
-  await page.getByRole("button", { name: "Move Beta ETF up" }).focus();
-  await page.keyboard.press("Enter");
-  await page.getByRole("status").filter({ hasText: "Watchlist updated." }).waitFor();
-  await assert.doesNotReject(() => page.getByRole("button", { name: "Move Beta ETF down" }).waitFor());
-  assert.equal(await page.evaluate(() => document.activeElement?.textContent), "Move Beta ETF down");
-
-  await page.getByRole("button", { name: "Remove Gamma ETF" }).focus();
-  await page.keyboard.press("Enter");
-  await page.getByRole("status").filter({ hasText: "Watchlist updated." }).waitFor();
-  assert.equal(await page.getByText("Gamma ETF", { exact: true }).count(), 0);
-  assert.equal(await page.evaluate(() => document.activeElement?.textContent), "Remove Alpha ETF");
-
-  await page.getByRole("button", { name: "Submit paper order" }).focus();
-  await page.keyboard.press("Enter");
-  await page.waitForLoadState("load");
-  await page.getByRole("status").filter({ hasText: "Paper order submitted." }).waitFor();
-  await page.waitForFunction(() => document.activeElement?.id === "order-status");
-  assert.equal(harness.requests.filter(({ operation }) => operation === "PaperOrderTransition").length, 1);
-
-  const desktopAxe = await new AxeBuilder({ page }).include("#main-content").withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
-  assert.deepEqual(desktopAxe.violations, [], JSON.stringify(desktopAxe.violations));
+  };
+  const harness = await browserWorkbench(context, initialModel);
 
   for (const viewport of [
     { width: 1280, height: 720 },
     { width: 768, height: 1024 },
     { width: 320, height: 568 },
   ]) {
-    await page.setViewportSize(viewport);
+    harness.setModel(initialModel);
+    const page = await harness.newPage({ viewport });
+    await page.addInitScript(() => {
+      globalThis.__focusOptions = [];
+      globalThis.__scrollOptions = [];
+      const focus = HTMLElement.prototype.focus;
+      HTMLElement.prototype.focus = function focusWithEvidence(options) {
+        globalThis.__focusOptions.push({ id: this.id, options });
+        return focus.call(this, options);
+      };
+      const scrollIntoView = Element.prototype.scrollIntoView;
+      Element.prototype.scrollIntoView = function scrollWithEvidence(options) {
+        globalThis.__scrollOptions.push({ id: this.id, options });
+        return scrollIntoView.call(this, options);
+      };
+    });
+    page.on("dialog", (dialog) => dialog.accept());
+    await page.goto(harness.origin);
+
+    await tabTo(page, page.getByText("Skip to content", { exact: true }), "Skip to content");
+    await page.keyboard.press("Enter");
+    assert.equal(new URL(page.url()).hash, "#main-content");
+
+    const instrumentId = page.getByLabel("Instrument ID");
+    await tabTo(page, instrumentId, "Instrument ID");
+    await instrumentId.fill("ETF-C");
+    const displayName = page.getByLabel("Display name");
+    await tabTo(page, displayName, "Display name");
+    await displayName.fill("Gamma ETF");
+    await tabTo(page, page.getByRole("button", { name: "Add or update" }), "Add or update");
+    await page.keyboard.press("Enter");
+    await page.getByRole("status").filter({ hasText: "Watchlist updated." }).waitFor();
+    await assert.doesNotReject(() => page.getByText("Gamma ETF", { exact: true }).waitFor());
+
+    await tabTo(page, page.getByRole("button", { name: "Move Beta ETF up" }), "Move Beta ETF up");
+    await page.keyboard.press("Enter");
+    await page.getByRole("status").filter({ hasText: "Watchlist updated." }).waitFor();
+    await assert.doesNotReject(() => page.getByRole("button", { name: "Move Beta ETF down" }).waitFor());
+    assert.equal(await page.evaluate(() => document.activeElement?.textContent), "Move Beta ETF down");
+
+    await tabTo(page, page.getByRole("button", { name: "Remove Gamma ETF" }), "Remove Gamma ETF");
+    await page.keyboard.press("Enter");
+    await page.getByRole("status").filter({ hasText: "Watchlist updated." }).waitFor();
+    assert.equal(await page.getByText("Gamma ETF", { exact: true }).count(), 0);
+    assert.equal(await page.evaluate(() => document.activeElement?.textContent), "Remove Alpha ETF");
+
+    const transitionsBefore = harness.requests.filter(({ operation }) => operation === "PaperOrderTransition").length;
+    await tabTo(page, page.getByRole("button", { name: "Submit paper order" }), "Submit paper order");
+    await page.keyboard.press("Enter");
+    await page.waitForLoadState("load");
+    await page.getByRole("status").filter({ hasText: "Paper order submitted." }).waitFor();
+    await page.waitForFunction(() => document.activeElement?.id === "order-status");
+    await page.waitForFunction(() => {
+      const status = document.querySelector("#order-status");
+      if (status === null) return false;
+      const box = status.getBoundingClientRect();
+      return box.top >= 0 && box.bottom <= window.innerHeight;
+    });
+    assert.equal(harness.requests.filter(({ operation }) => operation === "PaperOrderTransition").length, transitionsBefore + 1);
+    await assert.doesNotReject(() => page.locator("#order-status[data-state='Submitted']").getByText("Submitted", { exact: true }).waitFor());
+    assert.equal(await page.locator("#paper-order-details[data-version='5']").count(), 1);
+    await assert.doesNotReject(() => page.locator("#order-transition-history [data-transition='OT-02']").getByText("Draft to Submitted", { exact: true }).waitFor());
+    assert.deepEqual(await page.evaluate(() => globalThis.__focusOptions.at(-1)), {
+      id: "order-status",
+      options: { preventScroll: true },
+    });
+    assert.deepEqual(await page.evaluate(() => globalThis.__scrollOptions.at(-1)), {
+      id: "order-status",
+      options: { block: "center" },
+    });
+    assert.equal(await page.locator("#order-status.restored-focus").evaluate((element) => {
+      const style = getComputedStyle(element);
+      return Number.parseFloat(style.outlineWidth) >= 3 && style.outlineColor !== "rgba(0, 0, 0, 0)";
+    }), true);
+    const focusedStatusBox = await page.locator("#order-status").evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      return { top: box.top, bottom: box.bottom, viewportHeight: window.innerHeight };
+    });
+    assert.equal(
+      focusedStatusBox.top >= 0 && focusedStatusBox.bottom <= focusedStatusBox.viewportHeight,
+      true,
+      JSON.stringify({ viewport, focusedStatusBox }),
+    );
+
+    const axe = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
+    assert.deepEqual(axe.violations, [], JSON.stringify({ viewport, violations: axe.violations }));
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), true, JSON.stringify(viewport));
     const boxes = await page.locator("button, input, a").evaluateAll((elements) => elements.map((element) => {
       const box = element.getBoundingClientRect();
       return { text: element.textContent, left: box.left, right: box.right };
     }));
     assert.equal(boxes.every(({ left, right }) => left >= -1 && right <= viewport.width + 1), true, JSON.stringify({ viewport, boxes }));
+    await page.context().close();
   }
 });

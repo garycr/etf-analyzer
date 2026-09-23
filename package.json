@@ -9,8 +9,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "lint": "tsc -p tsconfig.json --noEmit",
-    "test": "npm run build && node --test --test-skip-pattern='PT-ANA-A11Y-001|PT-UI-009' tests/Unit/*.test.mjs tests/Integration/*.test.mjs",
-    "test:browser": "npm run build && node --test --test-name-pattern='PT-ANA-A11Y-001|PT-UI-009' tests/Integration/workbench-accessibility.test.mjs",
+    "test": "npm run build && node --test --test-skip-pattern='PT-ANA-A11Y-001|PT-A11Y-002' tests/Unit/*.test.mjs tests/Integration/*.test.mjs",
+    "test:browser": "npm run build && node --test --test-name-pattern='PT-ANA-A11Y-001|PT-A11Y-002' tests/Integration/workbench-accessibility.test.mjs",
     "test:coverage:wp8": "npm run build && node scripts/wp-8-coverage.mjs"
   },
   "dependencies": {

@@ -428,7 +428,12 @@ function restorePaperOrderOutcome(): void {
   if (message === null) return;
   sessionStorage.removeItem(paperOrderStatusKey);
   announcePaperOrder(message);
-  const restoreFocus = () => document.querySelector<HTMLElement>("#order-status")?.focus();
+  const restoreFocus = () => {
+    const status = document.querySelector<HTMLElement>("#order-status");
+    status?.classList.add("restored-focus");
+    status?.focus({ preventScroll: true });
+    requestAnimationFrame(() => status?.scrollIntoView({ block: "center" }));
+  };
   if (document.readyState === "complete") {
     restoreFocus();
   } else {

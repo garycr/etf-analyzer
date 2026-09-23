@@ -8,6 +8,7 @@ import pg from "pg";
 import { executeApplicationRequestAsync } from "../../dist/Application/application-boundary.js";
 import { canonicalizeJson } from "../../dist/Infrastructure/CanonicalJson/canonical-json.js";
 import { startLoopbackApiServer } from "../../dist/Infrastructure/Http/api-adapter.js";
+import { evaluatePrototypeOperations } from "../../dist/Infrastructure/Operations/prototype-operations.js";
 import { createPostgresApplicationReplayStore } from "../../dist/Infrastructure/PostgreSQL/application-replay-store.js";
 import { applyMigration } from "../../dist/Infrastructure/PostgreSQL/migration-runner.js";
 import { applicationMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/application.js";
@@ -457,6 +458,57 @@ test(
         { transactions: persisted.rows[0].transactions, projections: persisted.rows[0].projections },
         beforeSubmission,
       );
+
+      const operations = (await client.query(
+        `SELECT (SELECT count(*)::integer FROM etf.application_replays) AS application_replays,
+                (SELECT count(*)::integer FROM etf.analytics_publications) AS analytics_publications,
+                (SELECT count(*)::integer FROM etf.fixture_packages) AS fixture_packages,
+                (SELECT count(*)::integer FROM etf.jobs) AS jobs,
+                (SELECT count(*)::integer FROM etf.order_transitions) AS order_transitions,
+                (SELECT count(*)::integer FROM etf.paper_orders) AS paper_orders,
+                (SELECT count(*)::integer
+                   FROM etf.analytics_publications AS publication
+                   JOIN etf.analytics_evidence_bundles AS bundle ON bundle.evidence_id = publication.evidence_id
+                  WHERE publication.bundle_hash <> bundle.bundle_hash) AS hash_mismatches,
+                (SELECT count(*)::integer
+                   FROM etf.portfolio_projections
+                  WHERE reconciliation_state <> 'Reconciled') AS reconciliation_differences,
+                ((SELECT count(*) FROM etf.order_audit WHERE outcome = 'IntentRecorded') +
+                 (SELECT count(*) FROM etf.ledger_audit WHERE outcome = 'IntentRecorded'))::integer AS unresolved_intents`,
+      )).rows[0];
+      const workflowCounts = {
+        applicationReplays: operations.application_replays,
+        analyticsPublications: operations.analytics_publications,
+        fixturePackages: operations.fixture_packages,
+        jobs: operations.jobs,
+        orderTransitions: operations.order_transitions,
+        paperOrders: operations.paper_orders,
+      };
+      const workflowEvidence = evaluatePrototypeOperations({
+        apiDurationsMs: [0],
+        cpuPercent: 0,
+        dashboardDurationsMs: [0],
+        databaseConnections: 0,
+        databaseMaxConnections: 1,
+        evidenceCapacityBytes: 1,
+        evidenceManagedBytes: 0,
+        expectedWorkflowCounts: {
+          applicationReplays: 4,
+          analyticsPublications: 1,
+          fixturePackages: 1,
+          jobs: 2,
+          orderTransitions: 2,
+          paperOrders: 1,
+        },
+        hashMismatchCount: operations.hash_mismatches,
+        memoryBytes: 0,
+        queueOrOutboxObjectCount: 0,
+        reconciliationDifferenceCount: operations.reconciliation_differences,
+        unexpectedServerErrorCount: 0,
+        unresolvedIntentCount: operations.unresolved_intents,
+        workflowCounts,
+      });
+      assert.equal(workflowEvidence.status, "Pass", JSON.stringify(workflowEvidence));
 
       for (const [index, failurePoint] of [
         "after-job-start",

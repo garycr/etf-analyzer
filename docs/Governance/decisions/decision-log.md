@@ -80,6 +80,21 @@
 
 ## Decision Records
 
+### DEC-082: Accept Bounded PT-OPS-001 Operations Evidence
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-082 |
+| **Date** | 2026-09-23 |
+| **Category** | Local prototype observability evidence |
+| **Decision** | Accept PT-OPS-001 after live loopback latency and recovery checks, exact PT-E2E PostgreSQL workflow/integrity observations, PostgreSQL capacity and connection saturation, durable-handoff absence, and pinned non-skipped execution evidence passed |
+| **Policy** | DEC-069; PT-OPS-001; Four Golden Signals; fail-closed readiness and redaction; approved 80% evidence-capacity threshold; configured PostgreSQL connection ceiling; CPU and memory recorded-only |
+| **Authority** | Agent under Fully Agentic mode after independent Code and Security Reviewer PASS; this is not DP-1, DP-25, or DP-26 |
+| **Accountability** | Solo Orchestrator preserves the bounded local evidence surface, tracks the test-only sample-bound hardening note, advances next to aggregate coverage/security/accessibility evidence, and does not infer WP-8, DP-33, Ring 2, release, deployment, or production closure |
+| **Status** | Accepted under REV-186 and REV-187 for PT-OPS-001 only; WP-8, DP-33, Ring 2, release, deployment, and production remain open or unauthorized |
+
+---
+
 ### DEC-081: Repair The Bounded PT-E2E-001 Local Composition
 
 | Field | Value |

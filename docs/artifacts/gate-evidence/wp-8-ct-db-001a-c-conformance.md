@@ -5,6 +5,8 @@
 **Status:** Accepted under REV-169
 **Scope:** Integrated CT-DB-001A, CT-DB-001B, and CT-DB-001C only
 
+> **Superseded identity notice (2026-09-23):** The schema-manifest roots recorded below are stale. DEC-086 and `wp-8-postgresql-manifest-reconciliation.md` are the current seven-row identity authority. Behavioral history remains preserved.
+
 Sequence 7 was subsequently hardened for CT-DB-001D denial replay and least privilege. Its current SQL hash is `0d07358c3056885e15ba190681402a381ed71485beb35e3b9088cc8d107b1340` and current cumulative manifest hash is `915d698edc5d95ef648d38d754ed5754dc46fffa8a9d6272304eaf58cf274c2e`; the A-C checks were rerun against this successor identity.
 
 ## CT-DB-001A

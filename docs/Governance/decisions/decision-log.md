@@ -44,6 +44,7 @@
 | DEC-083 | 2026-09-23 | Coverage acceptance | Accept PT-COVERAGE-001 after exhaustive Domain/Application line and exact 16-route behavioral gates passed | Agent (Fully Agentic) | Solo Orchestrator | Accepted under REV-188/189; WP-8 remains open |
 | DEC-084 | 2026-09-23 | Accessibility acceptance | Accept PT-A11Y-002 after digest-pinned axe, natural keyboard, visible focus, and reflow gates passed at all required viewports | Agent (Fully Agentic) | Solo Orchestrator | Accepted under REV-190/191; WP-8 remains open |
 | DEC-085 | 2026-09-23 | Security acceptance | Accept PT-SEC-001 after dependency, secret, SAST, OSS, and redaction gates passed | Agent (Fully Agentic) | Solo Orchestrator | Accepted under REV-192/193; WP-8 remains open |
+| DEC-086 | 2026-09-23 | PostgreSQL evidence reconciliation | Replace stale recorded schema-manifest roots with the reproducible seven-row live catalog chain | Agent (Fully Agentic) | Solo Orchestrator | Implemented; independent review pending; WP-8 remains open |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -82,6 +83,27 @@
 ---
 
 ## Decision Records
+
+### DEC-086: Reconcile PostgreSQL Manifest Authority
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-086 |
+| **Date** | 2026-09-23 |
+| **Category** | PostgreSQL contract and evidence integrity |
+| **Decision** | Replace the seven stale recorded schema-manifest roots with the deterministic live catalog roots reproduced under the exact PostgreSQL 16.15 and Node 20 images; preserve every migration SQL hash, migration ID/sequence, and candidate.3 identity |
+| **Policy** | DEC-069; CT-DB-001A-L; exact catalog closure; evidence provenance; fail-closed readiness; no implicit migration repair; greenfield PostgreSQL only |
+| **Authority** | Agent under Fully Agentic mode after aggregate hardening exposed contradictory accepted evidence and exact reproduction proved the normative roots were stale; this is not DP-1, DP-25, or DP-26 |
+| **Accountability** | Solo Orchestrator preserves stale artifacts as superseded history, obtains independent review, retains REV-164/original CT-DB-001K invalidation, and does not infer WP-8, DP-33, Ring 2, release, deployment, or production closure |
+| **Context** | The accepted A-C/D/E/I/J/PT-E2E artifacts contained incompatible cumulative roots. The current projector reproduced one stable seven-row chain under pinned PostgreSQL 16.15 with both Node 20 and Node 24 and with trust/password bootstrap shapes, while all seven migration SQL hashes remained stable. |
+| **Alternatives** | Retain contradictory stale roots; alter the projector to reproduce an unsupported table; alter unchanged SQL; invalidate candidate.3; replace only the recorded roots and preserve history. The decision selects the final option. |
+| **Consequences** | Contract and executable constants now agree with the live catalog; historical identity tables are explicitly superseded; candidate.3 and seven SQL byte identities remain unchanged; immutable raw-output provenance and independent clean rerun remain blocking hardening work. |
+| **Assumptions** | The current PostgreSQL 16.15 catalog projector is the intended manifest authority and the exact pinned image/runtime commands define the bounded candidate environment. |
+| **Invalidation** | Any migration SQL-byte mismatch, projector semantic change, environment-dependent root, stale normative occurrence, or independent reproduction failure invalidates this decision and reopens RH-003. |
+| **Linked Artifacts** | `docs/artifacts/gate-evidence/wp-8-postgresql-manifest-reconciliation.md`; `docs/Quality/ring-2-review-hardening.md` RH-003/RH-005; `docs/Planning/contracts/postgresql-contract.md`; architecture/code re-review findings |
+| **Status** | Implemented in contract/test constants; canonical A-L 12/12 PASS with zero skips; independent review and remaining hardening findings open |
+
+---
 
 ### DEC-085: Accept Bounded PT-SEC-001 Evidence
 

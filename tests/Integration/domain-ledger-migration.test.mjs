@@ -438,7 +438,7 @@ test(
       );
       assert.equal(
         applied.schemaManifestHash,
-        "50fb07d7aeb7a51f8b985c6c53f8c1a2ef5707220032355bcd62769856076f13",
+        "78e552a59866cc93bf6e4b198e5a99b1cd53dae96c6aba805afced93d83c07a4",
       );
       assert.equal(Buffer.byteLength(manifestJson, "utf8"), 16368);
       assert.equal(manifest.migrationSequence.length, 3);

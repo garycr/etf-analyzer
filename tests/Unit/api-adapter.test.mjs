@@ -12,7 +12,7 @@ import {
 
 const expectedRoutes = [
   ["PUT", "/api/v1/watchlist/items/ETF1", "WatchlistPut"],
-  ["DELETE", "/api/v1/watchlist/items/ETF1", "WatchlistRemove"],
+  ["DELETE", "/api/v1/watchlist/items/ETF1?expectedVersion=1", "WatchlistRemove"],
   ["PUT", "/api/v1/watchlist/order", "WatchlistReorder"],
   ["POST", "/api/v1/fixture-ingestions", "FixtureIngestionStart"],
   ["POST", "/api/v1/jobs/10000000-0000-4000-8000-000000000001/restart", "JobRestart"],
@@ -39,6 +39,70 @@ test("CT-API-001A maps exactly 16 reviewed routes to application operations", ()
   assert.equal(resolveApiRoute("PATCH", "/api/v1/watchlist"), undefined);
   assert.equal(resolveApiRoute("GET", "/api/v1/unknown"), undefined);
   assert.equal(resolveApiRoute("GET", "/api/v2/readiness"), undefined);
+});
+
+test("CT-API-001B adapts all 16 reviewed routes through application dispatch", () => {
+  const bodyOperations = new Set([
+    "WatchlistPut",
+    "WatchlistReorder",
+    "FixtureIngestionStart",
+    "AnalyticsRun",
+    "PaperOrderDraftCreate",
+    "PaperOrderTransition",
+    "DiagnosticsExportCreate",
+  ]);
+  const commandOperations = new Set(expectedRoutes.slice(0, 9).map(([, , operation]) => operation));
+  const expectedPayloads = {
+    WatchlistPut: { instrumentId: "ETF1" },
+    WatchlistRemove: { instrumentId: "ETF1", expectedVersion: "1" },
+    JobRestart: { jobId: "10000000-0000-4000-8000-000000000001" },
+    PaperOrderTransition: { orderId: "10000000-0000-4000-8000-000000000002" },
+    JobGet: { jobId: "10000000-0000-4000-8000-000000000003" },
+    AnalyticsResultGet: { publicationTargetId: "10000000-0000-4000-8000-000000000004" },
+    EvidenceGet: { evidenceId: "10000000-0000-4000-8000-000000000005" },
+    PaperOrderGet: { orderId: "10000000-0000-4000-8000-000000000006" },
+    PortfolioGet: { portfolioId: "10000000-0000-4000-8000-000000000007", asOf: "2026-09-17" },
+  };
+  const executed = [];
+
+  for (const [method, target, operation] of expectedRoutes) {
+    const hasBody = bodyOperations.has(operation);
+    const isCommand = commandOperations.has(operation);
+    const response = adaptApiRequest({
+      method,
+      target,
+      headers: {
+        accept: "application/json",
+        ...(hasBody ? { "content-type": "application/json" } : {}),
+        host: "127.0.0.1:4173",
+        origin: "http://127.0.0.1:5173",
+        "x-request-id": requestId,
+        "x-correlation-id": correlationId,
+        "x-requested-at": requestedAt,
+        ...(isCommand ? { "idempotency-key": commandId } : {}),
+      },
+      body: hasBody ? new TextEncoder().encode("{}") : new Uint8Array(),
+    }, config, (requestJson) => {
+      const request = JSON.parse(requestJson);
+      executed.push(request);
+      return { operation: request.operation, outcome: "Succeeded" };
+    });
+
+    assert.equal(response.status, ["FixtureIngestionStart", "AnalyticsRun", "PaperOrderDraftCreate", "DiagnosticsExportCreate"].includes(operation) ? 201 : 200, operation);
+    assert.deepEqual(executed.at(-1), {
+      operation,
+      requestId,
+      correlationId,
+      actorId: "local-user",
+      prototypeCandidate: "v1.0.0-prototype.1",
+      contractVersion: "1.0.0-candidate.2",
+      requestedAt,
+      ...(isCommand ? { commandId } : {}),
+      payload: expectedPayloads[operation] ?? {},
+    }, operation);
+  }
+
+  assert.equal(executed.length, 16);
 });
 
 const requestId = "20000000-0000-4000-8000-000000000001";

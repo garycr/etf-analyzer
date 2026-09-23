@@ -11,13 +11,13 @@
 | Dependency audit policy | PASS; 0 Info, Low, Moderate, High, or Critical across 30 dependencies |
 | Moderate disposition policy | PASS; no current Moderate finding; any future finding requires unique package/advisory source, owner, rationale, and unexpired disposition |
 | SAST adversarial controls | 2/2 PASS; zero skips |
-| Production SAST scan | PASS; zero findings across all JavaScript/TypeScript executable extensions |
+| Banned-function source guardrail | PASS; zero findings across all JavaScript/TypeScript executable extensions |
 | Secret-signature controls | 2/2 PASS; zero skips |
 | Current, staged, untracked, and full-history secret scan | PASS; zero unapproved findings |
 | Focused build and redaction controls | 11/11 PASS; zero skips |
 | CI integration | PASS; security checkout fetches full history and runs all three security gates |
 
-The SAST gate rejects child-process acquisition through static import, `require`, aliased loaders, and dynamic import; dynamic or aliased `eval`/`Function`; malformed source; and source symlinks. It scans `.js`, `.jsx`, `.mjs`, `.cjs`, `.ts`, `.tsx`, `.mts`, and `.cts`. Regular-expression `.exec()` remains allowed.
+The source guardrail rejects child-process acquisition through static import, `require`, aliased loaders, and dynamic import; dynamic or aliased `eval`/`Function`; malformed source; and source symlinks. It scans `.js`, `.jsx`, `.mjs`, `.cjs`, `.ts`, `.tsx`, `.mts`, and `.cts`. Regular-expression `.exec()` remains allowed. This is a bounded banned-function control, not general taint-flow SAST; broader SAST coverage remains an open Ring 2 hardening item.
 
 The secret gate scans every blob/path in every reachable commit, exact staged index blobs, and tracked or untracked working files. It includes binary bytes and lockfiles and fails closed on Git or file errors. Signatures cover private keys, AWS, GitHub, GitLab, npm, OpenAI, Slack, credential-bearing database URIs, bearer/JWT, and Azure-like keys. Five exact synthetic PostgreSQL fixture fingerprints are allowlisted only at reviewed test/evidence paths with owner, rationale, and 2027-09-23 expiry; copying the same value elsewhere fails.
 

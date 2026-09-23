@@ -5,6 +5,8 @@
 **Status:** Accepted under REV-170 and REV-171
 **Scope:** CT-DB-001D only
 
+> **Superseded identity notice (2026-09-23):** The schema-manifest roots recorded below are stale. DEC-086 and `wp-8-postgresql-manifest-reconciliation.md` are the current seven-row identity authority. Behavioral history remains preserved.
+
 ## Least Privilege
 
 The canonical `CT-DB-001D roles and controlled operations enforce least privilege` scenario verifies the exact 15-role and 11-membership graph, closed database and schema ACLs, no PUBLIC controlled-function execution, and unchanged protected state after six denied attacks. Each attack returns SQLSTATE `42501`.

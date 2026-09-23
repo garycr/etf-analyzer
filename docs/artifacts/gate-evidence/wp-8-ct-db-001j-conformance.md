@@ -5,6 +5,8 @@
 **Status:** Accepted under REV-182 and REV-183
 **Scope:** CT-DB-001J only
 
+> **Superseded identity notice (2026-09-23):** The schema-manifest roots recorded below are stale. DEC-086 and `wp-8-postgresql-manifest-reconciliation.md` are the current seven-row identity authority. Behavioral history remains preserved.
+
 ## Durable Restart And Replay
 
 The canonical `CT-DB-001J job state and checkpoints resume without duplicate effects` parent runs under Node 20 and dispatches the exact complete owner `0002 preserves complete durable job state across CT-DB-001J restart cases`.

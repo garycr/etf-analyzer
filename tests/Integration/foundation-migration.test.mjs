@@ -136,7 +136,7 @@ test(
       );
       assert.equal(
         applied.schemaManifestHash,
-        "f488702c6e34dac01152ddc3f94f3856bf64156dfba3f1e0a81811db1052e0d6",
+        "f6be4a872519869b56b35d084377af52811eaef5b123b0cac6410ad29ba6f235",
       );
       assert.equal(Buffer.byteLength(manifestJson, "utf8"), 5866);
       const manifest = JSON.parse(manifestJson);

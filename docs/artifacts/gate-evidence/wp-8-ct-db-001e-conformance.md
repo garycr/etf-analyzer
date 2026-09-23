@@ -5,6 +5,8 @@
 **Status:** Accepted under REV-172 and REV-173
 **Scope:** CT-DB-001E only
 
+> **Superseded identity notice (2026-09-23):** The schema-manifest roots recorded below are stale. DEC-086 and `wp-8-postgresql-manifest-reconciliation.md` are the current seven-row identity authority. Behavioral history remains preserved.
+
 ## Exact Values And Pre-Cast Rejection
 
 The canonical `CT-DB-001E exact values reject noncanonical input before PostgreSQL cast` test executes six owning tests and requires all six to pass without skips:

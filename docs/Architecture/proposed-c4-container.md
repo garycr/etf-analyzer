@@ -2,7 +2,7 @@
 
 ## Status
 
-Status: Ledger-security design accepted at DP-33; remaining content Proposed; research-only/no-broker; not an accepted ADR
+Status: Future-state proposal. It is not the implemented WP-8 architecture and is not an accepted deployment ADR. See [WP-8 implemented-state architecture](wp-8-implemented-state.md).
 
 ## Purpose
 
@@ -88,7 +88,7 @@ No container or external relationship exists for brokerage, real orders, credent
 
 ## Deployment and scaling posture
 
-All containers run locally under Helm on kind/Kubernetes inside WSL Ubuntu. The prototype favors deterministic bounded jobs and horizontal worker concurrency only where idempotency and the frozen domain/API/schema contract permit it. There is no public load balancer, cloud autoscaling, multi-user capacity target, or HA/DR promise. Detailed pod, migration, PVC, and network placement is owned by the [deployment view](proposed-deployment-view.md).
+This section describes a future option only. WP-8 does not implement Helm, kind/Kubernetes, worker processes, Jobs/CronJobs, an outbox, provider egress, or a telemetry pipeline. There is no public load balancer, cloud autoscaling, multi-user capacity target, or HA/DR promise. Detailed proposed pod, migration, PVC, and network placement is owned by the [deployment view](proposed-deployment-view.md).
 
 ## Related behavioral views
 

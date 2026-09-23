@@ -1,7 +1,7 @@
 # Proposed Component View
 
 ## Status
-Status: Ledger-security design accepted at DP-33; remaining content Proposed; not an accepted ADR
+Status: Future-state proposal. It is not the implemented WP-8 architecture and is not an accepted deployment ADR. See [WP-8 implemented-state architecture](wp-8-implemented-state.md).
 
 ## Purpose and scope
 This view describes the proposed target architecture for the ETF research prototype as a local-first, single-user browser workbench. It focuses on the validated functional boundaries in the Objective PDF and its legacy migration evidence: a browser UI that calls a local web API, a portfolio service for paper-only accounting, an integrity-anchor procedure, an ingestion worker, an analytics worker, PostgreSQL with separately owned ledger and anchor schemas, provider and economic adapters, job/outbox coordination, and observability. It intentionally excludes brokerage connectors, real-order endpoints, and any credential transmission path.

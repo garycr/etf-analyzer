@@ -46,13 +46,13 @@ The current WP-8 PostgreSQL 16.15 identities are:
 
 | Sequence | Exact UTF-8 SQL SHA-256 | Resulting schema-manifest SHA-256 |
 | ---: | --- | --- |
-| 1 | `a604802a67bed66c6ce79d2f2f856b48e184ae5b4f76803ab8ead3a135c85291` | `f488702c6e34dac01152ddc3f94f3856bf64156dfba3f1e0a81811db1052e0d6` |
-| 2 | `6ad48f730617fadff8ae80d58171c84707d9159af8f0186e71538861d92d730a` | `c043fad160e0b6690971b6cc4e9ffc8d10ca74a879a43360f86872c1f8eaf8c1` |
-| 3 | `c5da21109969595e17dfb7b31e5c45296324b6d20caf1f1debdb1a70ea84a496` | `50fb07d7aeb7a51f8b985c6c53f8c1a2ef5707220032355bcd62769856076f13` |
-| 4 | `9bf81885aab5fafe8bcac9b372d7bbd0bec601fc29e0cdbc234a65fc3d5489f1` | `b19029387e1aae294efc28e8985573bf0bff9872ff05968228a0a70452915cf7` |
-| 5 | `2a848c629d66a7e3e2621ea065f684a94fc82acb9b7e85477a228c30c8ed8001` | `9cec7c53e45b418d389abe4a8f85ad8a1e7930e253e7ac9580a1e15b3bb87e64` |
-| 6 | `d8ad459296b049ce681a216573159b09d3f95be9297af727f1335b6da75c738a` | `9ec929080517cdf491139537eb9501d701b6c973c77ff8473c2bd2cee548b3d0` |
-| 7 | `0d07358c3056885e15ba190681402a381ed71485beb35e3b9088cc8d107b1340` | `e6791ce150824592fcfb288c05c11342c61dfeb9f7bb3dda72e1a3a85930ee38` |
+| 1 | `a604802a67bed66c6ce79d2f2f856b48e184ae5b4f76803ab8ead3a135c85291` | `f6be4a872519869b56b35d084377af52811eaef5b123b0cac6410ad29ba6f235` |
+| 2 | `6ad48f730617fadff8ae80d58171c84707d9159af8f0186e71538861d92d730a` | `0fde1bcd49ac6dbcf6db036b7110c1c61c1bddd6e534c9fc27f9c5fe18b80e3e` |
+| 3 | `c5da21109969595e17dfb7b31e5c45296324b6d20caf1f1debdb1a70ea84a496` | `78e552a59866cc93bf6e4b198e5a99b1cd53dae96c6aba805afced93d83c07a4` |
+| 4 | `9bf81885aab5fafe8bcac9b372d7bbd0bec601fc29e0cdbc234a65fc3d5489f1` | `efd8177a365c073cb11a914fd66c5adc2fa53339d9aefbc47e8b41b00016ef08` |
+| 5 | `2a848c629d66a7e3e2621ea065f684a94fc82acb9b7e85477a228c30c8ed8001` | `51dd362827c52929203cc465a75e791a2a995627e9989867580cb702d97b4990` |
+| 6 | `d8ad459296b049ce681a216573159b09d3f95be9297af727f1335b6da75c738a` | `d35a8d12cf8166f4c85b21544949fbe06810c0f474e3efb35950a6f1a1f71b24` |
+| 7 | `0d07358c3056885e15ba190681402a381ed71485beb35e3b9088cc8d107b1340` | `e7db4b10fc5464692009f66c303163a5a3d7690897e5fc6cc393ee479476debb` |
 
 **2026-09-21 DEC-070 amendment.** Clean bootstrap adds `audit_activity_verifier_owner` and its two bounded membership edges before migration projection. Existing canonical sequence-6 installations use the projector-backed provisioner upgrade, which locks the migration domain, verifies the exact six-row ledger and stored terminal manifest, re-projects the sequence-6 catalog, rejects role, membership, schema, and PUBLIC ACL drift, and only then creates the verifier role and edges in the same transaction. Migration `0007-denial-backend-verifier` installs the boolean-only backend correlation helper. Identical migration replay re-projects the current catalog and accepts a no-op only when its hash equals the stored manifest hash.
 
@@ -74,7 +74,7 @@ The current WP-8 PostgreSQL 16.15 identities are:
 
 **2026-09-16 PT-APP-001D amendment.** Job restart and durable JobGet retain the latest committed checkpoint across attempt increments. The prototype remains inactive and empty-database-only, so sequences 2 and 6 were re-baselined in place; sequence 3 through 5 SQL bytes remain unchanged and their cumulative manifest hashes inherit the sequence-2 root.
 
-**2026-09-24 DEC-081 amendment.** Sequence 2 adds controlled `job_succeed(jsonb)` for the bounded fixture and analytics owner composition, and sequence 6 grants its execution only to `app_runtime`. `portfolio_get` returns `portfolioVersion` as the canonical application String UInt. The prototype remains inactive and empty-database-only, so sequences 2 and 6 were re-baselined in place; sequence 3 through 5 and 7 SQL bytes remain unchanged and their cumulative manifest hashes inherit the new sequence-2 and sequence-6 roots. No new migration sequence, candidate version, SQL Server work, release, deployment, or production authority is introduced.
+**2026-09-23 DEC-081 amendment.** Sequence 2 adds controlled `job_succeed(jsonb)` for the bounded fixture and analytics owner composition, and sequence 6 grants its execution only to `app_runtime`. `portfolio_get` returns `portfolioVersion` as the canonical application String UInt. The prototype remains inactive and empty-database-only, so sequences 2 and 6 were re-baselined in place; sequence 3 through 5 and 7 SQL bytes remain unchanged and their cumulative manifest hashes inherit the new sequence-2 and sequence-6 roots. No new migration sequence, candidate version, SQL Server work, release, deployment, or production authority is introduced.
 
 Each migration is one transaction under a transaction-scoped advisory lock derived from UTF-8 `etf:v1.0.0-prototype.1:migrations`. Before DDL, the deployment runner verifies the migration identity, ascending sequence, and lowercase SHA-256 of exact UTF-8 SQL bytes. A successful transaction inserts exactly one `schema_migrations` row with `sequence`, `migration_id`, `content_hash`, `applied_at`, and resulting `schema_manifest_hash`. A repeated identical identity/hash is a no-op; a missing, reordered, duplicate, changed, or unknown migration fails readiness with `APPLICATION_MIGRATIONS_INCOMPLETE` and performs no implicit repair.
 

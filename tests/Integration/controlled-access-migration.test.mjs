@@ -45,7 +45,7 @@ const lockSql =
 const unlockSql =
   "SELECT pg_catalog.pg_advisory_unlock(pg_catalog.hashtextextended('etf:test:role-bootstrap', 0))";
 const controlledAccessContentHash = "d8ad459296b049ce681a216573159b09d3f95be9297af727f1335b6da75c738a";
-const controlledAccessManifestHash = "9ec929080517cdf491139537eb9501d701b6c973c77ff8473c2bd2cee548b3d0";
+const controlledAccessManifestHash = "d35a8d12cf8166f4c85b21544949fbe06810c0f474e3efb35950a6f1a1f71b24";
 
 async function cleanBootstrap(client) {
   await client.query("ROLLBACK").catch(() => undefined);
@@ -511,13 +511,13 @@ test(
       assert.deepEqual(
         migrations.rows,
         [
-          { sequence: 1, migration_id: "0001-foundation", content_hash: "a604802a67bed66c6ce79d2f2f856b48e184ae5b4f76803ab8ead3a135c85291", schema_manifest_hash: "f488702c6e34dac01152ddc3f94f3856bf64156dfba3f1e0a81811db1052e0d6" },
-          { sequence: 2, migration_id: "0002-application", content_hash: "6ad48f730617fadff8ae80d58171c84707d9159af8f0186e71538861d92d730a", schema_manifest_hash: "c043fad160e0b6690971b6cc4e9ffc8d10ca74a879a43360f86872c1f8eaf8c1" },
-          { sequence: 3, migration_id: "0003-domain-ledger", content_hash: "c5da21109969595e17dfb7b31e5c45296324b6d20caf1f1debdb1a70ea84a496", schema_manifest_hash: "50fb07d7aeb7a51f8b985c6c53f8c1a2ef5707220032355bcd62769856076f13" },
-          { sequence: 4, migration_id: "0004-fixtures", content_hash: "9bf81885aab5fafe8bcac9b372d7bbd0bec601fc29e0cdbc234a65fc3d5489f1", schema_manifest_hash: "b19029387e1aae294efc28e8985573bf0bff9872ff05968228a0a70452915cf7" },
-          { sequence: 5, migration_id: "0005-analytics-evidence", content_hash: "2a848c629d66a7e3e2621ea065f684a94fc82acb9b7e85477a228c30c8ed8001", schema_manifest_hash: "9cec7c53e45b418d389abe4a8f85ad8a1e7930e253e7ac9580a1e15b3bb87e64" },
-          { sequence: 6, migration_id: "0006-controlled-access", content_hash: "d8ad459296b049ce681a216573159b09d3f95be9297af727f1335b6da75c738a", schema_manifest_hash: "9ec929080517cdf491139537eb9501d701b6c973c77ff8473c2bd2cee548b3d0" },
-          { sequence: 7, migration_id: "0007-denial-backend-verifier", content_hash: "0d07358c3056885e15ba190681402a381ed71485beb35e3b9088cc8d107b1340", schema_manifest_hash: "e6791ce150824592fcfb288c05c11342c61dfeb9f7bb3dda72e1a3a85930ee38" },
+          { sequence: 1, migration_id: "0001-foundation", content_hash: "a604802a67bed66c6ce79d2f2f856b48e184ae5b4f76803ab8ead3a135c85291", schema_manifest_hash: "f6be4a872519869b56b35d084377af52811eaef5b123b0cac6410ad29ba6f235" },
+          { sequence: 2, migration_id: "0002-application", content_hash: "6ad48f730617fadff8ae80d58171c84707d9159af8f0186e71538861d92d730a", schema_manifest_hash: "0fde1bcd49ac6dbcf6db036b7110c1c61c1bddd6e534c9fc27f9c5fe18b80e3e" },
+          { sequence: 3, migration_id: "0003-domain-ledger", content_hash: "c5da21109969595e17dfb7b31e5c45296324b6d20caf1f1debdb1a70ea84a496", schema_manifest_hash: "78e552a59866cc93bf6e4b198e5a99b1cd53dae96c6aba805afced93d83c07a4" },
+          { sequence: 4, migration_id: "0004-fixtures", content_hash: "9bf81885aab5fafe8bcac9b372d7bbd0bec601fc29e0cdbc234a65fc3d5489f1", schema_manifest_hash: "efd8177a365c073cb11a914fd66c5adc2fa53339d9aefbc47e8b41b00016ef08" },
+          { sequence: 5, migration_id: "0005-analytics-evidence", content_hash: "2a848c629d66a7e3e2621ea065f684a94fc82acb9b7e85477a228c30c8ed8001", schema_manifest_hash: "51dd362827c52929203cc465a75e791a2a995627e9989867580cb702d97b4990" },
+          { sequence: 6, migration_id: "0006-controlled-access", content_hash: "d8ad459296b049ce681a216573159b09d3f95be9297af727f1335b6da75c738a", schema_manifest_hash: "d35a8d12cf8166f4c85b21544949fbe06810c0f474e3efb35950a6f1a1f71b24" },
+          { sequence: 7, migration_id: "0007-denial-backend-verifier", content_hash: "0d07358c3056885e15ba190681402a381ed71485beb35e3b9088cc8d107b1340", schema_manifest_hash: "e7db4b10fc5464692009f66c303163a5a3d7690897e5fc6cc393ee479476debb" },
         ],
       );
     } finally {

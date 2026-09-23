@@ -5,6 +5,8 @@
 **Status:** Accepted under REV-180 and REV-181
 **Scope:** CT-DB-001I only
 
+> **Superseded identity notice (2026-09-23):** The SQL/schema-manifest identities recorded below are stale historical evidence. DEC-086 and `wp-8-postgresql-manifest-reconciliation.md` are the current seven-row identity authority. Behavioral history remains preserved.
+
 ## Analytics Admission And Publication
 
 The canonical `CT-DB-001I analytics evidence publishes only complete verified bundles` parent runs under Node 20 and serially dispatches two exact owner tests: complete state preservation and ranked validation precedence. The positive baseline persists exact input, evidence, and manifest identities, including `input-fixture-1`, `evidence-fixture-1`, and `manifest-fixture-1`.

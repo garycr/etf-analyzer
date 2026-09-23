@@ -5,8 +5,8 @@
 **Owner:** Team Lead
 **Governance verifier:** Solo Orchestrator
 **Independent verification:** Complete - REV-019 and REV-027 PASS
-**Architecture status:** Proposed
-**Implementation status:** Partial; WP-1 durable-storage foundations, WP-2 fixture input, and the WP-3 application boundary are executable. WP-4 through WP-8 product surfaces remain pending. Governance automation and planning artifacts are not ETF product surfaces unless they consume or expose the prototype candidate contract.
+**Architecture status:** Historical contract inventory with implemented-state overlay in `docs/Architecture/wp-8-implemented-state.md`; unimplemented target views remain Proposed
+**Implementation status:** WP-1 through WP-7 are closed under their recorded decisions. WP-8 is an executable Ring 2 integration candidate with review hardening and DP-33 still open; release, deployment, and production remain unauthorized. Governance automation and planning artifacts are not ETF product surfaces unless they consume or expose the prototype candidate contract.
 
 ## Purpose
 

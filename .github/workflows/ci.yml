@@ -58,6 +58,9 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: WP-8 PostgreSQL parents with zero skips
+        run: npm run test:postgres:wp8
+
       - name: WP-8 coverage gate
         run: npm run test:coverage:wp8
 

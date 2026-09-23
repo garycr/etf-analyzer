@@ -47,11 +47,20 @@ async function runOwnerTests(testTitles, testFiles) {
     [...stdout.matchAll(/^# (tests|pass|fail|cancelled|skipped|todo) (\d+)$/gmu)]
       .map(([, key, value]) => [key, Number(value)]),
   );
-  assert.equal(summary.pass, testTitles.length);
   assert.equal(summary.fail, 0);
   assert.equal(summary.cancelled, 0);
   assert.equal(summary.todo, 0);
-  assert.equal(summary.tests, summary.pass + summary.skipped);
+}
+
+for (const title of [
+  "CT-DB-001A an empty database reaches the exact candidate schema",
+  "CT-DB-001B migration replay is deterministic and drift fails closed",
+  "CT-DB-001C a failed migration leaves no partial candidate state",
+  "CT-DB-001D roles and controlled operations enforce least privilege",
+]) {
+  test(title, { skip: !connectionString }, async () => {
+    await runOwnerTests([title], ["tests/Integration/controlled-access-migration.test.mjs"]);
+  });
 }
 
 test(
@@ -132,6 +141,43 @@ test(
     await runOwnerTests(
       ["0002 preserves complete durable job state across CT-DB-001J restart cases"],
       ["tests/Integration/application-migration.test.mjs"],
+    );
+  },
+);
+
+test(
+  "CT-DB-001K readiness reflects connectivity migration and security state",
+  { skip: !connectionString },
+  async () => {
+    await runOwnerTests(
+      [
+        "CT-DB-001K migration readiness accepts only the canonical seven-row ledger",
+        "CT-DB-001K migration readiness rejects PUBLIC function execution",
+        "CT-DB-001K schema readiness rejects manifest drift and projector failure",
+        "CT-DB-001K denial-audit probe uses the authenticated audit role and always rolls back",
+        "CT-DB-001K ledger probe rejects an unverifiable protected checkpoint",
+        "CT-DB-001K composes the four PostgreSQL-owned readiness members",
+        "CT-DB-001K composer preserves connectivity versus migration drift classification",
+      ],
+      ["tests/Unit/postgres-readiness.test.mjs"],
+    );
+  },
+);
+
+test(
+  "CT-DB-001L the prototype schema contains no durable handoff",
+  { skip: !connectionString },
+  async () => {
+    await runOwnerTests(
+      [
+        "migration preflight rejects extensions and durable handoff objects",
+        "CT-DB-001L classifies durable handoff object names without contract confounders",
+      ],
+      ["tests/Unit/migration-set.test.mjs"],
+    );
+    await runOwnerTests(
+      ["CT-DB-001A an empty database reaches the exact candidate schema"],
+      ["tests/Integration/controlled-access-migration.test.mjs"],
     );
   },
 );

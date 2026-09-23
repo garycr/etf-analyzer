@@ -353,7 +353,7 @@ test(
       );
       assert.equal(
         applicationApplied.schemaManifestHash,
-        "c043fad160e0b6690971b6cc4e9ffc8d10ca74a879a43360f86872c1f8eaf8c1",
+        "0fde1bcd49ac6dbcf6db036b7110c1c61c1bddd6e534c9fc27f9c5fe18b80e3e",
       );
       assert.equal(Buffer.byteLength(applicationManifest, "utf8"), 8264);
       const manifest = JSON.parse(applicationManifest);

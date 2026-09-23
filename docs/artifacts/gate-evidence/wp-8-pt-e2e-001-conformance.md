@@ -1,9 +1,11 @@
 # WP-8 PT-E2E-001 Conformance Evidence
 
-**Date:** 2026-09-24
+**Date:** 2026-09-23
 **Decision:** DEC-081
 **Status:** Accepted under REV-184 and REV-185
 **Scope:** PT-E2E-001 local greenfield PostgreSQL composition only
+
+> **Superseded identity notice (2026-09-23):** The schema-manifest table recorded below is stale. DEC-086 and `wp-8-postgresql-manifest-reconciliation.md` are the current seven-row identity authority. Behavioral history remains preserved.
 
 ## Canonical Workflow
 

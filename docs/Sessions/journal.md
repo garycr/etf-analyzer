@@ -6,6 +6,18 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-24 | Post-push CI coverage parser corrected | Ring-2 | @solo-orchestrator
+
+**Type:** GATE
+**Decision:** Keep Ring 2 active and correct ANSI handling in the WP-8 coverage parser after pushed CI run 35939531225 failed
+**Policy:** Test-before-present; fail-closed coverage; post-push publication integrity; DEC-089
+**Authority:** Solo Orchestrator under Fully Agentic remediation authority; production DP-25 not invoked
+**Accountability:** Add a failing ANSI-decorated report test, normalize ANSI before structural parsing, rerun local and pushed controls, and retain the Plaid blocker
+**Result:** Regression failed with ANSI bytes embedded in parsed paths; focused parser and `FORCE_COLOR=1` full coverage gates pass after normalization; follow-up CI verification pending
+**authorization-boundary:** Ring 2 remains active; no Ring 3 execution, release, deployment, production, provider, broker, public ingress, durable handoff, or SQL Server migration/conversion is authorized
+
+---
+
 ## 2026-09-23 | Ring 2 final Plaid action blocked | Ring-2 | @solo-orchestrator
 
 **Type:** GATE

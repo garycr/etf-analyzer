@@ -85,4 +85,13 @@ test("PT-COVERAGE-001 parses complete paths and rejects missing or sub-threshold
     () => assertBusinessCoverage(report, []),
     /No compiled Domain or Application/u,
   );
+
+  const flatReport = [
+    "\u001B[36mℹ\u001B[39m dist/Application/analytics-evidence-service.js | 91.43 | 81.16 | 100.00 |",
+    "\u001B[36mℹ\u001B[39m dist/Domain/Analytics/analytics.js | 90.09 | 87.02 | 88.33 |",
+  ].join("\n");
+  assert.deepEqual([...parseLineCoverage(flatReport)], [
+    ["dist/Application/analytics-evidence-service.js", 91.43],
+    ["dist/Domain/Analytics/analytics.js", 90.09],
+  ]);
 });

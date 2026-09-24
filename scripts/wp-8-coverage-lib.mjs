@@ -2,6 +2,7 @@ import { readdirSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 
 const normalizePath = (path) => path.split(sep).join("/");
+const stripAnsi = (text) => text.replace(/\u001B\[[0-?]*[ -/]*[@-~]/gu, "");
 
 const walkJavaScriptFiles = (directory) => readdirSync(directory, { withFileTypes: true })
   .flatMap((entry) => {
@@ -20,7 +21,8 @@ export const parseLineCoverage = (report) => {
   const paths = [];
   const coverage = new Map();
 
-  for (const line of report.split("\n")) {
+  for (const rawLine of report.split("\n")) {
+    const line = stripAnsi(rawLine);
     const match = line.match(/^(?:ℹ )?( *)([^|]+?)\s+\|\s*([^|]*)\|/u);
     if (match === null) {
       continue;

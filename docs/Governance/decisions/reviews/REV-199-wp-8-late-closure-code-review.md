@@ -18,6 +18,8 @@ No Critical or Major finding. The reviewer reported two Minor observations: a de
 - Coverage: 86.40% lines, 85.61% branches, 83.10% functions.
 - Security audit, SAST, secret scan, evidence generation, pushed CodeQL, and downloaded evidence provenance: pass.
 
+Post-push CI run 35939531225 exposed ANSI-decorated Node coverage output that the parser did not normalize. A focused regression reproduced the exact path mismatch, ANSI normalization was added before parsing, and both the focused parser test and color-forced full coverage gate passed. Ring 2 remains active pending successful follow-up CI and the mandatory Plaid action.
+
 ## Boundary
 
 This review supports DEC-089 only. It grants no Ring 3, release, deployment, production, provider, broker, public-ingress, durable-handoff, or SQL Server migration/conversion authority.

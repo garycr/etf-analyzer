@@ -560,10 +560,10 @@ test(
         )],
         ["schema owner", () => client.query("ALTER SCHEMA etf OWNER TO postgres")],
         ["PUBLIC database CONNECT", () => client.query(
-          "GRANT CONNECT ON DATABASE postgres TO PUBLIC",
+          "DO $$ BEGIN EXECUTE format('GRANT CONNECT ON DATABASE %I TO PUBLIC', current_database()); END $$",
         )],
         ["PUBLIC database TEMPORARY", () => client.query(
-          "GRANT TEMPORARY ON DATABASE postgres TO PUBLIC",
+          "DO $$ BEGIN EXECUTE format('GRANT TEMPORARY ON DATABASE %I TO PUBLIC', current_database()); END $$",
         )],
         ["PUBLIC schema USAGE", () => client.query(
           "GRANT USAGE ON SCHEMA etf TO PUBLIC",

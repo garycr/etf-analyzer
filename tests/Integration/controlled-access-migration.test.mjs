@@ -44,8 +44,8 @@ const lockSql =
   "SELECT pg_catalog.pg_advisory_lock(pg_catalog.hashtextextended('etf:test:role-bootstrap', 0))";
 const unlockSql =
   "SELECT pg_catalog.pg_advisory_unlock(pg_catalog.hashtextextended('etf:test:role-bootstrap', 0))";
-const controlledAccessContentHash = "d8ad459296b049ce681a216573159b09d3f95be9297af727f1335b6da75c738a";
-const controlledAccessManifestHash = "d35a8d12cf8166f4c85b21544949fbe06810c0f474e3efb35950a6f1a1f71b24";
+const controlledAccessContentHash = "69edc73adca240b45af423ee4d4725b1999692b561e9d3d79bcd8cc6bede81cb";
+const controlledAccessManifestHash = "91d0b8b2c12284b2d1fe481242388a32668424309e74ef2f82f1850d62f6a4de";
 
 async function cleanBootstrap(client) {
   await client.query("ROLLBACK").catch(() => undefined);
@@ -512,12 +512,12 @@ test(
         migrations.rows,
         [
           { sequence: 1, migration_id: "0001-foundation", content_hash: "a604802a67bed66c6ce79d2f2f856b48e184ae5b4f76803ab8ead3a135c85291", schema_manifest_hash: "f6be4a872519869b56b35d084377af52811eaef5b123b0cac6410ad29ba6f235" },
-          { sequence: 2, migration_id: "0002-application", content_hash: "6ad48f730617fadff8ae80d58171c84707d9159af8f0186e71538861d92d730a", schema_manifest_hash: "0fde1bcd49ac6dbcf6db036b7110c1c61c1bddd6e534c9fc27f9c5fe18b80e3e" },
-          { sequence: 3, migration_id: "0003-domain-ledger", content_hash: "c5da21109969595e17dfb7b31e5c45296324b6d20caf1f1debdb1a70ea84a496", schema_manifest_hash: "78e552a59866cc93bf6e4b198e5a99b1cd53dae96c6aba805afced93d83c07a4" },
-          { sequence: 4, migration_id: "0004-fixtures", content_hash: "9bf81885aab5fafe8bcac9b372d7bbd0bec601fc29e0cdbc234a65fc3d5489f1", schema_manifest_hash: "efd8177a365c073cb11a914fd66c5adc2fa53339d9aefbc47e8b41b00016ef08" },
-          { sequence: 5, migration_id: "0005-analytics-evidence", content_hash: "2a848c629d66a7e3e2621ea065f684a94fc82acb9b7e85477a228c30c8ed8001", schema_manifest_hash: "51dd362827c52929203cc465a75e791a2a995627e9989867580cb702d97b4990" },
-          { sequence: 6, migration_id: "0006-controlled-access", content_hash: "d8ad459296b049ce681a216573159b09d3f95be9297af727f1335b6da75c738a", schema_manifest_hash: "d35a8d12cf8166f4c85b21544949fbe06810c0f474e3efb35950a6f1a1f71b24" },
-          { sequence: 7, migration_id: "0007-denial-backend-verifier", content_hash: "0d07358c3056885e15ba190681402a381ed71485beb35e3b9088cc8d107b1340", schema_manifest_hash: "e7db4b10fc5464692009f66c303163a5a3d7690897e5fc6cc393ee479476debb" },
+          { sequence: 2, migration_id: "0002-application", content_hash: "e944f4c75488cba07045595b1769517ddfc369b6828b747091cc9774464fdb8d", schema_manifest_hash: "0418e808ca3d371e273b7500c8f836bf2cc5a06b613b1c50c40da579ed592e01" },
+          { sequence: 3, migration_id: "0003-domain-ledger", content_hash: "c5da21109969595e17dfb7b31e5c45296324b6d20caf1f1debdb1a70ea84a496", schema_manifest_hash: "ed2b0c90c02e7eb39a2818ee890f41713475ed7ef2e19e90569bd54f37c2d9f3" },
+          { sequence: 4, migration_id: "0004-fixtures", content_hash: "9bf81885aab5fafe8bcac9b372d7bbd0bec601fc29e0cdbc234a65fc3d5489f1", schema_manifest_hash: "d6e0e28b925a9dbad5375a2042b3bd84d7e26cb3861a1f45e8d4a52175f01009" },
+          { sequence: 5, migration_id: "0005-analytics-evidence", content_hash: "2a848c629d66a7e3e2621ea065f684a94fc82acb9b7e85477a228c30c8ed8001", schema_manifest_hash: "05f956d422453a53346b7ac1280d801bd3eb47211817bfd13fc9cc8060d34e95" },
+          { sequence: 6, migration_id: "0006-controlled-access", content_hash: "69edc73adca240b45af423ee4d4725b1999692b561e9d3d79bcd8cc6bede81cb", schema_manifest_hash: "91d0b8b2c12284b2d1fe481242388a32668424309e74ef2f82f1850d62f6a4de" },
+          { sequence: 7, migration_id: "0007-denial-backend-verifier", content_hash: "0d07358c3056885e15ba190681402a381ed71485beb35e3b9088cc8d107b1340", schema_manifest_hash: "690a7efe18d5279f84ca5c7af3cf507a1bcc2a38841a1d3b3a622cbae9f3dc43" },
         ],
       );
     } finally {
@@ -947,7 +947,11 @@ test(
       const job = await client.query(
         "SELECT etf.job_get('10000000-0000-0000-0000-000000000001') AS result",
       );
-      assert.equal(job.rows[0].result.job.checkpoint.sequence, 0);
+      assert.equal(job.rows[0].result.job.attempt, "2");
+      assert.equal(job.rows[0].result.job.checkpoint.attempt, "1");
+      assert.equal(job.rows[0].result.job.checkpoint.sequence, "0");
+      assert.equal(job.rows[0].result.job.acceptedCount, "0");
+      assert.equal(job.rows[0].result.job.rejectedCount, "0");
       const order = await client.query(
         "SELECT etf.paper_order_get('20000000-0000-0000-0000-000000000001') AS result",
       );

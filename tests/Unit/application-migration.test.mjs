@@ -29,7 +29,7 @@ test("0002 application has the exact identity and closed table set", () => {
   ]);
   assert.equal(
     createHash("sha256").update(applicationMigration.sql, "utf8").digest("hex"),
-    "6ad48f730617fadff8ae80d58171c84707d9159af8f0186e71538861d92d730a",
+    "e944f4c75488cba07045595b1769517ddfc369b6828b747091cc9774464fdb8d",
   );
 });
 
@@ -91,6 +91,9 @@ test("0002 application enforces replay, job, checkpoint, and readiness invariant
   assert.match(sql, /IF session_user <> 'app_runtime'/);
   assert.match(sql, /accepted_count > 9007199254740991/);
   assert.match(sql, /rejected_count > 9007199254740991/);
+  assert.match(sql, /'attempt', created_job\.attempt::text/);
+  assert.match(sql, /'acceptedCount', created_job\.accepted_count::text/);
+  assert.match(sql, /'rejectedCount', created_job\.rejected_count::text/);
   assert.match(sql, /SET status = 'Running'/);
   assert.match(sql, /SET status = 'Succeeded'/);
   assert.match(sql, /APPLICATION_JOB_MISMATCH/);

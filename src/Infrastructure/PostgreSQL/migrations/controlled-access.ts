@@ -210,8 +210,8 @@ BEGIN
   END IF;
   SELECT jsonb_build_object(
            'checkpointId', checkpoint.checkpoint_id,
-           'attempt', checkpoint.attempt,
-           'sequence', checkpoint.sequence,
+           'attempt', checkpoint.attempt::text,
+           'sequence', checkpoint.sequence::text,
            'committedAt', to_char(checkpoint.committed_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
            'contentHash', checkpoint.content_hash
          )
@@ -226,7 +226,7 @@ BEGIN
     'jobType', job_row.job_type,
     'status', job_row.status,
     'restartability', job_row.restartability,
-    'attempt', job_row.attempt,
+    'attempt', job_row.attempt::text,
     'operation', job_row.operation,
     'originalCommandId', job_row.original_command_id,
     'inputIdentity', job_row.input_identity,
@@ -234,8 +234,8 @@ BEGIN
     'startedAt', CASE WHEN job_row.started_at IS NULL THEN NULL ELSE to_jsonb(to_char(job_row.started_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')) END,
     'completedAt', CASE WHEN job_row.completed_at IS NULL THEN NULL ELSE to_jsonb(to_char(job_row.completed_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')) END,
     'checkpoint', checkpoint_value,
-    'acceptedCount', job_row.accepted_count,
-    'rejectedCount', job_row.rejected_count,
+    'acceptedCount', job_row.accepted_count::text,
+    'rejectedCount', job_row.rejected_count::text,
     'controllingError', job_row.controlling_error
   ));
 END;

@@ -206,3 +206,44 @@ test("workflow owner reads portfolios and closes unknown PostgreSQL failures", a
     (error) => error.code === "APPLICATION_DEPENDENCY_UNAVAILABLE",
   );
 });
+
+test("workflow owner rejects partial PostgreSQL error-token matches", async () => {
+  for (const [code, message] of [
+    ["22023", "APPLICATION_REQUEST_INVALID"],
+    ["22023", "ANALYTICS_INPUT_INCOMPLETE"],
+    ["22023", "ANALYTICS_INTEGRITY_FAILED"],
+    ["22023", "ANALYTICS_NUMERIC_CLASS_INVALID"],
+    ["23505", "APPLICATION_IDEMPOTENCY_CONFLICT"],
+    ["23505", "FIXTURE_IDEMPOTENCY_CONFLICT"],
+    ["23505", "ANALYTICS_IDEMPOTENCY_CONFLICT"],
+    ["40001", "ANALYTICS_PUBLICATION_VERSION_CONFLICT"],
+    ["42501", "permission denied"],
+    ["42501", "ANALYTICS_RIGHTS_RESTRICTED"],
+    ["53100", "ANALYTICS_CAPACITY_BLOCKED"],
+    ["P0001", "APPLICATION_JOB_MISMATCH"],
+    ["P0001", "APPLICATION_JOB_NOT_COMPLETABLE"],
+    ["P0001", "ANALYTICS_EVIDENCE_COMMIT_FAILED"],
+    ["P0002", "APPLICATION_JOB_NOT_FOUND"],
+  ]) {
+    for (const [driftedCode, driftedMessage] of [
+      [code, `${message}_DRIFTED`],
+      ["XX000", message],
+    ]) {
+      await assert.rejects(
+        dispatchPostgresWorkflowOperation(
+          {
+            async query() {
+              throw Object.assign(new Error(driftedMessage), { code: driftedCode });
+            },
+          },
+          { resolveFixture: () => fixtureArtifact, resolveAnalytics: () => undefined },
+          () => "2026-09-22T10:00:02.000Z",
+          definition("FixtureIngestionStart"),
+          fixturePayload,
+          context,
+        ),
+        (error) => error.code === "APPLICATION_DEPENDENCY_UNAVAILABLE",
+      );
+    }
+  }
+});

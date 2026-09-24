@@ -45,7 +45,9 @@
 | DEC-084 | 2026-09-23 | Accessibility acceptance | Accept PT-A11Y-002 after digest-pinned axe, natural keyboard, visible focus, and reflow gates passed at all required viewports | Agent (Fully Agentic) | Solo Orchestrator | Accepted under REV-190/191; WP-8 remains open |
 | DEC-085 | 2026-09-23 | Security acceptance | Accept PT-SEC-001 after dependency, secret, SAST, OSS, and redaction gates passed | Agent (Fully Agentic) | Solo Orchestrator | Accepted under REV-192/193; WP-8 remains open |
 | DEC-086 | 2026-09-23 | PostgreSQL evidence reconciliation | Replace stale recorded schema-manifest roots with the reproducible seven-row live catalog chain | Agent (Fully Agentic) | Solo Orchestrator | Implemented; independent review pending; WP-8 remains open |
-| DEC-087 | 2026-09-23 | Security evidence hardening | Add pinned CodeQL analysis and commit-bound raw security evidence artifacts | Agent (Fully Agentic) | Solo Orchestrator | Implemented; CI verification and independent review pending |
+| DEC-087 | 2026-09-23 | Security evidence hardening | Add pinned CodeQL analysis and commit-bound raw security evidence artifacts | Agent (Fully Agentic) | Solo Orchestrator | Implemented; CI and artifact verified; DP-33 review pending |
+| DEC-088 | 2026-09-23 | Canonical Job UInt contract | Return all public Job UInt values as canonical strings and reproduce the seven-row PostgreSQL identity chain | Agent (Fully Agentic) | Solo Orchestrator | Reviewed and accepted under REV-194/195; WP-8 remains open |
+| DEC-089 | 2026-09-23 | Package and ring closure | Approve bounded WP-8 and Ring 2 completion after mandatory final pre-exit action | Workspace Owner | Solo Orchestrator | Approved; blocked on Plaid session analysis; Ring 3 not authorized |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -85,6 +87,47 @@
 
 ## Decision Records
 
+### DEC-089: Complete WP-8 And Ring 2
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-089 |
+| **Date** | 2026-09-23 |
+| **Category** | Package and ring closure |
+| **Decision** | Approve WP-8 and Ring 2 completion as the bounded executable greenfield PostgreSQL candidate after DP-33 and every final validation control passes |
+| **Policy** | Workspace Owner completion approval; DP-33; WP-8 exit plan; test-before-present; decision traceability; greenfield PostgreSQL-only scope |
+| **Authority** | Workspace Owner explicitly approved WP-8 and Ring 2 completion; Fully Agentic governance owns the recorded gate controls but does not own DP-25 production authority |
+| **Accountability** | Solo Orchestrator publishes the exact validation and review record, preserves REV-164 and original CT-DB-001K invalidated history, verifies commit/push and post-push CI, and grants no Ring 3, release, deployment, production, provider, broker, public-ingress, durable-handoff, or SQL Server authority |
+| **Context** | DP-33 Plan, Architecture, and Security reviews passed with no unresolved Critical/Major. Exact CI-equivalent tests passed, including readiness 1/1, main suite 572 pass with one intentional skip, canonical A-L 12/12, role-bootstrap 20/20, browser accessibility 2/2, coverage above 80%, and all security gates. |
+| **Alternatives** | Keep Ring 2 open despite passing controls; expand into productization; close the bounded candidate. The decision selects bounded closure and retains productization in governed follow-up issues. |
+| **Consequences** | Technical, review, and owner-approval controls are complete. The mandatory Plaid full-window session analysis remains the final pre-exit blocker. The supported launcher/read-owner composition, provider and broker work, public ingress, durable handoff, deployment, release, production, and Ring 3 execution remain separately unauthorized. |
+| **Invalidation** | A failed publication commit, failed post-push CI, hidden Critical/Major, or mismatch between committed source and recorded evidence reopens closure until remediated. |
+| **Linked Artifacts** | `docs/Planning/wp-8-dp-33-gap-analysis.md`; `docs/Quality/ring-2-artifact-compliance.md`; `docs/Quality/ring-2-trust-audit.md`; REV-196; REV-197; REV-198; REV-199; issue #84 |
+| **Status** | Approved for WP-8 and Ring 2 completion; blocked on unavailable `plaid-cl_analyzeSessions`, then publication commit and post-push CI verification |
+
+---
+
+### DEC-088: Normalize Public Job UInt Values
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-088 |
+| **Date** | 2026-09-23 |
+| **Category** | PostgreSQL contract integrity |
+| **Decision** | Cast `attempt`, `acceptedCount`, `rejectedCount`, and checkpoint `attempt` and `sequence` to text in the public `job_start` and `job_get` JSON results, then mechanically reproduce every cumulative schema-manifest root on a fresh digest-pinned PostgreSQL 16.15 database |
+| **Policy** | Canonical Application `UInt` contract; issue #85; DEC-069; CT-DB-001A-L; exact evidence provenance; greenfield PostgreSQL only |
+| **Authority** | Agent under Fully Agentic mode after DP-33 Plan Review classified the owner/test contract inconsistency as Major; this is not DP-1, DP-25, or DP-26 |
+| **Accountability** | Solo Orchestrator validates live Job behavior, updates only current identity authority while preserving superseded evidence, obtains independent Code and Security review, and keeps WP-8 and Ring 2 open until all exit criteria pass |
+| **Context** | PostgreSQL `jsonb_build_object` serialized bigint Job fields as JSON numbers even though the canonical Application contract represents every `UInt` as a decimal string. Migrations 0002 and 0006 own the affected public functions. |
+| **Alternatives** | Tolerate numeric JSON; normalize in each caller; add migration 0008; normalize in the owning SQL functions. The decision selects owner-level normalization in 0002/0006 because candidate.3 is an inactive empty-database-only greenfield prototype with no released or deployed database. |
+| **Consequences** | Public Job values now preserve cross-runtime UInt precision and type consistency; SQL byte identities for 0002 and 0006 change; every cumulative root from sequence 2 changes; candidate.3 and seven-migration scope remain unchanged pending live validation and review. |
+| **Assumptions** | No database built from the prior candidate.3 bytes has been released, deployed, or made authoritative; PostgreSQL 16.15 and the current catalog projector remain the bounded evidence environment. |
+| **Invalidation** | Any numeric public Job UInt, SQL/root mismatch, released prior candidate database, nonzero live failure/skip, or independent review failure invalidates this decision and leaves issue #85 and Ring 2 open. |
+| **Linked Artifacts** | `src/Infrastructure/PostgreSQL/migrations/application.ts`; `src/Infrastructure/PostgreSQL/migrations/controlled-access.ts`; `tests/Integration/application-migration.test.mjs`; `tests/Integration/controlled-access-migration.test.mjs`; `docs/artifacts/gate-evidence/wp-8-postgresql-manifest-reconciliation.md`; REV-194; REV-195; issue #85 |
+| **Status** | Reviewed and accepted under REV-194/195 after focused live tests passed 32/32, owner tests passed 10/10, and canonical A-L passed 12/12 with zero skips under pinned Node 20/PostgreSQL 16.15; WP-8 and Ring 2 remain open |
+
+---
+
 ### DEC-087: Harden Security Analysis And Provenance
 
 | Field | Value |
@@ -102,7 +145,7 @@
 | **Assumptions** | GitHub code scanning is enabled for the repository and the pinned action revisions remain available; 90-day artifact retention is sufficient for this Ring 2 review packet. |
 | **Invalidation** | Floating action references, absent/mismatched raw stream hashes, incomplete CI identity, suppressed failed-gate artifacts, CodeQL execution failure, or unavailable security-event publication invalidates this decision and leaves RH-011/RH-012 open. |
 | **Linked Artifacts** | `.github/workflows/ci.yml`; `scripts/security-evidence-runner.mjs`; `scripts/security-evidence-lib.mjs`; `tests/Unit/security-evidence.test.mjs`; `docs/artifacts/gate-evidence/wp-8-security.md`; `docs/Quality/ring-2-review-hardening.md` |
-| **Status** | Implemented and locally verified; pushed CI evidence and independent review pending |
+| **Status** | Implemented; CI run 35902418187 and downloaded artifact verified; DP-33 reviewer confirmation pending |
 
 ---
 

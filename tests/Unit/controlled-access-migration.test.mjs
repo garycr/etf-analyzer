@@ -90,6 +90,10 @@ test("0006 closes the read and authority surface without new storage", () => {
   assert.match(sql, /CREATE FUNCTION etf\.application_replay_get\(\s+requested_operation text,\s+requested_command_id uuid,\s+requested_canonical_content text\s+\) RETURNS jsonb/u);
   assert.match(sql, /pg_advisory_xact_lock\(pg_catalog\.hashtextextended\(/u);
   assert.match(sql, /CREATE FUNCTION etf\.job_get\(requested_job_id uuid\) RETURNS jsonb/u);
+  assert.match(sql, /'attempt', job_row\.attempt::text/u);
+  assert.match(sql, /'sequence', checkpoint\.sequence::text/u);
+  assert.match(sql, /'acceptedCount', job_row\.accepted_count::text/u);
+  assert.match(sql, /'rejectedCount', job_row\.rejected_count::text/u);
   assert.match(sql, /CREATE FUNCTION etf\.paper_order_get\(requested_order_id uuid\) RETURNS jsonb/u);
   assert.match(sql, /CREATE FUNCTION etf\.paper_order_command_get\(requested_order_id uuid, requested_transition_command_id uuid\) RETURNS jsonb/u);
   assert.match(sql, /CREATE FUNCTION etf\.portfolio_get\(requested_portfolio_id uuid, requested_as_of timestamp with time zone\) RETURNS jsonb/u);

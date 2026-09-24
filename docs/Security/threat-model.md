@@ -1,7 +1,7 @@
 # WP-8 Implemented-Boundary Threat Model
 
 **Last Updated:** 2026-09-23
-**Review State:** Updated after Ring 2 security hardening review; independent re-review pending
+**Review State:** Ring 2 security hardening complete; DEC-088 re-review and DP-33 Security Review PASS; final Plaid action blocked; Ring 3 not authorized
 **Scope:** Single-user browser workbench, loopback HTTP adapter, synchronous Application owners, and greenfield PostgreSQL 16.15
 
 This model covers only the implemented WP-8 candidate. Public ingress, provider egress, Kubernetes, workers, brokers, outbox/queue handoff, deployment, release, and production are absent and are not authorized by this document.
@@ -16,7 +16,7 @@ This model covers only the implemented WP-8 candidate. Public ingress, provider 
 | TB-002 | HTTP adapter to Application | Transport data | Typed operation envelope | Identities, operation, path/query/body payload | Exact envelope reconstruction, command idempotency, closed operation parser, malformed-input rejection |
 | TB-003 | Application to PostgreSQL | Application runtime | Separately owned database objects | Controlled function calls and replay records | `NOINHERIT` login roles, `NOLOGIN` owners, revoked PUBLIC grants, fixed `SECURITY DEFINER` search paths |
 | TB-004 | Migration provisioner to candidate schema | External database owner | Empty `etf` schema | Seven greenfield migrations | Exact migration ledger and manifests, advisory lock, transactional rollback, readiness fail-closed |
-| TB-005 | Repository/CI to evidence | Mutable source and runner | Gate records | Tests, policies, scanner results | Digest-pinned service images/actions, full-history secret scan, tests; immutable CI evidence bundle remains open |
+| TB-005 | Repository/CI to evidence | Mutable source and runner | Gate records | Tests, policies, scanner results | Digest-pinned service images/actions, full-history secret scan, pinned CodeQL, and commit/run/job-bound raw evidence with verified byte counts and SHA-256 hashes |
 
 ## Threat Actors
 
@@ -41,15 +41,15 @@ This model covers only the implemented WP-8 candidate. Public ingress, provider 
 
 | Asset | Threat | Likelihood | Impact | Mitigation | Status |
 |-------|--------|-----------|--------|------------|--------|
-| Migration/evidence ledger | Source or database state diverges from accepted hashes | M | H | Seven-row hashes/manifests, readiness projection, replay/drift tests | Mitigated; aggregate evidence reconciliation open |
-| Gate evidence | Contributor edits summarized results without raw provenance | M | H | Independent review and Git history exist; commit-bound immutable evidence bundle is required | Open; owner: Solo Orchestrator; review: before DP-33 |
+| Migration/evidence ledger | Source or database state diverges from accepted hashes | M | H | Seven-row hashes/manifests, readiness projection, replay/drift tests | Mitigated; DEC-088 accepted under REV-194/195 |
+| Gate evidence | Contributor edits summarized results without raw provenance | M | H | Run 35902418187 artifact binds raw streams to commit/run/job identity with verified byte counts and SHA-256 hashes | Mitigated; DP-33 reviewer confirmation pending |
 
 ### Repudiation
 
 | Asset | Threat | Likelihood | Impact | Mitigation | Status |
 |-------|--------|-----------|--------|------------|--------|
 | Application commands | Caller denies a submitted command | L | M | Request/correlation/command identities and immutable replay/audit records | Mitigated |
-| CI/gate execution | Result cannot be tied to exact commit/tool run | M | H | Current summaries record commands/images; CI run identity and raw-output manifest remain required | Open; owner: Solo Orchestrator; review: before DP-33 |
+| CI/gate execution | Result cannot be tied to exact commit/tool run | M | H | Run 35902418187 and its downloaded artifact match commit `8c362813f1ae3e7857971cba66c6c739d9daa20a`, repository, workflow, job, ref, run, attempt, and raw stream hashes | Mitigated; DP-33 reviewer confirmation pending |
 
 ### Information Disclosure
 
@@ -71,17 +71,17 @@ This model covers only the implemented WP-8 candidate. Public ingress, provider 
 |-------|--------|-----------|--------|------------|--------|
 | Controlled functions | `SECURITY DEFINER` body or `search_path` reaches attacker object | L | H | Fixed qualified bodies, pinned `pg_catalog` search paths, no dynamic SQL, catalog tests | Mitigated |
 | Database login | Runtime inherits owner/admin authority | L | H | `NOINHERIT` login roles, `NOLOGIN` owners, exact memberships and grants | Mitigated |
-| Build scripts | Dynamic code or child process bypass executes unreviewed tools | M | H | TypeScript AST banned-function guardrail | Partially mitigated; broader SAST remains open |
+| Build scripts | Dynamic code or child process bypass executes unreviewed tools | M | H | TypeScript AST banned-function guardrail plus commit-pinned CodeQL JavaScript/TypeScript analysis | Mitigated for the implemented boundary; CodeQL passed with no alerts in run 35902418187 |
 
 ## Risk Summary
 
 | STRIDE Category | Threats Identified | Mitigated | Open | Accepted |
 |----------------|-------------------|-----------|------|----------|
 | Spoofing | 2 | 1 | 0 | 1 |
-| Tampering | 2 | 1 | 1 | 0 |
-| Repudiation | 2 | 1 | 1 | 0 |
+| Tampering | 2 | 2 | 0 | 0 |
+| Repudiation | 2 | 2 | 0 | 0 |
 | Information Disclosure | 2 | 2 | 0 | 0 |
 | Denial of Service | 2 | 1 | 0 | 1 |
-| Elevation of Privilege | 3 | 2 | 1 | 0 |
+| Elevation of Privilege | 3 | 3 | 0 | 0 |
 
-Open risks block Ring 2 hardening PASS until remediated or explicitly dispositioned at DP-33. Accepted local-only risks become open immediately if ingress, identity, deployment, provider, or multi-user boundaries widen.
+No open technical threat-model risk remains for the implemented boundary. Accepted local-only risks become open immediately if ingress, identity, deployment, provider, or multi-user boundaries widen. DEC-088 re-review passed under REV-194/195; DP-33 confirmation remains a governance requirement rather than a mitigation inferred by this document.

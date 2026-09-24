@@ -62,6 +62,29 @@ test("JobRestart owner maps allowlisted PostgreSQL errors", async () => {
   }
 });
 
+test("JobRestart owner rejects partial PostgreSQL error-token matches", async () => {
+  for (const [code, message] of [
+    ["P0001", "APPLICATION_JOB_NOT_RESTARTABLE"],
+    ["P0002", "APPLICATION_JOB_NOT_FOUND"],
+    ["42501", "permission denied"],
+  ]) {
+    for (const [driftedCode, driftedMessage] of [
+      [code, `${message}_DRIFTED`],
+      ["XX000", message],
+    ]) {
+      const client = {
+        async query() {
+          throw Object.assign(new Error(driftedMessage), { code: driftedCode });
+        },
+      };
+      await assert.rejects(
+        dispatchPostgresJobRestart(client, definition, payload, context),
+        (error) => error.code === "APPLICATION_DEPENDENCY_UNAVAILABLE",
+      );
+    }
+  }
+});
+
 test("JobRestart owner closes unknown errors and malformed results", async () => {
   await assert.rejects(
     dispatchPostgresJobRestart(

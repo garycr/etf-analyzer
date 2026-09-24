@@ -3,14 +3,14 @@
 > **Purpose:** CVP briefing artifact. Updated at each Ring completion to reflect what was explored, decided, and delivered. This document does not control ring execution.
 
 **Project:** ETF Analyzer  
-**Last Updated:** 2026-09-17
-**Current Ring:** Ring 2 - Development (WP-1 through WP-4 complete; WP-5 eligible next but not started)
+**Last Updated:** 2026-09-23
+**Current Ring:** Ring 2 completion approved; final Plaid pre-exit action blocked; Ring 3 not authorized
 
 ---
 
 ## 1. Executive Overview
 
-Ring 1 converted the selected MAI-ST strategy into one sequential Tier 1 delivery stream and approved the WP-1..WP-8 WBS, schedule, and cost/token baselines. Ring 2 WP-1 completed the executable foundation, WP-2 deterministic fixture ingestion, and WP-3 the transport-independent application boundary. WP-4 now closes the exact 16-operation loopback API with OpenAPI candidate.3, `CT-API-001A..L`, REV-098/099 PASS, REV-100 conditional PASS, 328 discovered/298 passed/30 environment-skipped/0 failed, and zero audit vulnerabilities. WP-5 is eligible next but not started. Architecture remains Proposed.
+Ring 2 delivered WP-1 through WP-8 as an executable greenfield PostgreSQL integration candidate. Exact PostgreSQL A-L, the fixture-to-analysis-to-confirmed-paper-order workflow, 16-route API behavior, coverage, accessibility, bounded operations, dependency/secret/CodeQL/redaction gates, and commit-bound evidence provenance pass. DP-33 accepted the absent supported launcher as deferred productization tracked by #88, and DEC-089 records owner approval. Ring 2 remains active because the mandatory final Plaid session-analysis broker is unavailable. Ring 3, release, deployment, and production remain unauthorized.
 
 ---
 
@@ -52,7 +52,7 @@ The Proposed baseline contains C4 Context, Container, and Component views; deplo
 | S-004 | Evidence/telemetry retention and backup method are unresolved | Medium | Operational evidence design remains conditional | #11 and #22 |
 | S-005 | Mermaid renderer/version is not pinned | Low | Visual render portability is unproven | #12 |
 
-No application implementation exists yet; production readiness is not claimed.
+The implemented-state architecture is published in `docs/Architecture/wp-8-implemented-state.md`. Proposed Kubernetes, worker, outbox, provider, production telemetry, backup/restore, and public-ingress views remain future-state only.
 
 ---
 
@@ -70,10 +70,10 @@ No application implementation exists yet; production readiness is not claimed.
 
 ## 6. Recommendation
 
-**Production Readiness:** Not Ready - planning only  
-**Ring Recommendation:** Keep Ring 2 active; initialize WP-5 separately as the next sequential package
+**Production Readiness:** Not Ready - executable local candidate only
+**Ring Recommendation:** Run the mandatory full-window Plaid session analysis when the broker is available, journal it as the final non-GATE action, then complete commit/push and post-push CI verification. Do not begin Ring 3 without separate authorization.
 
-Close WP-4 under GitHub issues #75/#76. WP-5 may then be initialized separately; do not treat DEC-039 as WP-5 implementation authority. Do not activate a product baseline, accept Proposed architecture, satisfy WP-8 DP-33, connect a live provider or broker, deploy, release, or take production action.
+Do not activate a product baseline, execute Ring 3, connect a live provider or broker, widen ingress, deploy, release, or take production action from this recommendation.
 
 ### Lessons Learned
 

@@ -1,7 +1,7 @@
 # WP-8 Implemented-State Architecture
 
 **Date:** 2026-09-23  
-**Status:** Implemented Ring 2 candidate; DP-33 and Ring 2 remain open
+**Status:** Implemented Ring 2 candidate; completion approved under DEC-089 but blocked on final Plaid pre-exit action; Ring 3 not authorized
 
 ## Scope
 

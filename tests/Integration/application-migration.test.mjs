@@ -349,11 +349,11 @@ test(
       );
       assert.equal(
         applicationApplied.contentHash,
-        "6ad48f730617fadff8ae80d58171c84707d9159af8f0186e71538861d92d730a",
+        "e944f4c75488cba07045595b1769517ddfc369b6828b747091cc9774464fdb8d",
       );
       assert.equal(
         applicationApplied.schemaManifestHash,
-        "0fde1bcd49ac6dbcf6db036b7110c1c61c1bddd6e534c9fc27f9c5fe18b80e3e",
+        "0418e808ca3d371e273b7500c8f836bf2cc5a06b613b1c50c40da579ed592e01",
       );
       assert.equal(Buffer.byteLength(applicationManifest, "utf8"), 8264);
       const manifest = JSON.parse(applicationManifest);
@@ -553,6 +553,9 @@ test(
         ],
       );
       assert.equal(started.rows[0].result.status, "Pending");
+      assert.equal(started.rows[0].result.attempt, "1");
+      assert.equal(started.rows[0].result.acceptedCount, "0");
+      assert.equal(started.rows[0].result.rejectedCount, "0");
       await assert.rejects(
         () =>
           client.query("SELECT etf.job_start($1::jsonb)", [

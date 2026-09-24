@@ -384,7 +384,7 @@ BEGIN
     'jobType', created_job.job_type,
     'status', created_job.status,
     'restartability', created_job.restartability,
-    'attempt', created_job.attempt,
+    'attempt', created_job.attempt::text,
     'operation', created_job.operation,
     'originalCommandId', created_job.original_command_id,
     'inputIdentity', created_job.input_identity,
@@ -392,8 +392,8 @@ BEGIN
     'startedAt', NULL,
     'completedAt', NULL,
     'checkpoint', NULL,
-    'acceptedCount', created_job.accepted_count,
-    'rejectedCount', created_job.rejected_count,
+    'acceptedCount', created_job.accepted_count::text,
+    'rejectedCount', created_job.rejected_count::text,
     'controllingError', NULL
   );
 EXCEPTION

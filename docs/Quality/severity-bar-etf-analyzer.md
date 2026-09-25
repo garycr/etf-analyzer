@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-23  
 **Scope:** WP-1 through WP-8 implementation and aggregate review-hardening findings  
-**Status:** PASS under REV-196/197/198; DEC-089 approval recorded; final Plaid action blocked
+**Status:** PASS under REV-196/197/198; DEC-089 approval and final Plaid completion recorded
 
 ## Severity Bar
 

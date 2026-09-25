@@ -48,6 +48,7 @@
 | DEC-087 | 2026-09-23 | Security evidence hardening | Add pinned CodeQL analysis and commit-bound raw security evidence artifacts | Agent (Fully Agentic) | Solo Orchestrator | Implemented; CI and artifact verified; DP-33 review pending |
 | DEC-088 | 2026-09-23 | Canonical Job UInt contract | Return all public Job UInt values as canonical strings and reproduce the seven-row PostgreSQL identity chain | Agent (Fully Agentic) | Solo Orchestrator | Reviewed and accepted under REV-194/195; WP-8 remains open |
 | DEC-089 | 2026-09-23 | Package and ring closure | Approve bounded WP-8 and Ring 2 completion after mandatory final pre-exit action | Workspace Owner | Solo Orchestrator | Approved; blocked on Plaid session analysis; Ring 3 not authorized |
+| DEC-090 | 2026-09-25 | Ring gate publication | Accept successful final Plaid analysis and require committed post-push verification before Ring 3 entry | Agent (Fully Agentic) | Solo Orchestrator | Approved; publication verification pending |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -86,6 +87,26 @@
 ---
 
 ## Decision Records
+
+### DEC-090: Publish Ring 2 Closure Before Ring 3 Entry
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-090 |
+| **Date** | 2026-09-25 |
+| **Category** | Ring gate publication |
+| **Decision** | Accept the successful 15-day `plaid-cl_analyzeSessions` result as the final Ring 2 `WORK` action, publish the closure bundle, and open Ring 3 only after post-push CI verifies the committed evidence |
+| **Policy** | Ring 2 final pre-exit action; WP-8 exit criteria; test-before-present; Fully Agentic gate evaluation; fail-closed publication integrity |
+| **Authority** | Agent (Fully Agentic), following the Workspace Owner directive to continue through Ring 3; DP-25 and DP-26 remain human-owned and are not invoked |
+| **Accountability** | Solo Orchestrator preserves the exact broker result, commits and pushes only the governed closure bundle, verifies post-push CI, and records Ring 3 entry under issue #92 without inferring release or deployment authority |
+| **Context** | Plaid CL 1.9.11 initially returned zero because it does not discover VS Code Server transcript storage. A reversible user-data compatibility projection exposed the same transcript events without changing repository or extension source. The broker then analyzed 7 signal sets, 20,917 tool calls, 325 rejected/error calls, and one medium `read_file` cluster at 98.3% acceptance. |
+| **Alternatives** | Treat zero sessions as success; waive Plaid; open Ring 3 before publication; require successful analysis and verified publication. The decision selects the final option. |
+| **Consequences** | The final Ring 2 evidence blocker is cleared. Ring 2 is substantively complete but remains in Review until committed post-push CI passes; Ring 3, release, deployment, and production remain unopened during publication verification. |
+| **Invalidation** | Failed push or CI, evidence mismatch, a later Ring 2 non-GATE action, or a newly discovered Critical/Major requires rerunning Plaid or reopening remediation as applicable. |
+| **Linked Artifacts** | `docs/Sessions/journal.md`; `docs/Planning/ring-status.md`; `docs/Quality/ring-2-artifact-compliance.md`; issue #92 |
+| **Status** | Approved; publication verification pending |
+
+---
 
 ### DEC-089: Complete WP-8 And Ring 2
 

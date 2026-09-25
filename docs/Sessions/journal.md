@@ -6,6 +6,22 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-25 | Ring 2 final Plaid analysis completed | Ring-2 | @solo-orchestrator
+
+**Type:** WORK
+**action:** plaid-cl_analyzeSessions
+**status:** completed
+**days:** 15
+**Decision:** Complete the mandatory final Ring 2 session-analysis action after every technical, review, approval, and remediation control
+**Policy:** Ring 2 final pre-exit action; fail-closed governance; DEC-089; full active-ring analysis window
+**Authority:** Workspace Owner direction to continue through Ring 3 plus Solo Orchestrator execution under Fully Agentic mode
+**Accountability:** Solo Orchestrator records the broker result exactly, publishes the Ring 2 closure bundle, and opens Ring 3 only after commit, push, and post-push CI succeed
+**Result:** Plaid analyzed 7 signal sets across the 15-day window, covering 20,917 tool calls with 325 rejected/error calls and a 98.3% acceptance rate; one medium `read_file` error cluster was reported with no higher-severity cluster
+**Compatibility:** Plaid CL 1.9.11 does not discover VS Code Server transcript storage directly; a reversible user-data compatibility projection exposed the same local transcript events without modifying repository or extension source
+**authorization-boundary:** Ring 2 closure publication is authorized; Ring 3 remains unopened until the committed closure bundle passes post-push CI; release, deployment, production, provider, broker, public ingress, durable handoff, and SQL Server work remain unauthorized
+
+---
+
 ## 2026-09-24 | Post-push CI coverage parser corrected | Ring-2 | @solo-orchestrator
 
 **Type:** GATE
@@ -3314,5 +3330,45 @@
 **Result:** Exact digest PostgreSQL `16.15|UTF8|UTC|on|C`; self-contained live aggregate 21/21 PASS with zero failures/skips and container removal; impossible-ledger unit matrix 6/6 PASS; lint, build, and diff checks PASS; REV-169 PASS with zero findings
 **Artifacts:** DEC-073 | REV-169 | docs/artifacts/gate-evidence/wp-8-ct-db-001a-c-conformance.md | DEC-072 | REV-168 | GitHub issue #84
 **authorization-boundary:** CT-DB-001A-C only; CT-DB-001D..J, PT-E2E-001, WP-8 closure, DP-33, Ring 2 closure, release, deployment, and production remain open or unauthorized
+
+---
+
+## 2026-09-24T01:19:18 | WORK-023 | Ring-0 | @extension
+
+**Type:** WORK
+**action:** extension-activated
+**version:** 13.2.0
+**workspace:** etf-analyzer [WSL: Ubuntu]
+**duration-ms:** 9
+
+---
+
+## 2026-09-24T01:26:53 | WORK-024 | Ring-0 | @extension
+
+**Type:** WORK
+**action:** extension-activated
+**version:** 13.2.0
+**workspace:** etf-analyzer [WSL: Ubuntu]
+**duration-ms:** 8
+
+---
+
+## 2026-09-25T16:31:28 | WORK-025 | Ring-0 | @extension
+
+**Type:** WORK
+**action:** extension-activated
+**version:** 13.2.0
+**workspace:** etf-analyzer [WSL: Ubuntu]
+**duration-ms:** 11
+
+---
+
+## 2026-09-25T16:33:00 | WORK-026 | Ring-0 | @extension
+
+**Type:** WORK
+**action:** extension-activated
+**version:** 13.2.0
+**workspace:** etf-analyzer [WSL: Ubuntu]
+**duration-ms:** 8
 
 ---

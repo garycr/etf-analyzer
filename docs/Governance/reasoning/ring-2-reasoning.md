@@ -139,3 +139,29 @@
 **Invalidation criteria:** Any DP-33 reviewer classifies the launcher/read-owner omission as an unresolved Major or finds another Critical/Major gap.
 
 **Outcome:** Accepted under DP-33 and approved in DEC-089, but Ring 2 remains active because the mandatory final `plaid-cl_analyzeSessions` broker action is unavailable. Productization remains deferred; Ring 3, release, deployment, and production are not authorized.
+
+---
+
+## RSN-007: Ring 2 Publication Boundary
+
+| Field | Value |
+| --- | --- |
+| **ID** | RSN-007 |
+| **Ring** | Ring-2 |
+| **Date** | 2026-09-25 |
+| **Trigger** | Gate disposition |
+| **Related** | DEC-089; DEC-090; issue #92 |
+
+**Question:** Does a successful full-window Plaid analysis immediately open Ring 3, or must the closure bundle first be published and verified?
+
+**Constraints considered:** The Ring 2 plan requires Plaid as the final `WORK` action; WP-8 exit requires committed and pushed evidence before transition; failed post-push CI invalidates closure.
+
+**Trade-offs evaluated:** Open Ring 3 immediately - rejected; retain the stale blocker - rejected; mark Ring 2 complete in substance but keep Ring 3 unopened until commit, push, and post-push CI verify the exact bundle - selected.
+
+**Reasoning:** The 15-day Plaid action successfully analyzed seven signal sets, 20,917 tool calls, and one medium error cluster. Publication controls establish that the reviewed evidence, not an uncommitted working tree, is the transition authority.
+
+**Assumptions:** The closure-only commit preserves all passing source and test evidence and post-push CI verifies that commit.
+
+**Invalidation criteria:** A failed commit, push, CI run, hidden Critical/Major, or mismatch between recorded and published evidence returns Ring 2 to active remediation.
+
+**Outcome:** Ring 2 is 100% and in Review with Plaid complete. Ring 3 remains not started until publication verification passes.

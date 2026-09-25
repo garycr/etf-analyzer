@@ -3,14 +3,14 @@
 > **Purpose:** CVP briefing artifact. Updated at each Ring completion to reflect what was explored, decided, and delivered. This document does not control ring execution.
 
 **Project:** ETF Analyzer  
-**Last Updated:** 2026-09-23
-**Current Ring:** Ring 2 completion approved; final Plaid pre-exit action blocked; Ring 3 not authorized
+**Last Updated:** 2026-09-25
+**Current Ring:** Ring 2 completion approved; final Plaid action passed; publication verification pending
 
 ---
 
 ## 1. Executive Overview
 
-Ring 2 delivered WP-1 through WP-8 as an executable greenfield PostgreSQL integration candidate. Exact PostgreSQL A-L, the fixture-to-analysis-to-confirmed-paper-order workflow, 16-route API behavior, coverage, accessibility, bounded operations, dependency/secret/CodeQL/redaction gates, and commit-bound evidence provenance pass. DP-33 accepted the absent supported launcher as deferred productization tracked by #88, and DEC-089 records owner approval. Ring 2 remains active because the mandatory final Plaid session-analysis broker is unavailable. Ring 3, release, deployment, and production remain unauthorized.
+Ring 2 delivered WP-1 through WP-8 as an executable greenfield PostgreSQL integration candidate. Exact PostgreSQL A-L, the fixture-to-analysis-to-confirmed-paper-order workflow, 16-route API behavior, coverage, accessibility, bounded operations, dependency/secret/CodeQL/redaction gates, and commit-bound evidence provenance pass. DP-33 accepted the absent supported launcher as deferred productization tracked by #88, and DEC-089 records owner approval. The mandatory 15-day Plaid analysis passed on 2026-09-25. Ring 3 remains unopened until this closure bundle is committed, pushed, and verified by post-push CI; release, deployment, and production remain unauthorized.
 
 ---
 
@@ -71,7 +71,7 @@ The implemented-state architecture is published in `docs/Architecture/wp-8-imple
 ## 6. Recommendation
 
 **Production Readiness:** Not Ready - executable local candidate only
-**Ring Recommendation:** Run the mandatory full-window Plaid session analysis when the broker is available, journal it as the final non-GATE action, then complete commit/push and post-push CI verification. Do not begin Ring 3 without separate authorization.
+**Ring Recommendation:** Commit and push the Plaid-complete Ring 2 closure bundle, verify post-push CI, then open Ring 3 IV&V under issue #92. Do not infer release, deployment, or production authority from the transition.
 
 Do not activate a product baseline, execute Ring 3, connect a live provider or broker, widen ingress, deploy, release, or take production action from this recommendation.
 

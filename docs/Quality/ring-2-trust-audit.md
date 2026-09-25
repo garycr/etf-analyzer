@@ -3,7 +3,7 @@
 **Date:** 2026-09-23  
 **Scope:** Ring 2 WP-1 through WP-8 and closure preparation  
 **Auditor:** Solo Orchestrator (Tier 1)  
-**Status:** PASS WITH RESOLVED EXCEPTION - final Plaid and post-push verification pending
+**Status:** PASS WITH RESOLVED EXCEPTION - final Plaid passed; post-push verification pending
 
 | Check | Status | Notes |
 | --- | --- | --- |
@@ -34,4 +34,4 @@
 
 ## Gate Trust Status
 
-**PASS WITH RESOLVED EXCEPTION.** No unresolved Critical or Major trust violation exists. TE-R2-001 is resolved. The unavailable mandatory Plaid action is a gate blocker, not an accepted trust exception; post-push CI remains a publication-integrity check.
+**PASS WITH RESOLVED EXCEPTION.** No unresolved Critical or Major trust violation exists. TE-R2-001 is resolved. The mandatory 15-day Plaid action completed successfully on 2026-09-25; post-push CI remains the publication-integrity check before Ring 3 opens.

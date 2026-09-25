@@ -3,7 +3,7 @@
 **Date:** 2026-09-23  
 **Tier:** 1 - Small Team, Light, Fully Agentic  
 **Checkpoint:** WP-8 / Ring 2 completion  
-**Status:** CONDITIONAL - technical controls and DP-33 pass; final Plaid pre-exit action unavailable
+**Status:** PASS - technical controls, DP-33, and final Plaid action pass; publication verification pending
 
 ## Ring 2 Inventory
 
@@ -13,8 +13,8 @@
 | 27 Tests | PASS | Unit, integration, PostgreSQL, browser, accessibility, coverage, security, and adversarial runner tests |
 | 28 Code review | PASS | Slice reviews through REV-195 plus DP-33 Plan/Architecture/Security REV-196/197/198 PASS |
 | 29 CI passing | PASS | Run 35902418187; all jobs/steps including CodeQL passed; evidence artifact verified |
-| 30 Decision log | PASS WITH BLOCKER | DEC-069..089 exist; DP-33 PASS; DEC-089 records approval and the unavailable Plaid blocker |
-| 31 Reasoning ledger | PASS | RSN-002..006 published; RSN-006 records approval and the final blocker |
+| 30 Decision log | PASS | DEC-069..090 exist; DP-33 PASS; DEC-089 records owner approval and DEC-090 records the Plaid-complete publication gate |
+| 31 Reasoning ledger | PASS | RSN-002..007 published; RSN-007 records the successful final action and publication boundary |
 | 32 Risk updates | PASS FOR TIER 1 | Current risks live in STRIDE threat model, severity reconciliation, and DP-33 gap analysis; formal risk register is inactive |
 | 33 Scope changes | PASS | DEC-057 preserves PostgreSQL-only scope and excludes SQL Server conversion/custom restore work |
 | 34 Findings | PASS | Executive findings refreshed to WP-8 closure state |
@@ -26,9 +26,9 @@
 | Control | Status | Evidence / disposition |
 | --- | --- | --- |
 | C1 Work evidence current | PASS | September 23 WORK entry in canonical journal |
-| C2 Ring status current | PASS | Ring 2 remains active pending mandatory Plaid analysis; Ring 3 remains unauthorized |
+| C2 Ring status current | PASS | Ring 2 is 100% and in Review pending committed publication and post-push CI; Ring 3 is not started |
 | C3 Journal current | PASS | WORK, REASONING, REVIEW, trust checkpoint appended |
-| C4 Decision log | PASS | DEC-089 records owner approval and the final pre-exit blocker |
+| C4 Decision log | PASS | DEC-089 records owner approval; DEC-090 records the successful pre-exit action and fail-closed publication sequence |
 | C5 Reasoning ledger | PASS | Master index and Ring 2 records synchronized |
 | C6 Risk maintained | PASS FOR TIER 1 | Threat/gap/severity artifacts current |
 | C7 GitHub synchronization | PASS | #84 parent and #85-#91 sub-issues are assigned to open milestone #2 `Ring 2 — Development` |
@@ -42,4 +42,4 @@
 
 ## Blocking Result
 
-DP-33 triple review and final executable validation passed with no unresolved Critical/Major. The required `plaid-cl_analyzeSessions` broker is unavailable, so Ring 2 remains active. After that successful action is journaled last, commit/push and post-push CI verification remain publication-integrity checks.
+DP-33 triple review and final executable validation passed with no unresolved Critical/Major. The required `plaid-cl_analyzeSessions` broker completed over the full 15-day Ring 2 window and is journaled as the final Ring 2 `WORK` action. Commit, push, and post-push CI verification remain publication-integrity checks before Ring 3 opens.

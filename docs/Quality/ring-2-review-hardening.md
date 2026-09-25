@@ -2,10 +2,10 @@
 
 **Date:** 2026-09-23  
 **Scope:** WP-8 committed state through `a714f07`, followed by bounded remediation  
-**Disposition:** PASS under REV-196/197/198; DEC-089 approval recorded; final Plaid action blocked
+**Disposition:** PASS under REV-196/197/198; DEC-089 approval and final Plaid completion recorded
 **Critical findings:** 0
 
-This campaign supports DEC-089 approval of WP-8 and Ring 2 completion. The ring remains active until the mandatory Plaid pre-exit action succeeds. It does not authorize Ring 3, release, deployment, production, public ingress, provider/broker work, or SQL Server migration/conversion.
+This campaign supports DEC-089 approval of WP-8 and Ring 2 completion. The mandatory Plaid pre-exit action succeeded on 2026-09-25; committed publication and post-push CI remain before Ring 3 entry. This does not authorize release, deployment, production, public ingress, provider/broker work, or SQL Server migration/conversion.
 
 ## Independent Reviews
 

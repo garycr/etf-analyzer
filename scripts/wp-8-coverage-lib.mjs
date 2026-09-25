@@ -35,14 +35,39 @@ export const parseLineCoverage = (report) => {
     const percentageText = match[3].trim();
     const percentage = Number(percentageText);
     if (percentageText !== "" && Number.isFinite(percentage)) {
-      coverage.set(paths.join("/"), percentage);
+      const coveragePath = paths.join("/");
+      if (coverage.has(coveragePath)) {
+        throw new Error(`Duplicate coverage row: ${coveragePath}`);
+      }
+      coverage.set(coveragePath, percentage);
     }
   }
 
   return coverage;
 };
 
+export const parseTestCount = (report, expectedName) => {
+  if (!["pass", "fail", "skipped"].includes(expectedName)) {
+    throw new Error(`Unsupported test count: ${expectedName}`);
+  }
+
+  let count;
+  for (const rawLine of report.split("\n")) {
+    const match = stripAnsi(rawLine).match(/^(?:ℹ |# )?(pass|fail|skipped) (\d+)$/u);
+    if (match !== null && match[1] === expectedName) {
+      if (count !== undefined) {
+        throw new Error(`Duplicate ${expectedName} test count`);
+      }
+      count = Number(match[2]);
+    }
+  }
+  return count;
+};
+
 export const assertBusinessCoverage = (report, businessFiles, threshold = 80) => {
+  if (!Number.isFinite(threshold) || threshold < 0 || threshold > 100) {
+    throw new Error("Coverage threshold must be between 0 and 100");
+  }
   if (businessFiles.length === 0) {
     throw new Error("No compiled Domain or Application JavaScript files were discovered");
   }

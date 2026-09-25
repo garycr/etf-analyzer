@@ -7,6 +7,7 @@ import {
   assertBusinessCoverage,
   discoverBusinessFiles,
   parseLineCoverage,
+  parseTestCount,
 } from "../../scripts/wp-8-coverage-lib.mjs";
 
 const coveragePath = process.env.ETF_COVERAGE_REPORT;
@@ -36,11 +37,11 @@ test(
     const report = await readFile(coveragePath, "utf8");
     assertBusinessCoverage(report, discoverBusinessFiles());
 
-    const passCount = report.match(/ℹ pass (\d+)/u);
-    assert.notEqual(passCount, null);
-    assert.ok(Number(passCount[1]) > 0);
-    assert.match(report, /fail 0/u);
-    assert.match(report, /skipped 0/u);
+    const passCount = parseTestCount(report, "pass");
+    assert.notEqual(passCount, undefined);
+    assert.ok(passCount > 0);
+    assert.equal(parseTestCount(report, "fail"), 0);
+    assert.equal(parseTestCount(report, "skipped"), 0);
 
     assert.equal(apiRoutes.length, 16);
     assert.deepEqual(
@@ -85,6 +86,10 @@ test("PT-COVERAGE-001 parses complete paths and rejects missing or sub-threshold
     () => assertBusinessCoverage(report, []),
     /No compiled Domain or Application/u,
   );
+  assert.throws(
+    () => assertBusinessCoverage(report, ["dist/Application/foundation.js"], Number.NaN),
+    /Coverage threshold must be between 0 and 100/u,
+  );
 
   const flatReport = [
     "\u001B[36mℹ\u001B[39m dist/Application/analytics-evidence-service.js | 91.43 | 81.16 | 100.00 |",
@@ -103,4 +108,22 @@ test("PT-COVERAGE-001 parses complete paths and rejects missing or sub-threshold
     ["dist/Application/analytics-evidence-service.js", 91.43],
     ["dist/Domain/Analytics/analytics.js", 90.09],
   ]);
+
+  assert.equal(parseTestCount("ℹ pass 426", "pass"), 426);
+  assert.equal(parseTestCount("# pass 426", "pass"), 426);
+  assert.equal(parseTestCount("# fail 0", "fail"), 0);
+  assert.equal(parseTestCount("# skipped 0", "skipped"), 0);
+  assert.equal(parseTestCount("pass 426", "pass"), 426);
+  assert.equal(parseTestCount("\u001B[36m#\u001B[39m pass 426", "pass"), 426);
+  assert.equal(parseTestCount("# pass 426 extra", "pass"), undefined);
+  assert.equal(parseTestCount("# tests 426", "pass"), undefined);
+  assert.throws(() => parseTestCount("# pass 426", "tests"), /Unsupported test count/u);
+  assert.throws(
+    () => parseTestCount("# pass 426\n# pass 425", "pass"),
+    /Duplicate pass test count/u,
+  );
+  assert.throws(
+    () => parseLineCoverage(`${flatReport}\n${flatReport.split("\n")[0]}`),
+    /Duplicate coverage row: dist\/Application\/analytics-evidence-service\.js/u,
+  );
 });

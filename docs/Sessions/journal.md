@@ -6,6 +6,34 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-25 | Ring 2 final post-hardening Plaid analysis completed | Ring-2 | @solo-orchestrator
+
+**Type:** WORK
+**action:** plaid-cl_analyzeSessions
+**status:** completed
+**days:** 15
+**Decision:** Complete the mandatory final Ring 2 session-analysis action after the full coverage parser hardening and finding-free REV-201 review
+**Policy:** Ring 2 final pre-exit action; DEC-091; fail-closed publication integrity; full active-ring analysis window
+**Authority:** Workspace Owner direction to continue through Ring 3 plus Solo Orchestrator execution under Fully Agentic mode
+**Accountability:** Solo Orchestrator publishes this exact final broker result and opens Ring 3 only after replacement post-push CI succeeds
+**Result:** Plaid analyzed 7 signal sets across the 15-day window, covering 21,178 tool calls with 333 rejected/error calls and a 98.2% acceptance rate; one medium `read_file` error cluster was reported with no higher-severity cluster
+**Compatibility:** The reversible VS Code Server user-data projection was refreshed from the same local transcripts; repository and installed extension source remained unchanged
+**authorization-boundary:** This is the final Ring 2 `WORK` action; only commit, push, post-push CI, and gate recording may follow before Ring 3 entry; release, deployment, production, provider, broker, public ingress, durable handoff, and SQL Server work remain unauthorized
+
+---
+
+## 2026-09-25 | Ring 2 coverage gate fully hardened | Ring-2 | @solo-orchestrator
+
+**Type:** GATE
+**Decision:** Keep Ring 2 in Review after replacement CI run 36164635168 exposed Node 20 TAP-comment summary markers, then close all parser fail-open edges before republishing
+**Policy:** DEC-091 invalidation; test-before-present; fail-closed coverage; post-push publication integrity; independent code review
+**Authority:** Solo Orchestrator under Fully Agentic remediation authority; Workspace Owner direction to continue through Ring 3; production DP-25 not invoked
+**Accountability:** Reproduce the summary mismatch, test all marker and boundary forms, reject unsupported names, duplicates, and invalid thresholds, obtain a finding-free final recheck, rerun Plaid last, and republish
+**Result:** Focused parser validation passes with one intentional environment skip; the full coverage gate passes 2/2 with zero skips; lint, dependency audit, SAST, secrets, and diff checks pass; REV-201 returns PASS with no finding and supersedes REV-200 for the complete parser remediation
+**authorization-boundary:** Ring 2 remains in Review pending the mandatory final Plaid rerun and successful republished CI; Ring 3, release, deployment, and production remain unopened
+
+---
+
 ## 2026-09-25 | Ring 2 final post-remediation Plaid analysis completed | Ring-2 | @solo-orchestrator
 
 **Type:** WORK

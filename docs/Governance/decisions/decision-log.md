@@ -51,6 +51,7 @@
 | DEC-090 | 2026-09-25 | Ring gate publication | Accept successful final Plaid analysis and require committed post-push verification before Ring 3 entry | Agent (Fully Agentic) | Solo Orchestrator | Approved; publication verification pending |
 | DEC-091 | 2026-09-25 | Publication remediation | Normalize and harden Node coverage evidence parsing, then republish only after final Plaid rerun | Agent (Fully Agentic) | Solo Orchestrator | REV-201 PASS; final Plaid passed; replacement CI pending |
 | DEC-092 | 2026-09-25 | Ring gate | Close Ring 2 and activate Ring 3 IV&V after verified publication | Agent (Fully Agentic) | Solo Orchestrator | Active; Ring 3 IV&V only |
+| DEC-093 | 2026-09-25 | Ring gate review | Accept DP-32 findings and approve complete Ring 3 evidence for publication | Agent (Fully Agentic) | Solo Orchestrator | Approved; Ring 3 closure pending post-push CI |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -89,6 +90,27 @@
 ---
 
 ## Decision Records
+
+### DEC-093: Approve Ring 3 Evidence For Publication
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-093 |
+| **Date** | 2026-09-25 |
+| **Category** | Ring gate review and DP-32 |
+| **Decision** | Accept REV-203 Security Reviewer findings at DP-32, accept REV-202 after its documentation condition is remediated, and approve the complete Ring 3 IV&V packet for publication while holding closure until post-push CI passes |
+| **Policy** | DP-32; Fully Agentic §5; Ring 3 IV&V; test-quality gate; OSS review; token reconciliation; decision traceability; issue #92 |
+| **Authority** | Agent (Fully Agentic), exercising Tier 1 DP-32 and Ring 3 completion authority; DP-25 and DP-26 remain human-owned and are not invoked |
+| **Accountability** | Solo Orchestrator publishes only validated artifacts, verifies every CI job and step, records the exact resulting commit/run, returns failed evidence to remediation, and does not open Ring 4 implicitly |
+| **Context** | Published candidate run 36168279046 passed all jobs. REV-202 scored test quality 4.11 and identified only a now-remediated artifact condition plus owned Sev 3 debt. REV-203 accepted all 11 security dimensions with no Sev 1/2 blocker. Every active quality artifact now exists and validates. |
+| **Alternatives** | Close Ring 3 from local evidence; defer despite complete IV&V; approve publication and require post-push verification. The decision selects publication-gated closure. |
+| **Consequences** | Ring 3 enters Review at 95%. Evidence may be committed and pushed. Ring 3 becomes Closed only after the exact publication passes CI; Ring 4 remains unopened. |
+| **Assumptions** | Documentation changes do not alter the executable candidate; CI continues to enforce the same Node 20, PostgreSQL, browser, security, and coverage controls. |
+| **Invalidation** | Failed job/step, evidence mismatch, missing required artifact, new Sev 1/2 finding, or scope widening invalidates approval and returns Ring 3 to remediation. |
+| **Linked Artifacts** | `docs/artifacts/gate-evidence/ring-3-ivv.md`; REV-202; REV-203; `docs/Quality/independent-quality-assessment.md`; issues #92 and #95 |
+| **Status** | Approved for publication; Ring 3 closure pending post-push CI |
+
+---
 
 ### DEC-092: Close Ring 2 And Activate Ring 3 IV&V
 
@@ -208,7 +230,7 @@
 | **Assumptions** | GitHub code scanning is enabled for the repository and the pinned action revisions remain available; 90-day artifact retention is sufficient for this Ring 2 review packet. |
 | **Invalidation** | Floating action references, absent/mismatched raw stream hashes, incomplete CI identity, suppressed failed-gate artifacts, CodeQL execution failure, or unavailable security-event publication invalidates this decision and leaves RH-011/RH-012 open. |
 | **Linked Artifacts** | `.github/workflows/ci.yml`; `scripts/security-evidence-runner.mjs`; `scripts/security-evidence-lib.mjs`; `tests/Unit/security-evidence.test.mjs`; `docs/artifacts/gate-evidence/wp-8-security.md`; `docs/Quality/ring-2-review-hardening.md` |
-| **Status** | Implemented; CI run 35902418187 and downloaded artifact verified; DP-33 reviewer confirmation pending |
+| **Status** | Implemented; CI run 35902418187 and downloaded artifact verified; RH-011/RH-012 closed under REV-196/198 and revalidated for Ring 3 by run 36168279046 and REV-203 |
 
 ---
 

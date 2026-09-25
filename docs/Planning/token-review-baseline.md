@@ -4,7 +4,7 @@
 
 **Project:** ETF Analyzer
 **Created:** 2026-09-10
-**Updated:** 2026-09-15
+**Updated:** 2026-09-25
 **Pricing basis:** Token volumes are estimated; dollar pricing is unavailable until the Ring 2 execution model/provider is selected.
 
 ## Ring 1 - Human Review Attachments
@@ -66,4 +66,8 @@ When development moves to IV&V, carry forward the original Ring 1 estimate and r
 
 | IV&V item | Original Ring 1 estimate | Updated Ring 3 estimate | Variance | Reason for variance | Human disposition | Evidence |
 | --------- | ------------------------ | ----------------------- | -------- | ------------------- | ----------------- | -------- |
-| | | | | | Pending | |
+| Ring 2 development control | 1,310,000 input / 655,000 output | Unchanged control estimate | 0% forecast-to-forecast; actual variance unavailable | Product scope and eight-package plan did not change; provider actuals are unavailable | Fully Agentic reconciliation; no rebaseline | `docs/Quality/independent-quality-assessment.md` |
+| Ring 3 IV&V activity | Included in the project review allowance; no separate token volume | Actual and updated token volume unavailable | Not computable | The execution surface exposes neither provider token counts nor reliable per-activity attribution; no retroactive proxy is fabricated | Telemetry limitation accepted and preserved | REV-202; REV-203 |
+| Product operating tokens | 0 | 0 | 0 | The prototype has no runtime AI workflow | Confirmed | `docs/Quality/independent-quality-assessment.md` |
+
+Ring 3 does not claim measured development-token actuals or dollar cost. The original Ring 2 control forecast remains the only quantitative development baseline, and the absence of provider telemetry prevents the 15%/25% actual-variance triggers from being evaluated retrospectively. Operating-token actuals are zero because no product runtime path invokes AI.

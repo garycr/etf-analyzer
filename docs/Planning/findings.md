@@ -4,13 +4,13 @@
 
 **Project:** ETF Analyzer  
 **Last Updated:** 2026-09-25
-**Current Ring:** Ring 3 IV&V active under DEC-092 and issue #92
+**Current Ring:** Ring 3 Review at 95% under DEC-093; post-push verification pending
 
 ---
 
 ## 1. Executive Overview
 
-Ring 2 delivered WP-1 through WP-8 as an executable greenfield PostgreSQL integration candidate. Exact PostgreSQL A-L, the fixture-to-analysis-to-confirmed-paper-order workflow, 16-route API behavior, coverage, accessibility, bounded operations, dependency/secret/CodeQL/redaction gates, and commit-bound evidence provenance pass. The final 15-day Plaid analysis and published CI run 36167208385 passed on 2026-09-25. DEC-092 closes Ring 2 and opens Ring 3 for independent validation only; release, deployment, and production remain unauthorized.
+Ring 2 delivered WP-1 through WP-8 as an executable greenfield PostgreSQL integration candidate. Ring 3 independently validated functional, PostgreSQL, browser accessibility, coverage, performance, observability, security, OSS, provenance, and test-quality evidence. REV-202 passes at 4.11 after its documentation condition was remediated; REV-203 accepts DP-32 with no Sev 1/2 blocker. DEC-093 approves publication but keeps Ring 3 in Review until the exact closure packet passes post-push CI. Release, deployment, production, and Ring 4 remain unauthorized.
 
 ---
 
@@ -71,7 +71,7 @@ The implemented-state architecture is published in `docs/Architecture/wp-8-imple
 ## 6. Recommendation
 
 **Production Readiness:** Not Ready - executable local candidate only
-**Ring Recommendation:** Execute the complete Ring 3 IV&V checklist under issue #92, including DP-32 Security Reviewer findings and token-estimate reconciliation. Do not infer Ring 4, release, deployment, or production authority from Ring 3 activity.
+**Ring Recommendation:** Publish the DEC-093 Ring 3 evidence packet and require every post-push CI job and step to pass before closure. Do not infer Ring 4, release, deployment, or production authority from Ring 3 completion.
 
 Do not activate a product baseline, execute Ring 3, connect a live provider or broker, widen ingress, deploy, release, or take production action from this recommendation.
 
@@ -103,3 +103,4 @@ Do not activate a product baseline, execute Ring 3, connect a live provider or b
 | --- | --- | --- |
 | 2026-09-10 | Ring 0 | Objective, BDD requirements, MAI-ST selection, eleven Proposed architecture views, dual decision reviews, architecture gate review, and Ring 1 issue traceability completed; Conditional PASS approved in DEC-012. |
 | 2026-09-11 | Ring 1 | Prototype design-time contracts, sequential WP-1..WP-8 WBS, 16-week schedule, cost/token baselines, and lessons learned approved; DEC-023 closed Ring 1 and opened Ring 2 at WP-1 only. |
+| 2026-09-25 | Ring 2 | Eight work packages, final Plaid analysis, reviewed publication remediation, and post-push CI completed; DEC-092 closed Ring 2 and opened Ring 3 IV&V. |

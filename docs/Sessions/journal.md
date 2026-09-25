@@ -6,6 +6,19 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-25 | Ring 3 IV&V approved for publication | Ring-3 | @solo-orchestrator
+
+**Type:** GATE
+**agentic:** true
+**Decision:** Accept DP-32 and the independently reviewed Ring 3 IV&V packet, but retain Review status until the exact evidence publication passes post-push CI
+**Policy:** DP-32; Fully Agentic decision ownership; test-quality, OSS, security, token-reconciliation, and artifact-completeness gates; DEC-093; issue #92
+**Authority:** Agent (Fully Agentic); production DP-25 and hotfix DP-26 remain human-owned and are not invoked
+**Accountability:** Publish the validated packet, verify every resulting CI job and step, return failures to remediation, and record closure only after successful publication
+**Result:** REV-202 test quality 4.11 with its documentation condition remediated; REV-203 DP-32 ACCEPT across all 11 dimensions; complete 31-entry OSS review; zero open Sev 1/2; all configured quality artifacts present
+**authorization-boundary:** Ring 3 Review at 95%; no Ring 4, release, deployment, production, provider, broker, public ingress, durable handoff, or SQL Server authority
+
+---
+
 ## 2026-09-25 | Ring 2 closed and Ring 3 IV&V opened | Ring-3 | @solo-orchestrator
 
 **Type:** GATE
@@ -3438,5 +3451,15 @@
 **version:** 13.2.0
 **workspace:** etf-analyzer [WSL: Ubuntu]
 **duration-ms:** 8
+
+---
+
+## 2026-09-25T17:39:54 | WORK-027 | Ring-0 | @extension
+
+**Type:** WORK
+**action:** extension-activated
+**version:** 13.2.0
+**workspace:** etf-analyzer [WSL: Ubuntu]
+**duration-ms:** 14
 
 ---

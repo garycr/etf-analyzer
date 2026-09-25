@@ -25,6 +25,10 @@ DEC-087 adds a distinct commit-pinned CodeQL JavaScript/TypeScript job and a fai
 
 Local verification passed all three gates and independently recomputed every raw-stream byte count and digest. Pushed CI run 35902418187 passed all jobs and steps, including CodeQL with no alerts. Its downloaded artifact matched commit `8c362813f1ae3e7857971cba66c6c739d9daa20a`, repository, workflow, job, ref, run, attempt, and every recorded raw-stream byte count and SHA-256 hash. RH-011 and RH-012 are technically remediated and await DP-33 reviewer confirmation; this addendum does not retroactively alter REV-192 or REV-193.
 
+## Ring 3 Provenance Revalidation
+
+The historical Ring 2 attestation above remains unchanged. Ring 3 published commit `2b8a21d4ad55ea489eed9546824a64f161c3a1d6` passed CI run 36168279046, including the same security evidence gates and CodeQL. Downloaded artifact `security-evidence-2b8a21d4ad55ea489eed9546824a64f161c3a1d6-1` binds repository, ref, workflow, job, commit, run, and attempt and has archive digest `sha256:33056a37a6805886525a8e361c61aa7ae30e75e081e50232c110ccbefa82450c`. Its manifest records successful dependency, secret, and banned-function controls with exact raw-stream byte counts and SHA-256 hashes. REV-196/198 closed RH-011/RH-012 at Ring 2; REV-203 independently accepted their continuing Ring 3 operation.
+
 The secret gate scans every blob/path in every reachable commit, exact staged index blobs, and tracked or untracked working files. It includes binary bytes and lockfiles and fails closed on Git or file errors. Signatures cover private keys, AWS, GitHub, GitLab, npm, OpenAI, Slack, credential-bearing database URIs, bearer/JWT, and Azure-like keys. Five exact synthetic PostgreSQL fixture fingerprints are allowlisted only at reviewed test/evidence paths with owner, rationale, and 2027-09-23 expiry; copying the same value elsewhere fails.
 
 ## Dependency And License Review
@@ -50,7 +54,7 @@ Focused controls passed for PT-UI-010, both PT-OPS-001 evaluator outcomes, recur
 - Remediation replaced fragile text scanning with TypeScript AST and Git object-model controls, strengthened audit schema/policy enforcement, broadened token signatures, and added adversarial tests.
 - Final Security Review REV-192: PASS with no remaining Critical, High, or Medium finding.
 - Final Code Review REV-193: PASS with no blocking finding.
-- Aggregate Ring 2 hardening subsequently opened RH-011/RH-012; DEC-087 now has successful pushed CI and downloaded artifact evidence, with DP-33 reviewer confirmation pending.
+- Aggregate Ring 2 hardening opened RH-011/RH-012; REV-196/198 closed both after successful pushed CI and downloaded-artifact verification, and REV-203 accepted the Ring 3 revalidation.
 
 ## Boundary
 

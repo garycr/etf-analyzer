@@ -17,6 +17,7 @@
 | RSN-005 | 2 | 2026-09-23 | Security analysis and evidence provenance | Security trade-off | → DEC-087 | DEC-087 | `ring-2-reasoning.md` |
 | RSN-006 | 2 | 2026-09-23 | WP-8 closure boundary | Gate disposition | Approved; Plaid pre-exit action blocked | RH-007, RH-009, DP-33, DEC-089 | `ring-2-reasoning.md` |
 | RSN-007 | 2 | 2026-09-25 | Ring 2 publication boundary | Gate disposition | Plaid passed; publication verification pending | DEC-089, DEC-090, issue #92 | `ring-2-reasoning.md` |
+| RSN-008 | 3 | 2026-09-25 | Ring 3 publication boundary | Gate disposition | DP-32 accepted; closure pending post-push CI | DEC-093, REV-202, REV-203, issue #92 | `ring-3-reasoning.md` |
 
 ---
 

@@ -1,7 +1,7 @@
 # WP-8 Implemented-Boundary Threat Model
 
-**Last Updated:** 2026-09-23
-**Review State:** Ring 2 security hardening complete; DEC-088 re-review and DP-33 Security Review PASS; final Plaid action blocked; Ring 3 not authorized
+**Last Updated:** 2026-09-25
+**Review State:** Ring 3 DP-32 Security Review ACCEPT under REV-203 for the implemented prototype boundary
 **Scope:** Single-user browser workbench, loopback HTTP adapter, synchronous Application owners, and greenfield PostgreSQL 16.15
 
 This model covers only the implemented WP-8 candidate. Public ingress, provider egress, Kubernetes, workers, brokers, outbox/queue handoff, deployment, release, and production are absent and are not authorized by this document.
@@ -42,14 +42,14 @@ This model covers only the implemented WP-8 candidate. Public ingress, provider 
 | Asset | Threat | Likelihood | Impact | Mitigation | Status |
 |-------|--------|-----------|--------|------------|--------|
 | Migration/evidence ledger | Source or database state diverges from accepted hashes | M | H | Seven-row hashes/manifests, readiness projection, replay/drift tests | Mitigated; DEC-088 accepted under REV-194/195 |
-| Gate evidence | Contributor edits summarized results without raw provenance | M | H | Run 35902418187 artifact binds raw streams to commit/run/job identity with verified byte counts and SHA-256 hashes | Mitigated; DP-33 reviewer confirmation pending |
+| Gate evidence | Contributor edits summarized results without raw provenance | M | H | Runs 35902418187 and 36168279046 bind raw streams to commit/run/job identity with verified byte counts and SHA-256 hashes | Mitigated; DP-32 accepted under REV-203 |
 
 ### Repudiation
 
 | Asset | Threat | Likelihood | Impact | Mitigation | Status |
 |-------|--------|-----------|--------|------------|--------|
 | Application commands | Caller denies a submitted command | L | M | Request/correlation/command identities and immutable replay/audit records | Mitigated |
-| CI/gate execution | Result cannot be tied to exact commit/tool run | M | H | Run 35902418187 and its downloaded artifact match commit `8c362813f1ae3e7857971cba66c6c739d9daa20a`, repository, workflow, job, ref, run, attempt, and raw stream hashes | Mitigated; DP-33 reviewer confirmation pending |
+| CI/gate execution | Result cannot be tied to exact commit/tool run | M | H | Run 36168279046 artifact matches commit `2b8a21d4ad55ea489eed9546824a64f161c3a1d6`, repository, workflow, job, ref, run, attempt, and raw stream hashes | Mitigated; DP-32 accepted under REV-203 |
 
 ### Information Disclosure
 
@@ -71,7 +71,7 @@ This model covers only the implemented WP-8 candidate. Public ingress, provider 
 |-------|--------|-----------|--------|------------|--------|
 | Controlled functions | `SECURITY DEFINER` body or `search_path` reaches attacker object | L | H | Fixed qualified bodies, pinned `pg_catalog` search paths, no dynamic SQL, catalog tests | Mitigated |
 | Database login | Runtime inherits owner/admin authority | L | H | `NOINHERIT` login roles, `NOLOGIN` owners, exact memberships and grants | Mitigated |
-| Build scripts | Dynamic code or child process bypass executes unreviewed tools | M | H | TypeScript AST banned-function guardrail plus commit-pinned CodeQL JavaScript/TypeScript analysis | Mitigated for the implemented boundary; CodeQL passed with no alerts in run 35902418187 |
+| Build scripts | Dynamic code or child process bypass executes unreviewed tools | M | H | TypeScript AST banned-function guardrail plus commit-pinned CodeQL JavaScript/TypeScript analysis | Mitigated for the implemented boundary; CodeQL passed in run 36168279046 |
 
 ## Risk Summary
 
@@ -84,4 +84,4 @@ This model covers only the implemented WP-8 candidate. Public ingress, provider 
 | Denial of Service | 2 | 1 | 0 | 1 |
 | Elevation of Privilege | 3 | 3 | 0 | 0 |
 
-No open technical threat-model risk remains for the implemented boundary. Accepted local-only risks become open immediately if ingress, identity, deployment, provider, or multi-user boundaries widen. DEC-088 re-review passed under REV-194/195; DP-33 confirmation remains a governance requirement rather than a mitigation inferred by this document.
+No open technical threat-model risk remains for the implemented boundary. Accepted local-only risks become open immediately if ingress, identity, deployment, provider, or multi-user boundaries widen. DEC-088 re-review passed under REV-194/195 and Ring 3 DP-32 accepted the bounded posture under REV-203.

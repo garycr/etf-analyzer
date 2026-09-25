@@ -237,6 +237,52 @@ async function dispatchAnalytics(
   return completeJob(client, "AnalyticsRun", payload, context, "1", completedAt());
 }
 
+async function dispatchQuery(
+  client: WorkflowQueryClient,
+  definition: ApplicationOperationDefinition,
+  payload: Readonly<Record<string, unknown>>,
+): Promise<Readonly<Record<string, unknown>>> {
+  let sql: string;
+  let values: readonly unknown[];
+  switch (definition.operation) {
+    case "ReadinessGet":
+      sql = "SELECT etf.readiness_get() AS result";
+      values = [];
+      break;
+    case "WatchlistGet":
+      sql = "SELECT etf.watchlist_get() AS result";
+      values = [];
+      break;
+    case "JobGet":
+      sql = "SELECT etf.job_get($1::uuid) AS result";
+      values = [property(payload, "jobId")];
+      break;
+    case "AnalyticsResultGet":
+      sql = "SELECT etf.analytics_result_get($1::uuid) AS result";
+      values = [property(payload, "publicationTargetId")];
+      break;
+    case "EvidenceGet":
+      sql = "SELECT etf.evidence_read($1) AS result";
+      values = [property(payload, "evidenceId")];
+      break;
+    case "PaperOrderGet":
+      sql = "SELECT etf.paper_order_get($1::uuid) AS result";
+      values = [property(payload, "orderId")];
+      break;
+    case "PortfolioGet":
+      sql = "SELECT etf.portfolio_get($1::uuid, $2::timestamptz) AS result";
+      values = [property(payload, "portfolioId"), property(payload, "asOf")];
+      break;
+    default:
+      return invalidOwnerRequest();
+  }
+  const result = requireSingleResult(await client.query(sql, values), "result");
+  if (result === null || typeof result !== "object" || Array.isArray(result)) {
+    return ownerError("APPLICATION_RESULT_INVALID");
+  }
+  return Object.freeze(result as Readonly<Record<string, unknown>>);
+}
+
 export async function dispatchPostgresWorkflowOperation(
   client: WorkflowQueryClient,
   resolver: WorkflowArtifactResolver,
@@ -254,16 +300,9 @@ export async function dispatchPostgresWorkflowOperation(
       if (definition.kind !== "command" || context === undefined) return invalidOwnerRequest();
       return await dispatchAnalytics(client, resolver, completedAt, payload, context);
     }
-    if (definition.operation === "PortfolioGet") {
-      if (definition.kind !== "query" || context !== undefined) return invalidOwnerRequest();
-      const result = requireSingleResult(await client.query(
-        "SELECT etf.portfolio_get($1::uuid, $2::timestamptz) AS result",
-        [property(payload, "portfolioId"), property(payload, "asOf")],
-      ), "result");
-      if (result === null || typeof result !== "object" || Array.isArray(result) || !("portfolio" in result)) {
-        return ownerError("APPLICATION_RESULT_INVALID");
-      }
-      return Object.freeze({ portfolio: result.portfolio });
+    if (definition.kind === "query") {
+      if (context !== undefined) return invalidOwnerRequest();
+      return await dispatchQuery(client, definition, payload);
     }
     return invalidOwnerRequest();
   } catch (error) {

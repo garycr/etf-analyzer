@@ -53,6 +53,8 @@
 | DEC-092 | 2026-09-25 | Ring gate | Close Ring 2 and activate Ring 3 IV&V after verified publication | Agent (Fully Agentic) | Solo Orchestrator | Active; Ring 3 IV&V only |
 | DEC-093 | 2026-09-25 | Ring gate review | Accept DP-32 findings and approve complete Ring 3 evidence for publication | Agent (Fully Agentic) | Solo Orchestrator | Approved; Ring 3 closure pending post-push CI |
 | DEC-094 | 2026-09-25 | Ring gate closure | Close Ring 3 after its exact evidence publication passed every CI job and step | Agent (Fully Agentic) | Solo Orchestrator | Approved; Ring 3 closed; Ring 4 unopened |
+| DEC-095 | 2026-09-25 | Release activation | Activate bounded Ring 4 release management and require productization before promotion | Agent (Fully Agentic) | Solo Orchestrator | Active; no release candidate or promotion yet |
+| DEC-096 | 2026-09-25 | Release productization | Accept the supported local runtime design and require publication CI before closing #88 | Agent (Fully Agentic) | Solo Orchestrator | Reviewed; publication CI pending |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -91,6 +93,48 @@
 ---
 
 ## Decision Records
+
+### DEC-096: Accept Supported Local Runtime For Publication
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-096 |
+| **Date** | 2026-09-25 |
+| **Category** | Release productization |
+| **Decision** | Accept the issue #88 local composition root, six missing query owners plus existing portfolio ownership, reviewed artifact loader, migration 0008, operator launcher, and fail-closed startup attestation for publication; close #88 only after pinned PostgreSQL CI passes |
+| **Policy** | DEC-095; Ring 4 release plan; test-first development; least privilege; loopback-only ingress; immutable migrations; architecture, code, and security review |
+| **Authority** | Agent under Fully Agentic mode, with alternate-model REV-204, REV-205, and REV-206 PASS dispositions |
+| **Accountability** | Solo Orchestrator publishes only task-related paths, verifies PostgreSQL 16.15 CI and all security jobs, remediates failures before closure, keeps the promotion log unchanged, and proceeds next to #89 only after #88 closes |
+| **Context** | Ring 3 proved the workflow through integration-owned composition. Ring 4 requires a supported launcher and truthful reads before any promotion. Review remediation added sequence-8 readiness, complete negative/lifecycle tests, separate control/runtime identities, and pre-bind attestation. |
+| **Alternatives** | Promote the integration fixture; bind HTTP after connection only; use one privileged database identity; productize with separate identities and fail-closed attestation. The decision selects the last alternative. |
+| **Consequences** | Operators gain one documented local command and deterministic shutdown. PostgreSQL gains one forward-only migration and three missing controlled read functions. No promotion occurs; #89 token/concurrency hardening remains next. |
+| **Assumptions** | Operator-reviewed artifact root; control identity has bounded catalog-read capability; request identity is least-privilege `app_runtime`; persisted readiness exists; local single-user host and literal loopback remain authoritative. |
+| **Invalidation** | Failed publication CI, writable/untrusted artifact root, shared/multi-user host, public ingress, missing identity separation, migration drift, NotReady startup, durable handoff, provider/broker activation, or production use reopens review and blocks promotion. |
+| **Linked Artifacts** | `docs/artifacts/gate-evidence/ring-4-local-runtime.md`; REV-204; REV-205; REV-206; issue #88 |
+| **Status** | Reviewed; publication CI pending; no promotion authority |
+
+---
+
+### DEC-095: Activate Bounded Ring 4 Release Management
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-095 |
+| **Date** | 2026-09-25 |
+| **Category** | Release activation |
+| **Decision** | Activate Ring 4 for the bounded local candidate and sequence #88 productization before any DEV/SMOKE promotion, followed by #89, #90, #93, and #94 release hardening |
+| **Policy** | Ring 3 to Ring 4 entry criteria; Tier 1 increment release; Fully Agentic decision ownership; immutable-artifact and forward-only promotion rules; issue #97 |
+| **Authority** | Agent (Fully Agentic), following the Workspace Owner directive to continue; DP-25 and DP-26 remain human-owned and are not invoked |
+| **Accountability** | Solo Orchestrator keeps promotion evidence append-only, tests each code change, obtains independent review, publishes exact release identities, and stops before staging, production, or any boundary widening |
+| **Context** | DEC-094 closed Ring 3 with no Sev 1/2 finding. All seven Ring 3 to Ring 4 criteria pass. The candidate is not yet a releasable product because complete composition remains integration-owned and #88 defines the required launcher/read-owner work. |
+| **Alternatives** | Keep Ring 4 unopened; promote the integration fixture; activate bounded release work and productize first. The decision selects bounded activation and rejects misleading fixture promotion. |
+| **Consequences** | Ring 4 becomes Active at 10%. Planning and implementation for a local release candidate may proceed. No immutable artifact, environment promotion, Ring 5, staging, release, deployment, or production authority follows. |
+| **Assumptions** | The release remains local, fixture-only, loopback-only, synchronous, and greenfield PostgreSQL-only; existing Ring 3 evidence remains the behavioral baseline. |
+| **Invalidation** | Open Sev 1/2, failed regression, unverifiable runtime identity, unsupported launch behavior, or boundary expansion returns the affected work to planning/review and blocks promotion. |
+| **Linked Artifacts** | `docs/Planning/ring-4-release-plan.md`; `docs/Operations/promotion-log.md`; RSN-010; issues #88 and #97 |
+| **Status** | Active; Ring 4 planning and implementation authorized within the recorded boundary |
+
+---
 
 ### DEC-094: Close Ring 3 After Verified Publication
 

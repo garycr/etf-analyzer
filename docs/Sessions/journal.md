@@ -6,6 +6,32 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-25 | Supported local runtime reviewed for publication | Ring-4 | @solo-orchestrator
+
+**Type:** WORK
+**agentic:** true
+**Decision:** Accept issue #88 implementation for publication under DEC-096, conditional on pinned PostgreSQL CI
+**Policy:** DEC-095; Ring 4 release plan; test-first implementation; separate control/runtime identity; independent code, security, and architecture review
+**Authority:** Agent (Fully Agentic) with REV-204, REV-205, and REV-206 PASS dispositions
+**Accountability:** Publish task-related files only, verify all CI jobs, close #88 only after success, then continue to #89 without recording promotion
+**Result:** Supported launcher, reviewed artifact loader, migration 0008, seven total query operations, fail-closed startup attestation, and signal shutdown implemented; local lint/tests/policy/SAST/secret/diff checks pass; PostgreSQL execution awaits CI
+**authorization-boundary:** Local fixture-only loopback release work; no DEV/SMOKE promotion, staging, release, deployment, production, provider, broker, public ingress, durable handoff, or SQL Server authority
+
+---
+
+## 2026-09-25 | Ring 4 bounded release management activated | Ring-4 | @solo-orchestrator
+
+**Type:** GATE
+**agentic:** true
+**Decision:** Activate Ring 4 for a local single-user release candidate and require #88 productization before any DEV/SMOKE promotion
+**Policy:** Ring 3 to Ring 4 entry criteria; Tier 1 increment release; Fully Agentic decision ownership; DEC-095; issue #97
+**Authority:** Agent (Fully Agentic) following the Workspace Owner directive to continue; production DP-25 remains human-owned and is not invoked
+**Accountability:** Execute #88, #89, #90, #93, and #94 in release order; preserve immutable evidence; record promotions; stop before staging or production
+**Result:** All seven entry criteria pass; Ring 4 Active at 10%; release plan and promotion log initialized; no release candidate or promotion exists yet
+**authorization-boundary:** Local fixture-only loopback release work only; no public ingress, providers, brokerage, durable handoff, SQL Server migration, staging, deployment, release, or production authority
+
+---
+
 ## 2026-09-25 | Ring 3 closed after verified publication | Ring-3 | @solo-orchestrator
 
 **Type:** GATE

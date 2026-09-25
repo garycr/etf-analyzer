@@ -4,13 +4,13 @@
 
 **Project:** ETF Analyzer  
 **Last Updated:** 2026-09-25
-**Current Ring:** Ring 3 Closed under DEC-094; Ring 4 not activated
+**Current Ring:** Ring 4 Active under DEC-095 and issue #97
 
 ---
 
 ## 1. Executive Overview
 
-Ring 2 delivered WP-1 through WP-8 as an executable greenfield PostgreSQL integration candidate. Ring 3 independently validated functional, PostgreSQL, browser accessibility, coverage, performance, observability, security, OSS, provenance, and test-quality evidence. REV-202 passes at 4.11 after its documentation condition was remediated; REV-203 accepts DP-32 with no Sev 1/2 blocker. Commit `92b7238e7ddd8cf83e3f5466e7ddb6b3fe00d33e` and CI run 36173930332 satisfy DEC-093 publication verification, so DEC-094 closes Ring 3 at 100%. Ring 4 remains unopened.
+Ring 2 delivered WP-1 through WP-8 as an executable greenfield PostgreSQL integration candidate, and Ring 3 closed with independent quality/security acceptance and verified publication. DEC-095 activates bounded Ring 4 release management. Issue #88 is implemented and independently reviewed under DEC-096, with publication CI still required before closure. The next release blocker is #89 launch-token and request-control hardening; no DEV/SMOKE promotion exists.
 
 ---
 
@@ -71,9 +71,9 @@ The implemented-state architecture is published in `docs/Architecture/wp-8-imple
 ## 6. Recommendation
 
 **Production Readiness:** Not Ready - executable local candidate only
-**Ring Recommendation:** Retain the validated candidate and open no Ring 4 activity without a separate release-management decision. Do not infer release, deployment, or production authority from Ring 3 completion.
+**Ring Recommendation:** Verify #88 publication CI, then execute `docs/Planning/ring-4-release-plan.md` sequentially from #89 and record each actual promotion in `docs/Operations/promotion-log.md`. Do not infer staging, release, deployment, or production authority from Ring 4 activation.
 
-Do not activate a product baseline, execute Ring 3, connect a live provider or broker, widen ingress, deploy, release, or take production action from this recommendation.
+Do not connect a live provider or broker, widen ingress, introduce durable handoff, change database platform, stage, deploy, release, or take production action from this recommendation.
 
 ### Lessons Learned
 

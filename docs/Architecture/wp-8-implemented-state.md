@@ -1,7 +1,7 @@
 # WP-8 Implemented-State Architecture
 
-**Date:** 2026-09-23  
-**Status:** Implemented Ring 2 candidate; completion approved under DEC-089 but blocked on final Plaid pre-exit action; Ring 3 not authorized
+**Date:** 2026-09-25
+**Status:** Ring 3 verified; supported local runtime implemented in Ring 4 under issue #88
 
 ## Scope
 
@@ -11,12 +11,17 @@ This view describes the code and executable integration candidate implemented by
 flowchart LR
     User[Research operator]
     Browser[Browser workbench]
+    Launcher[Local composition root\nstrict config + shutdown\nstartup attestation]
+    Artifacts[Reviewed fixture + analytics artifacts\ncanonical root only]
     HTTP[Loopback HTTP adapter\n127.0.0.1 only\n16 reviewed routes]
     App[Application boundary\nclosed envelopes + replay]
     Owners[Synchronous owners\nfixture, analytics, paper order, reads]
-    PG[(Greenfield PostgreSQL 16.15\nseven migrations\ncontrolled functions)]
+    PG[(Greenfield PostgreSQL 16.15\neight migrations\ncontrolled functions)]
 
-    User --> Browser
+    User --> Launcher
+    Launcher --> Browser
+    Artifacts --> Launcher
+    Launcher --> HTTP
     Browser -->|local HTTP/JSON| HTTP
     HTTP -->|validated envelope| App
     App -->|synchronous dispatch| Owners
@@ -31,10 +36,13 @@ flowchart LR
 | Component | Implemented behavior | Current limitation |
 | --- | --- | --- |
 | Browser workbench | Accessible local watchlist and paper-order workflow | Not an authenticated multi-user client |
+| Local composition root | Strict operator configuration, reviewed artifact loading, separate control/runtime database identities, fail-closed startup attestation, and idempotent signal shutdown | Local single-user process only; no service manager packaging |
 | Loopback HTTP adapter | Literal loopback binding, closed routes, bounded body/deadline, fixed public errors | Same-user processes can connect; no per-launch token or rate limit |
-| Application boundary | Typed operation envelopes, command idempotency, replay, redaction | Complete composition is currently an integration fixture, not a product launcher |
+| Application boundary | Typed operation envelopes, command idempotency, replay, redaction | Commands remain research-only and fixture-only |
 | Synchronous owners | Fixture ingestion, analytics publication, paper-order transition, controlled reads | No independent worker process, scheduler, or provider adapter |
-| PostgreSQL | Seven exact greenfield migrations, least-privilege roles, controlled functions, immutable evidence and replay | No backup/restore or production operations implementation |
+| PostgreSQL | Eight exact greenfield migrations, least-privilege roles, seven authoritative query operations, controlled functions, immutable evidence and replay | No backup/restore or production operations implementation |
+
+The launcher uses `ETF_POSTGRES_CONTROL_URL` only for baseline, migration-ledger, and schema-manifest attestation. Request execution uses the separate `ETF_POSTGRES_URL` identity, which must be the least-privilege `app_runtime` login. The HTTP server does not bind until the control checks and persisted readiness snapshot report Ready.
 
 ## Structural Handoff Boundary
 
@@ -61,4 +69,4 @@ The proposed views remain design options only and must not be used as implementa
 
 ## Candidate Classification
 
-WP-8 currently proves an executable local integration candidate. It does not yet provide a supported product composition root or documented local launch command. DP-33 must explicitly disposition whether that omission is accepted for Ring 2 or requires implementation before Ring 3.
+WP-8 and Ring 4 issue #88 now provide an executable local integration candidate and a supported operator-driven composition root. The launcher remains bounded to a fixture-only, research-only, single-user loopback runtime and does not authorize promotion, staging, deployment, or production.

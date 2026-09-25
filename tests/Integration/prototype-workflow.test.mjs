@@ -18,6 +18,7 @@ import { denialBackendVerifierMigration } from "../../dist/Infrastructure/Postgr
 import { domainLedgerMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/domain-ledger.js";
 import { fixtureMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/fixtures.js";
 import { foundationMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/foundation.js";
+import { runtimeQueriesMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/runtime-queries.js";
 import { dispatchPostgresPaperOrder } from "../../dist/Infrastructure/PostgreSQL/paper-order-owner.js";
 import { projectPostgresSchemaManifest } from "../../dist/Infrastructure/PostgreSQL/postgres-schema-manifest.js";
 import { createRoleBootstrapSql, productRoles } from "../../dist/Infrastructure/PostgreSQL/role-bootstrap.js";
@@ -60,6 +61,7 @@ async function applyCompleteMigrationSet(client) {
     analyticsEvidenceMigration,
     controlledAccessMigration,
     denialBackendVerifierMigration,
+    runtimeQueriesMigration,
   ];
   for (const [index, migration] of migrations.entries()) {
     await applyMigration(
@@ -164,7 +166,7 @@ function analyticsArtifact(fixtureEvidenceId) {
     databasePayload: {
       evidenceId: "81000000-0000-4000-8000-000000000005",
       evidenceCommitCommandId: "81000000-0000-4000-8000-000000000004",
-      publicationTargetId: "p0-current",
+      publicationTargetId: "81000000-0000-4000-8000-000000000006",
       expectedPublicationVersion: 0,
       baselineVersion: "v1.0.0",
       retentionPolicyVersion: "RET-A-1.0",
@@ -305,6 +307,22 @@ test(
         },
       };
       await client.query("SET SESSION AUTHORIZATION app_runtime");
+      await client.query("SELECT etf.readiness_append($1::jsonb)", [JSON.stringify({
+        readinessId: "81000000-0000-4000-8000-000000000014",
+        state: "Ready",
+        checkedAt: "2026-09-24T09:59:00.000Z",
+        displayTimezone: "UTC",
+        liveness: "Live",
+        dependencies: [
+          "PostgreSQL", "Migrations", "FixturePolicy", "LocalDependency", "DenialAudit", "LedgerIntegrity",
+        ].map((dependency) => ({
+          dependency,
+          state: "Ready",
+          checkedAt: "2026-09-24T09:59:00.000Z",
+          code: null,
+        })),
+        controllingError: null,
+      })]);
       server = await startLoopbackApiServer(
         { allowedOrigins: ["http://127.0.0.1:5173"], bodyLimitBytes: 1_048_576, port: 0 },
         (requestJson) => executeApplicationRequestAsync(requestJson, {
@@ -406,6 +424,26 @@ test(
       });
       assert.equal(transitionResponse.status, 200, JSON.stringify(transitionResponse.body));
       assert.equal(transitionResponse.body.data.order.state, "Submitted");
+
+      const runtimeQueries = [
+        ["/api/v1/readiness", (data) => assert.equal(data.readiness.state, "Ready")],
+        ["/api/v1/watchlist", (data) => assert.deepEqual(data.orderedItems, [])],
+        [`/api/v1/jobs/${analytics.databasePayload.jobId}`, (data) => assert.equal(data.job.status, "Succeeded")],
+        [`/api/v1/analytics/results/${analytics.databasePayload.publicationTargetId}`, (data) => assert.equal(data.result.domain, "etf.analytics.result.v1")],
+        [`/api/v1/evidence?evidenceId=${analytics.databasePayload.evidenceId}`, (data) => assert.equal(data.evidence.evidenceId, analytics.databasePayload.evidenceId)],
+        [`/api/v1/paper-orders/${orderId}`, (data) => assert.equal(data.order.state, "Submitted")],
+      ];
+      for (const [index, [path, assertData]] of runtimeQueries.entries()) {
+        const queryResponse = await invoke({
+          method: "GET",
+          path,
+          requestId: `81000000-0000-4000-8005-${String(index + 1).padStart(12, "0")}`,
+          correlationId: `81000000-0000-4000-8006-${String(index + 1).padStart(12, "0")}`,
+          requestedAt: "2026-09-24T10:04:00.000Z",
+        });
+        assert.equal(queryResponse.status, 200, `${path}: ${JSON.stringify(queryResponse.body)}`);
+        assertData(queryResponse.body.data);
+      }
 
       const portfolioResponse = await invoke({
         method: "GET",

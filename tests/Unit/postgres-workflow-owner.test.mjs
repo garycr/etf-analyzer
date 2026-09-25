@@ -207,6 +207,71 @@ test("workflow owner reads portfolios and closes unknown PostgreSQL failures", a
   );
 });
 
+test("workflow owner dispatches every supported runtime query through controlled PostgreSQL functions", async () => {
+  const cases = [
+    {
+      operation: "ReadinessGet",
+      payload: {},
+      sql: "SELECT etf.readiness_get() AS result",
+      values: [],
+      result: { readiness: { state: "Ready" } },
+    },
+    {
+      operation: "WatchlistGet",
+      payload: {},
+      sql: "SELECT etf.watchlist_get() AS result",
+      values: [],
+      result: { orderedItems: [], version: "0" },
+    },
+    {
+      operation: "JobGet",
+      payload: { jobId: "83000000-0000-4000-8000-000000000002" },
+      sql: "SELECT etf.job_get($1::uuid) AS result",
+      values: ["83000000-0000-4000-8000-000000000002"],
+      result: { job: { jobId: "83000000-0000-4000-8000-000000000002" } },
+    },
+    {
+      operation: "AnalyticsResultGet",
+      payload: { publicationTargetId: "83000000-0000-4000-8000-000000000003" },
+      sql: "SELECT etf.analytics_result_get($1::uuid) AS result",
+      values: ["83000000-0000-4000-8000-000000000003"],
+      result: { result: { domain: "etf.analytics.result.v1" } },
+    },
+    {
+      operation: "EvidenceGet",
+      payload: { evidenceId: "83000000-0000-4000-8000-000000000004" },
+      sql: "SELECT etf.evidence_read($1) AS result",
+      values: ["83000000-0000-4000-8000-000000000004"],
+      result: { evidence: { evidenceId: "83000000-0000-4000-8000-000000000004" } },
+    },
+    {
+      operation: "PaperOrderGet",
+      payload: { orderId: "83000000-0000-4000-8000-000000000005" },
+      sql: "SELECT etf.paper_order_get($1::uuid) AS result",
+      values: ["83000000-0000-4000-8000-000000000005"],
+      result: { order: { orderId: "83000000-0000-4000-8000-000000000005" } },
+    },
+  ];
+
+  for (const queryCase of cases) {
+    const client = {
+      async query(sql, values) {
+        assert.equal(sql, queryCase.sql, queryCase.operation);
+        assert.deepEqual(values, queryCase.values, queryCase.operation);
+        return { rows: [{ result: queryCase.result }] };
+      },
+    };
+    assert.deepEqual(await dispatchPostgresWorkflowOperation(
+      client,
+      { resolveFixture: () => undefined, resolveAnalytics: () => undefined },
+      () => assert.fail("queries must not use the completion clock"),
+      definition(queryCase.operation, "query"),
+      queryCase.payload,
+      undefined,
+    ), queryCase.result, queryCase.operation);
+  }
+});
+
 test("workflow owner rejects partial PostgreSQL error-token matches", async () => {
   for (const [code, message] of [
     ["22023", "APPLICATION_REQUEST_INVALID"],

@@ -17,6 +17,7 @@ import { denialBackendVerifierMigration } from "../../dist/Infrastructure/Postgr
 import { domainLedgerMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/domain-ledger.js";
 import { fixtureMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/fixtures.js";
 import { foundationMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/foundation.js";
+import { runtimeQueriesMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/runtime-queries.js";
 
 function clientReturning(row) {
   return { query: async () => ({ rows: [row] }) };
@@ -117,6 +118,7 @@ test("CT-DB-001B migration ledger drift fails closed without repair", async (con
     analyticsEvidenceMigration,
     controlledAccessMigration,
     denialBackendVerifierMigration,
+    runtimeQueriesMigration,
   ].map(({ sequence, migrationId, sql }) => ({
     sequence,
     migration_id: migrationId,
@@ -126,7 +128,7 @@ test("CT-DB-001B migration ledger drift fails closed without repair", async (con
     ["missing migration 0004-fixtures", canonicalRows.filter(({ sequence }) => sequence !== 4)],
     ["duplicate migration sequence 4", [...canonicalRows, { ...canonicalRows[3], migration_id: "0004-duplicate" }]],
     ["reordered migrations 0004 and 0005", [...canonicalRows.slice(0, 3), canonicalRows[4], canonicalRows[3], ...canonicalRows.slice(5)]],
-    ["unknown migration 0007-outbox", [...canonicalRows.slice(0, 6), { ...canonicalRows[6], migration_id: "0007-outbox" }]],
+    ["unknown migration 0008-outbox", [...canonicalRows.slice(0, 7), { ...canonicalRows[7], migration_id: "0008-outbox" }]],
     ["changed migration content hash", canonicalRows.map((row) => row.sequence === 4 ? { ...row, content_hash: "0".repeat(64) } : row)],
   ]) {
     await context.test(name, async () => {
@@ -149,7 +151,7 @@ test("CT-DB-001B migration ledger drift fails closed without repair", async (con
   }
 });
 
-test("CT-DB-001K migration readiness accepts only the canonical seven-row ledger", async () => {
+test("CT-DB-001K migration readiness accepts only the canonical eight-row ledger", async () => {
   const migrationRows = [
     foundationMigration,
     applicationMigration,
@@ -158,6 +160,7 @@ test("CT-DB-001K migration readiness accepts only the canonical seven-row ledger
     analyticsEvidenceMigration,
     controlledAccessMigration,
     denialBackendVerifierMigration,
+    runtimeQueriesMigration,
   ].map(({ sequence, migrationId, sql }) => ({
     sequence,
     migration_id: migrationId,
@@ -202,6 +205,7 @@ test("CT-DB-001K migration readiness rejects PUBLIC function execution", async (
           analyticsEvidenceMigration,
           controlledAccessMigration,
           denialBackendVerifierMigration,
+          runtimeQueriesMigration,
         ].map(({ sequence, migrationId, sql }) => ({
           sequence,
           migration_id: migrationId,
@@ -221,6 +225,20 @@ test("CT-DB-001K migration readiness rejects PUBLIC function execution", async (
 test("CT-DB-001K schema readiness rejects manifest drift and projector failure", async () => {
   const canonicalManifest = '{"contractVersion":"1.0.0-candidate.2"}';
   const manifestHash = createHash("sha256").update(canonicalManifest, "utf8").digest("hex");
+  let manifestQuery;
+  assert.deepEqual(await checkPostgresSchemaManifest(
+    {
+      query: async (sql) => {
+        manifestQuery = sql;
+        return { rows: [{ schema_manifest_hash: manifestHash }] };
+      },
+    },
+    async () => canonicalManifest,
+  ), { ready: true });
+  assert.equal(
+    manifestQuery,
+    "SELECT schema_manifest_hash FROM etf.schema_migrations WHERE sequence = 8 AND migration_id = '0008-runtime-queries'",
+  );
   assert.deepEqual(await checkPostgresSchemaManifest(
     clientReturning({ schema_manifest_hash: "a".repeat(64) }),
     async () => canonicalManifest,

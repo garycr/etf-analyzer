@@ -38,6 +38,7 @@ test("migration preflight publishes ordered exact-byte hashes", () => {
     "0005-analytics-evidence",
     "0006-controlled-access",
     "0007-denial-backend-verifier",
+    "0008-runtime-queries",
   ]);
   const prepared = prepareMigrationSet(
     expectedMigrationIds.map((migrationId, index) => ({
@@ -59,7 +60,7 @@ test("migration preflight publishes ordered exact-byte hashes", () => {
 });
 
 test("migration preflight rejects a missing migration set", () => {
-  assert.throws(() => prepareMigrationSet([]), /migration set must contain exactly 7 artifacts/);
+  assert.throws(() => prepareMigrationSet([]), /migration set must contain exactly 8 artifacts/);
 });
 
 test("migration preflight rejects reordered identities", () => {

@@ -27,9 +27,11 @@ import { denialBackendVerifierMigration } from "../../dist/Infrastructure/Postgr
 import { domainLedgerMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/domain-ledger.js";
 import { fixtureMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/fixtures.js";
 import { foundationMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/foundation.js";
+import { runtimeQueriesMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/runtime-queries.js";
 import { dispatchPostgresPaperOrder } from "../../dist/Infrastructure/PostgreSQL/paper-order-owner.js";
 import {
   collectPostgresManifestGrants,
+  projectCurrentPostgresSchemaManifest,
   projectCurrentPostgresSchemaManifestPrefix,
   projectPostgresSchemaManifest,
 } from "../../dist/Infrastructure/PostgreSQL/postgres-schema-manifest.js";
@@ -104,6 +106,7 @@ async function applyCompleteMigrationSet(client) {
     analyticsEvidenceMigration,
     controlledAccessMigration,
     denialBackendVerifierMigration,
+    runtimeQueriesMigration,
   ];
   for (const [index, migration] of migrations.entries()) {
     if (migration.sequence === 6) {
@@ -378,7 +381,7 @@ test(
                AND privilege.privilege_type = 'EXECUTE') AS public_execute_count`,
       );
       assert.deepEqual(readinessPreconditions.rows, [{
-        migration_count: 7,
+        migration_count: 8,
         public_execute_count: 0,
       }]);
       assert.deepEqual(await checkPostgresMigrationState(client), { ready: true });
@@ -508,6 +511,12 @@ test(
       const migrations = await client.query(
         "SELECT sequence::integer AS sequence, migration_id, content_hash, schema_manifest_hash FROM etf.schema_migrations ORDER BY sequence",
       );
+      const runtimeQueriesContentHash = createHash("sha256")
+        .update(runtimeQueriesMigration.sql, "utf8")
+        .digest("hex");
+      const currentSchemaManifestHash = createHash("sha256")
+        .update(await projectCurrentPostgresSchemaManifest(client), "utf8")
+        .digest("hex");
       assert.deepEqual(
         migrations.rows,
         [
@@ -518,6 +527,7 @@ test(
           { sequence: 5, migration_id: "0005-analytics-evidence", content_hash: "2a848c629d66a7e3e2621ea065f684a94fc82acb9b7e85477a228c30c8ed8001", schema_manifest_hash: "05f956d422453a53346b7ac1280d801bd3eb47211817bfd13fc9cc8060d34e95" },
           { sequence: 6, migration_id: "0006-controlled-access", content_hash: "69edc73adca240b45af423ee4d4725b1999692b561e9d3d79bcd8cc6bede81cb", schema_manifest_hash: "91d0b8b2c12284b2d1fe481242388a32668424309e74ef2f82f1850d62f6a4de" },
           { sequence: 7, migration_id: "0007-denial-backend-verifier", content_hash: "0d07358c3056885e15ba190681402a381ed71485beb35e3b9088cc8d107b1340", schema_manifest_hash: "690a7efe18d5279f84ca5c7af3cf507a1bcc2a38841a1d3b3a622cbae9f3dc43" },
+          { sequence: 8, migration_id: "0008-runtime-queries", content_hash: runtimeQueriesContentHash, schema_manifest_hash: currentSchemaManifestHash },
         ],
       );
     } finally {
@@ -657,6 +667,7 @@ test(
       analyticsEvidenceMigration,
       controlledAccessMigration,
       denialBackendVerifierMigration,
+      runtimeQueriesMigration,
     ];
     try {
       await client.query(lockSql);
@@ -808,7 +819,7 @@ test(
           WHERE namespace.nspname = 'etf'
             AND function_record.proname = ANY($1::text[])
           ORDER BY function_record.proname`,
-        [["application_replay_get", "reject_immutable_change", "job_get", "paper_order_command_get", "paper_order_get", "portfolio_get"]],
+        [["analytics_result_get", "application_replay_get", "job_get", "paper_order_command_get", "paper_order_get", "portfolio_get", "readiness_get", "reject_immutable_change", "watchlist_get"]],
       );
       assert.deepEqual(
         functions.rows.map(({ name, owner, security_definer, volatility, parallel, configuration, public_execute }) => ({
@@ -821,12 +832,15 @@ test(
           public_execute,
         })),
         [
+          { name: "analytics_result_get", owner: "evidence_writer_owner", security_definer: true, volatility: "s", parallel: "s", configuration: ["search_path=pg_catalog, etf"], public_execute: false },
           { name: "application_replay_get", owner: "application_writer_owner", security_definer: true, volatility: "v", parallel: "u", configuration: ["search_path=pg_catalog, etf"], public_execute: false },
           { name: "job_get", owner: "application_writer_owner", security_definer: true, volatility: "s", parallel: "s", configuration: ["search_path=pg_catalog, etf"], public_execute: false },
           { name: "paper_order_command_get", owner: "application_writer_owner", security_definer: true, volatility: "s", parallel: "s", configuration: ["search_path=pg_catalog, etf"], public_execute: false },
           { name: "paper_order_get", owner: "application_writer_owner", security_definer: true, volatility: "s", parallel: "s", configuration: ["search_path=pg_catalog, etf"], public_execute: false },
           { name: "portfolio_get", owner: "projection_owner", security_definer: true, volatility: "s", parallel: "s", configuration: ["search_path=pg_catalog, etf"], public_execute: false },
+          { name: "readiness_get", owner: "application_writer_owner", security_definer: true, volatility: "s", parallel: "s", configuration: ["search_path=pg_catalog, etf"], public_execute: false },
           { name: "reject_immutable_change", owner: "schema_owner", security_definer: true, volatility: "v", parallel: "u", configuration: ["search_path=pg_catalog, etf"], public_execute: false },
+          { name: "watchlist_get", owner: "application_writer_owner", security_definer: true, volatility: "s", parallel: "s", configuration: ["search_path=pg_catalog, etf"], public_execute: false },
         ],
       );
 
@@ -996,6 +1010,15 @@ test(
           client.query("SELECT etf.job_get('10000000-0000-0000-0000-000000000001')"),
           (error) => error.code === "42501",
         );
+        await client.query("RESET SESSION AUTHORIZATION");
+      }
+      for (const [ownerRole, query] of [
+        ["application_writer_owner", "SELECT etf.readiness_get()"],
+        ["application_writer_owner", "SELECT etf.watchlist_get()"],
+        ["evidence_writer_owner", "SELECT etf.analytics_result_get('10000000-0000-0000-0000-000000000001')"],
+      ]) {
+        await client.query(`SET SESSION AUTHORIZATION ${ownerRole}`);
+        await assert.rejects(client.query(query), (error) => error.code === "42501");
         await client.query("RESET SESSION AUTHORIZATION");
       }
 

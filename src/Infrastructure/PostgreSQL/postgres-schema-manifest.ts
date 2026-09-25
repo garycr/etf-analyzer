@@ -35,6 +35,7 @@ import {
   controlledAccessViewNames,
 } from "./migrations/controlled-access.js";
 import { denialBackendVerifierFunctionNames } from "./migrations/denial-backend-verifier.js";
+import { runtimeQueryFunctionNames } from "./migrations/runtime-queries.js";
 import { foundationTableNames } from "./migrations/foundation.js";
 
 interface TableSource {
@@ -185,9 +186,9 @@ async function projectPostgresSchemaManifestInternal(
   client: ManifestClient,
   prospectiveMigration: ManifestMigration,
   currentState: boolean,
-  currentSequence = 7,
+  currentSequence = 8,
 ): Promise<string> {
-  if (prospectiveMigration.sequence < 1 || prospectiveMigration.sequence > 7) {
+  if (prospectiveMigration.sequence < 1 || prospectiveMigration.sequence > 8) {
     throw new Error("APPLICATION_MIGRATIONS_INCOMPLETE");
   }
   const manifestRoles = currentState && currentSequence === 6
@@ -415,6 +416,7 @@ async function projectPostgresSchemaManifestInternal(
     ...(prospectiveMigration.sequence >= 5 ? analyticsEvidenceFunctionNames : []),
     ...(prospectiveMigration.sequence >= 6 ? controlledAccessFunctionNames : []),
     ...(prospectiveMigration.sequence >= 7 ? denialBackendVerifierFunctionNames : []),
+    ...(prospectiveMigration.sequence >= 8 ? runtimeQueryFunctionNames : []),
   ].sort(compareCodeUnits);
   const expectedViewNames = [
     ...(prospectiveMigration.sequence >= 6 ? controlledAccessViewNames : []),
@@ -654,7 +656,7 @@ async function projectPostgresSchemaManifestInternal(
     migrationSequence.at(-1)?.migrationId === prospectiveMigration.migrationId &&
     migrationSequence.at(-1)?.contentHash === prospectiveMigration.contentHash;
   return currentState || replayState
-    ? currentState && currentSequence === 7
+    ? currentState && currentSequence === 8
       ? buildCurrentSchemaManifest(source)
       : buildCurrentSchemaManifestPrefix(
         source,
@@ -667,7 +669,7 @@ export async function projectCurrentPostgresSchemaManifestPrefix(
   client: ManifestClient,
   sequence: number,
 ): Promise<string> {
-  if (sequence < 1 || sequence > 7) {
+  if (sequence < 1 || sequence > 8) {
     throw new Error("APPLICATION_MIGRATIONS_INCOMPLETE");
   }
   return projectPostgresSchemaManifestInternal(client, {
@@ -681,8 +683,8 @@ export async function projectCurrentPostgresSchemaManifest(
   client: ManifestClient,
 ): Promise<string> {
   return projectPostgresSchemaManifestInternal(client, {
-    sequence: 7,
-    migrationId: "0007-denial-backend-verifier",
+    sequence: 8,
+    migrationId: "0008-runtime-queries",
     contentHash: "0".repeat(64),
   }, true);
 }

@@ -10,6 +10,23 @@ An **agent-enabled workspace** with built-in governance, ring lifecycle, and mul
 2. Use the Agent Workspace sidebar
 3. Follow the Ring development lifecycle (Ring-0 through Ring-5)
 
+## Local Runtime
+
+The supported runtime is local, fixture-only, and bound to `127.0.0.1`. PostgreSQL 16 must already contain the canonical eight migrations and a persisted readiness snapshot. Use a control connection with catalog-read access for startup attestation and a separate least-privilege `app_runtime` connection for requests.
+
+1. Copy [config/local-runtime.example.json](config/local-runtime.example.json) to an operator-owned location and set `artifactRoot` to an absolute reviewed-artifact directory.
+2. Place the approved fixture package under `fixturePackageDirectory`. It must contain `manifest.json` and every file declared by that manifest.
+3. Place the analytics artifact at `analyticsArtifactPath`. Its closed JSON shape is `configurationHash`, `inputEvidenceIds`, and `databasePayload`.
+4. Launch with the PostgreSQL connection string in the environment:
+
+```bash
+ETF_POSTGRES_CONTROL_URL='postgresql://control-role@...' \
+ETF_POSTGRES_URL='postgresql://app_runtime@...' \
+npm run start:local -- /path/to/local-runtime.json
+```
+
+The launcher prints the loopback URL after PostgreSQL, artifacts, and HTTP startup succeed. `SIGINT` or `SIGTERM` closes the HTTP server and then the database connection. Artifact paths must be relative to the canonical `artifactRoot`; traversal and symlink escapes are rejected.
+
 ## Structure
 
 ```

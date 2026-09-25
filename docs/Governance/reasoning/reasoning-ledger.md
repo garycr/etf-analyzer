@@ -19,6 +19,7 @@
 | RSN-007 | 2 | 2026-09-25 | Ring 2 publication boundary | Gate disposition | Plaid passed; publication verification pending | DEC-089, DEC-090, issue #92 | `ring-2-reasoning.md` |
 | RSN-008 | 3 | 2026-09-25 | Ring 3 publication boundary | Gate disposition | DP-32 accepted; closure pending post-push CI | DEC-093, REV-202, REV-203, issue #92 | `ring-3-reasoning.md` |
 | RSN-009 | 3 | 2026-09-25 | Ring 3 closure boundary | Gate disposition | Publication passed; Ring 3 closed; Ring 4 unopened | DEC-094, CI run 36173930332, issue #96 | `ring-3-reasoning.md` |
+| RSN-010 | 4 | 2026-09-25 | Productize before promotion | Release activation | Ring 4 active; #88 precedes DEV/SMOKE promotion | DEC-095, issues #88 and #97 | `ring-4-reasoning.md` |
 
 ---
 

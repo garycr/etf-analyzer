@@ -7,6 +7,7 @@
 | # | Task | Status | Notes |
 |---|------|--------|-------|
 | 1 | Appoint schema custodian and freeze parallel contracts | Completed | GitHub issue #21; Workspace Owner closed prototype contract planning in DEC-023; executable agreement remains Ring 2 evidence |
+| 2 | Productize and qualify the bounded local release candidate | In Progress | Ring 4 DEC-095; #88 reviewed under DEC-096 with publication CI pending; #89 is next; no promotion exists |
 | 3 | Assess providers and formalize fixture outage policy | Ready | GitHub issues #17, #3, #4, #5, and #10 |
 | 4 | Restate cross-cutting NFR acceptance criteria | Ready | GitHub issue #22; accessibility, latency, readiness, recovery, observability |
 | 5 | Add Mermaid render and version validation | Ready | GitHub issue #12; deferred from Ring 0 |

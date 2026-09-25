@@ -17,6 +17,7 @@ import { denialBackendVerifierMigration } from "../../dist/Infrastructure/Postgr
 import { domainLedgerMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/domain-ledger.js";
 import { fixtureMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/fixtures.js";
 import { foundationMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/foundation.js";
+import { runtimeQueriesMigration } from "../../dist/Infrastructure/PostgreSQL/migrations/runtime-queries.js";
 import { dispatchPostgresJobRestart } from "../../dist/Infrastructure/PostgreSQL/job-restart-owner.js";
 import { projectPostgresSchemaManifest } from "../../dist/Infrastructure/PostgreSQL/postgres-schema-manifest.js";
 import {
@@ -78,6 +79,7 @@ test(
         analyticsEvidenceMigration,
         controlledAccessMigration,
         denialBackendVerifierMigration,
+        runtimeQueriesMigration,
       ];
       for (const [index, migration] of migrations.entries()) {
         await applyMigration(

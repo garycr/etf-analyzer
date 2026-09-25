@@ -8,6 +8,7 @@ export const expectedMigrationIds = [
   "0005-analytics-evidence",
   "0006-controlled-access",
   "0007-denial-backend-verifier",
+  "0008-runtime-queries",
 ] as const;
 
 export interface MigrationArtifact {

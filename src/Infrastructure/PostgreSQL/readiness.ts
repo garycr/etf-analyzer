@@ -9,6 +9,7 @@ import { denialBackendVerifierMigration } from "./migrations/denial-backend-veri
 import { domainLedgerMigration } from "./migrations/domain-ledger.js";
 import { fixtureMigration } from "./migrations/fixtures.js";
 import { foundationMigration } from "./migrations/foundation.js";
+import { runtimeQueriesMigration } from "./migrations/runtime-queries.js";
 
 interface QueryResult {
   rows: Record<string, unknown>[];
@@ -94,6 +95,7 @@ const expectedMigrations = prepareMigrationSet([
   analyticsEvidenceMigration,
   controlledAccessMigration,
   denialBackendVerifierMigration,
+  runtimeQueriesMigration,
 ]);
 function createDenialAuditProbeIdentifiers(): DenialAuditProbeIdentifiers {
   return {
@@ -236,7 +238,7 @@ export async function checkPostgresSchemaManifest(
   let currentHash: string;
   try {
     const result = await client.query(
-      "SELECT schema_manifest_hash FROM etf.schema_migrations WHERE sequence = 7 AND migration_id = '0007-denial-backend-verifier'",
+      "SELECT schema_manifest_hash FROM etf.schema_migrations WHERE sequence = 8 AND migration_id = '0008-runtime-queries'",
     );
     storedHash = result.rows[0]?.schema_manifest_hash;
     currentHash = createHash("sha256")

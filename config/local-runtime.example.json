@@ -1,0 +1,12 @@
+{
+  "allowedOrigins": [
+    "http://127.0.0.1:5173"
+  ],
+  "analyticsArtifactPath": "analytics.json",
+  "artifactRoot": "/absolute/path/to/reviewed-etf-artifacts",
+  "bodyLimitBytes": 1048576,
+  "fixtureEvaluationAt": "2026-01-31T00:00:00.000Z",
+  "fixturePackageDirectory": "fixture",
+  "port": 43123,
+  "requestTimeoutMs": 5000
+}

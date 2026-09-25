@@ -49,6 +49,7 @@
 | DEC-088 | 2026-09-23 | Canonical Job UInt contract | Return all public Job UInt values as canonical strings and reproduce the seven-row PostgreSQL identity chain | Agent (Fully Agentic) | Solo Orchestrator | Reviewed and accepted under REV-194/195; WP-8 remains open |
 | DEC-089 | 2026-09-23 | Package and ring closure | Approve bounded WP-8 and Ring 2 completion after mandatory final pre-exit action | Workspace Owner | Solo Orchestrator | Approved; blocked on Plaid session analysis; Ring 3 not authorized |
 | DEC-090 | 2026-09-25 | Ring gate publication | Accept successful final Plaid analysis and require committed post-push verification before Ring 3 entry | Agent (Fully Agentic) | Solo Orchestrator | Approved; publication verification pending |
+| DEC-091 | 2026-09-25 | Publication remediation | Normalize Node 20 TAP-comment coverage paths and republish only after final Plaid rerun | Agent (Fully Agentic) | Solo Orchestrator | Reviewed; final Plaid passed; replacement CI pending |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -87,6 +88,26 @@
 ---
 
 ## Decision Records
+
+### DEC-091: Remediate Node 20 Coverage Publication
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-091 |
+| **Date** | 2026-09-25 |
+| **Category** | Publication remediation |
+| **Decision** | Accept the exact Node 20 TAP-comment coverage regression and normalize optional `# ` report markers before canonical business-file lookup; rerun Plaid after this remediation and require a new successful post-push CI run |
+| **Policy** | DEC-090 invalidation; test-before-present; 80% business-logic coverage; zero-skip WP-8 gate; post-push publication integrity |
+| **Authority** | Agent (Fully Agentic), following Workspace Owner direction to continue through Ring 3; no production authority invoked |
+| **Accountability** | Solo Orchestrator preserves the failed run, red-green regression, exact parser change, REV-200 independent PASS, final Plaid rerun, and replacement CI evidence |
+| **Context** | CI run 36163278890 used Node 20.20.2 and emitted `# dist/Application/analytics-evidence-service.js | 91.43 | ...`. The parser accepted bare and `ℹ ` rows but retained `# ` in the key, so exact lookup failed despite sufficient measured coverage. |
+| **Alternatives** | Rerun unchanged CI; pin a different runtime without understanding the failure; weaken missing-file enforcement; normalize the observed report marker. The decision selects normalization with an exact regression. |
+| **Consequences** | Node 20 and color-forced local report forms map to the same canonical paths. Focused validation and the full coverage gate pass; Ring 2 stays in Review until Plaid and replacement CI pass. |
+| **Invalidation** | Missing or sub-threshold business files, parser false acceptance of an expected path, failed independent review, failed final Plaid action, or failed replacement CI reopens remediation. |
+| **Linked Artifacts** | `scripts/wp-8-coverage-lib.mjs`; `tests/Unit/wp-8-coverage.test.mjs`; REV-200; CI run 36163278890; issue #92 |
+| **Status** | Reviewed under REV-200; final Plaid rerun passed; replacement CI pending |
+
+---
 
 ### DEC-090: Publish Ring 2 Closure Before Ring 3 Entry
 

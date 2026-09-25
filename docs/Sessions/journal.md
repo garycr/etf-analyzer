@@ -6,6 +6,34 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-25 | Ring 2 final post-remediation Plaid analysis completed | Ring-2 | @solo-orchestrator
+
+**Type:** WORK
+**action:** plaid-cl_analyzeSessions
+**status:** completed
+**days:** 15
+**Decision:** Complete the mandatory final Ring 2 session-analysis action again after coverage publication remediation and independent review
+**Policy:** Ring 2 final pre-exit action; DEC-091; fail-closed publication integrity; full active-ring analysis window
+**Authority:** Workspace Owner direction to continue through Ring 3 plus Solo Orchestrator execution under Fully Agentic mode
+**Accountability:** Solo Orchestrator publishes this exact post-remediation broker result and opens Ring 3 only after replacement post-push CI succeeds
+**Result:** Plaid analyzed 7 signal sets across the 15-day window, covering 21,055 tool calls with 330 rejected/error calls and a 98.2% acceptance rate; one medium `read_file` error cluster was reported with no higher-severity cluster
+**Compatibility:** The reversible VS Code Server user-data projection was refreshed from the same local transcripts; repository and installed extension source remained unchanged
+**authorization-boundary:** This is the final Ring 2 `WORK` action; only commit, push, post-push CI, and gate recording may follow before Ring 3 entry; release, deployment, production, provider, broker, public ingress, durable handoff, and SQL Server work remain unauthorized
+
+---
+
+## 2026-09-25 | Ring 2 publication coverage remediation | Ring-2 | @solo-orchestrator
+
+**Type:** GATE
+**Decision:** Keep Ring 2 in Review after post-push CI run 36163278890 failed only the WP-8 coverage gate, then remediate the exact Node 20 report-shape mismatch
+**Policy:** DEC-090 invalidation; test-before-present; fail-closed coverage; post-push publication integrity
+**Authority:** Solo Orchestrator under Fully Agentic remediation authority; Workspace Owner direction to continue through Ring 3; production DP-25 not invoked
+**Accountability:** Add the exact failing TAP-comment row as a red test, normalize the `# ` report marker, obtain independent Code Review, rerun executable controls, rerun Plaid last, and republish
+**Result:** The regression failed before implementation; focused parser validation then passed 1/1 with one intentional environment skip, the full color-forced coverage gate passed 426/426 with zero skips, and REV-200 returned PASS with no finding
+**authorization-boundary:** Ring 2 remains in Review pending the mandatory final Plaid rerun and successful republished CI; Ring 3, release, deployment, and production remain unopened
+
+---
+
 ## 2026-09-25 | Ring 2 final Plaid analysis completed | Ring-2 | @solo-orchestrator
 
 **Type:** WORK

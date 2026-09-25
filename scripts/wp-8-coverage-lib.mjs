@@ -23,7 +23,7 @@ export const parseLineCoverage = (report) => {
 
   for (const rawLine of report.split("\n")) {
     const line = stripAnsi(rawLine);
-    const match = line.match(/^(?:ℹ )?( *)([^|]+?)\s+\|\s*([^|]*)\|/u);
+    const match = line.match(/^(?:ℹ |# )?( *)([^|]+?)\s+\|\s*([^|]*)\|/u);
     if (match === null) {
       continue;
     }

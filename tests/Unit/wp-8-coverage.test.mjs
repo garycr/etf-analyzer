@@ -94,4 +94,13 @@ test("PT-COVERAGE-001 parses complete paths and rejects missing or sub-threshold
     ["dist/Application/analytics-evidence-service.js", 91.43],
     ["dist/Domain/Analytics/analytics.js", 90.09],
   ]);
+
+  const tapCommentReport = [
+    "# dist/Application/analytics-evidence-service.js | 91.43 | 81.16 | 100.00 |",
+    "# dist/Domain/Analytics/analytics.js | 90.09 | 87.02 | 88.33 |",
+  ].join("\n");
+  assert.deepEqual([...parseLineCoverage(tapCommentReport)], [
+    ["dist/Application/analytics-evidence-service.js", 91.43],
+    ["dist/Domain/Analytics/analytics.js", 90.09],
+  ]);
 });

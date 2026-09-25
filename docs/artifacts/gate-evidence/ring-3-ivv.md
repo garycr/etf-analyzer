@@ -3,9 +3,11 @@
 **Date:** 2026-09-25  
 **Candidate:** `2b8a21d4ad55ea489eed9546824a64f161c3a1d6`  
 **Published validation:** CI run 36168279046, attempt 1  
-**Status:** APPROVED for publication; Ring 3 closure pending post-push CI
+**Publication commit:** `92b7238e7ddd8cf83e3f5466e7ddb6b3fe00d33e`
+**Publication CI:** 36173930332, success
+**Status:** PASS; Ring 3 closed under DEC-094; Ring 4 unopened
 
-Autonomous decision trace: DEC-093 and GitHub issue #95.
+Autonomous decision trace: DEC-093/#95 for publication and DEC-094/#96 for closure.
 
 ## Gate Checklist
 
@@ -27,8 +29,8 @@ Autonomous decision trace: DEC-093 and GitHub issue #95.
 
 The Fully Agentic owner accepts REV-203 within the implemented single-user, loopback-only, greenfield PostgreSQL boundary. Identity, secrets, network, secure coding, CI/CD, data protection, threat modeling, monitoring, governance, confidential computing applicability, and container security were all evaluated. No Critical/High or Sev 1/2 finding remains.
 
-## Publication Condition
+## Publication Verification
 
-The complete Ring 3 evidence set must be committed and pushed, and the resulting CI run must pass every job and step before Ring 3 is marked Closed. A mismatch, failed job, missing artifact, or new Sev 1/2 finding returns Ring 3 to remediation.
+The complete evidence set was committed and pushed as `92b7238e7ddd8cf83e3f5466e7ddb6b3fe00d33e`. CI run 36173930332 passed every job and step. Artifact `security-evidence-92b7238e7ddd8cf83e3f5466e7ddb6b3fe00d33e-1` has digest `sha256:c10c948750bf89be2c249761a49c628a2b57ea83f6ea2070ce7b5e832fb46005` and expires 2026-12-24T18:31:03Z. The DEC-093 publication condition is satisfied.
 
 This approval does not open Ring 4 or authorize release, deployment, production, public ingress, providers, brokerage, durable handoff, or SQL Server migration.

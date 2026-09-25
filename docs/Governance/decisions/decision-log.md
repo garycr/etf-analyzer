@@ -52,6 +52,7 @@
 | DEC-091 | 2026-09-25 | Publication remediation | Normalize and harden Node coverage evidence parsing, then republish only after final Plaid rerun | Agent (Fully Agentic) | Solo Orchestrator | REV-201 PASS; final Plaid passed; replacement CI pending |
 | DEC-092 | 2026-09-25 | Ring gate | Close Ring 2 and activate Ring 3 IV&V after verified publication | Agent (Fully Agentic) | Solo Orchestrator | Active; Ring 3 IV&V only |
 | DEC-093 | 2026-09-25 | Ring gate review | Accept DP-32 findings and approve complete Ring 3 evidence for publication | Agent (Fully Agentic) | Solo Orchestrator | Approved; Ring 3 closure pending post-push CI |
+| DEC-094 | 2026-09-25 | Ring gate closure | Close Ring 3 after its exact evidence publication passed every CI job and step | Agent (Fully Agentic) | Solo Orchestrator | Approved; Ring 3 closed; Ring 4 unopened |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -90,6 +91,27 @@
 ---
 
 ## Decision Records
+
+### DEC-094: Close Ring 3 After Verified Publication
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-094 |
+| **Date** | 2026-09-25 |
+| **Category** | Ring gate closure |
+| **Decision** | Close Ring 3 at 100% after the DEC-093 evidence packet was committed, pushed, and passed every post-push CI job and step; leave Ring 4 unopened |
+| **Policy** | DEC-093 publication condition; Ring 3 IV&V exit; Fully Agentic decision ownership; test-before-present; immutable evidence provenance; issue #96 |
+| **Authority** | Agent (Fully Agentic), exercising Tier 1 Ring 3 closure authority; DP-25 and DP-26 remain human-owned and are not invoked |
+| **Accountability** | Solo Orchestrator records exact commit/run/artifact identity, closes completed Ring 3 tracking issues, preserves open nonblocking debt, and requires a separate decision before Ring 4 activity |
+| **Context** | Commit `92b7238e7ddd8cf83e3f5466e7ddb6b3fe00d33e` published 28 Ring 3 evidence files. CI run 36173930332 completed successfully with every build-and-test, PostgreSQL, coverage, browser accessibility, security-audit, artifact-upload, and CodeQL step green. Security artifact digest is `sha256:c10c948750bf89be2c249761a49c628a2b57ea83f6ea2070ce7b5e832fb46005`. |
+| **Alternatives** | Keep Ring 3 open despite satisfying the publication condition; open Ring 4 implicitly; close Ring 3 only. The decision selects bounded closure only. |
+| **Consequences** | Ring 3 is Closed at 100%. Issues #87, #89, #90, #93, and #94 remain later-scope debt. Ring 4, release, deployment, production, provider, broker, public-ingress, durable-handoff, and SQL Server work remain unauthorized. |
+| **Assumptions** | GitHub run and artifact metadata accurately identify the published commit and no hidden Sev 1/2 finding exists. |
+| **Invalidation** | Publication tampering, artifact mismatch, newly discovered Sev 1/2 defect, or scope widening requires reopening the affected validation before any later gate. |
+| **Linked Artifacts** | `docs/artifacts/gate-evidence/ring-3-ivv.md`; CI run 36173930332; issues #92, #95, and #96 |
+| **Status** | Approved; Ring 3 closed; Ring 4 unopened |
+
+---
 
 ### DEC-093: Approve Ring 3 Evidence For Publication
 

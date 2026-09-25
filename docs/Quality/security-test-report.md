@@ -30,6 +30,8 @@ Artifact `security-evidence-2b8a21d4ad55ea489eed9546824a64f161c3a1d6-1` has arch
 
 The empty-stream SHA-256 is `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`.
 
+The assembled Ring 3 packet was published as commit `92b7238e7ddd8cf83e3f5466e7ddb6b3fe00d33e`. CI run 36173930332 passed all jobs and uploaded `security-evidence-92b7238e7ddd8cf83e3f5466e7ddb6b3fe00d33e-1`, archive digest `sha256:c10c948750bf89be2c249761a49c628a2b57ea83f6ea2070ce7b5e832fb46005`, expiring 2026-12-24T18:31:03Z.
+
 ## Eleven-Dimension Result
 
 Identity, secrets, network, secure coding, CI/CD, data protection, threat modeling, monitoring, and governance pass for the local single-user boundary. Confidential computing is not applicable. Container security passes for disposable digest-pinned CI containers; no production container exists.

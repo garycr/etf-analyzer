@@ -18,3 +18,16 @@
 **Outcome:** DEC-093 accepts DP-32 and approves the Ring 3 evidence for publication while retaining Review status at 95%. A successful post-push run is required before closure.
 
 **Invalidation:** Failed CI, artifact mismatch, missing required record, open Sev 1/2 finding, or an unauthorized boundary expansion returns Ring 3 to remediation.
+
+## RSN-009: Close Without Opening Ring 4
+
+**Ring:** Ring 3
+**Date:** 2026-09-25
+**Trigger:** Verified publication
+**Related:** DEC-094, CI run 36173930332, issue #96
+
+**Question:** Does successful publication close Ring 3 only, or also activate release management?
+
+**Reasoning:** DEC-093 authorized only the evidence publication and defined successful CI as its closure condition. Ring 4 has distinct release-management scope, unresolved productization/tool-identity work, and no activation decision. Conflating closure with activation would exceed the reviewed boundary.
+
+**Outcome:** Close Ring 3 at 100% under DEC-094. Leave Ring 4 unopened and retain all release, deployment, and production prohibitions.

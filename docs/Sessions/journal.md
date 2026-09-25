@@ -6,6 +6,19 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-25 | Ring 3 closed after verified publication | Ring-3 | @solo-orchestrator
+
+**Type:** GATE
+**agentic:** true
+**Decision:** Close Ring 3 at 100% after the exact DEC-093 evidence publication passed every CI job and step; leave Ring 4 unopened
+**Policy:** DEC-093 publication condition; Ring 3 IV&V exit; Fully Agentic decision ownership; DEC-094; issue #96
+**Authority:** Agent (Fully Agentic); production DP-25 and hotfix DP-26 remain human-owned and are not invoked
+**Accountability:** Preserve the exact commit/run/artifact identity, close completed Ring 3 tracking issues, retain nonblocking later-scope debt, and require a separate decision before Ring 4 activity
+**Result:** Commit `92b7238e7ddd8cf83e3f5466e7ddb6b3fe00d33e`; CI run 36173930332 success with every job/step green; security artifact digest `sha256:c10c948750bf89be2c249761a49c628a2b57ea83f6ea2070ce7b5e832fb46005`
+**authorization-boundary:** Ring 3 Closed; Ring 4 unopened; no release, deployment, production, provider, broker, public ingress, durable handoff, or SQL Server authority
+
+---
+
 ## 2026-09-25 | Ring 3 IV&V approved for publication | Ring-3 | @solo-orchestrator
 
 **Type:** GATE

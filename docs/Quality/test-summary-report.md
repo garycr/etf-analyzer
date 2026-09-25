@@ -6,6 +6,8 @@
 **Independent review:** REV-202  
 **Status:** PASS after clearing the documentation condition
 
+The assembled Ring 3 packet was subsequently published as commit `92b7238e7ddd8cf83e3f5466e7ddb6b3fe00d33e`; CI run 36173930332 repeated every job successfully before DEC-094 closure.
+
 ## Execution Results
 
 | Command/job | Tests | Passed | Failed | Skipped | Todo/cancelled | Result |

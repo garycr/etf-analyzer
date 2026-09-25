@@ -6,6 +6,18 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-25 | Ring 2 closed and Ring 3 IV&V opened | Ring-3 | @solo-orchestrator
+
+**Type:** GATE
+**Decision:** Close Ring 2 and activate Ring 3 IV&V after the final Plaid action and published replacement CI both passed
+**Policy:** Ring 2 exit criteria; Fully Agentic gate evaluation; DEC-089 through DEC-092; issue #92
+**Authority:** Agent (Fully Agentic) following Workspace Owner direction to continue through Ring 3; production DP-25 remains human-owned and is not invoked
+**Accountability:** Execute independent integration, security, accessibility, performance, OSS, coverage, token-reconciliation, and artifact validation; complete DP-32 before Ring 3 closure
+**Result:** Commit `58a10221694490efc3552f639b65526f1e574e75` is published; CI run 36167208385 completed successfully with build-and-test, security-audit, CodeQL, and browser-accessibility jobs green and no failed step
+**authorization-boundary:** Ring 3 IV&V only; no Ring 4, release, deployment, production, provider, broker, public ingress, durable handoff, or SQL Server authority
+
+---
+
 ## 2026-09-25 | Ring 2 final post-hardening Plaid analysis completed | Ring-2 | @solo-orchestrator
 
 **Type:** WORK

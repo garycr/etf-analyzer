@@ -50,6 +50,7 @@
 | DEC-089 | 2026-09-23 | Package and ring closure | Approve bounded WP-8 and Ring 2 completion after mandatory final pre-exit action | Workspace Owner | Solo Orchestrator | Approved; blocked on Plaid session analysis; Ring 3 not authorized |
 | DEC-090 | 2026-09-25 | Ring gate publication | Accept successful final Plaid analysis and require committed post-push verification before Ring 3 entry | Agent (Fully Agentic) | Solo Orchestrator | Approved; publication verification pending |
 | DEC-091 | 2026-09-25 | Publication remediation | Normalize and harden Node coverage evidence parsing, then republish only after final Plaid rerun | Agent (Fully Agentic) | Solo Orchestrator | REV-201 PASS; final Plaid passed; replacement CI pending |
+| DEC-092 | 2026-09-25 | Ring gate | Close Ring 2 and activate Ring 3 IV&V after verified publication | Agent (Fully Agentic) | Solo Orchestrator | Active; Ring 3 IV&V only |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -88,6 +89,26 @@
 ---
 
 ## Decision Records
+
+### DEC-092: Close Ring 2 And Activate Ring 3 IV&V
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-092 |
+| **Date** | 2026-09-25 |
+| **Category** | Ring gate |
+| **Decision** | Close Ring 2 and activate Ring 3 IV&V after the final full-window Plaid action, reviewed coverage remediation, committed publication, and replacement post-push CI all passed |
+| **Policy** | Ring 2 exit checklist; Fully Agentic gate evaluation; decision traceability; test-before-present; issue #92 |
+| **Authority** | Agent (Fully Agentic), following Workspace Owner direction to continue through Ring 3; DP-25 and DP-26 remain human-owned and are not invoked |
+| **Accountability** | Solo Orchestrator executes independent Ring 3 integration, security, accessibility, performance, OSS, coverage, token-reconciliation, and artifact validation; obtains DP-32 disposition; and does not open Ring 4 without a separate gate decision |
+| **Context** | Final Plaid analyzed 7 signal sets and 21,178 tool calls at 98.2% acceptance. REV-201 passed with no finding. Commit `58a10221694490efc3552f639b65526f1e574e75` is on `origin/main`; CI run 36167208385 completed successfully with no failed job or step. |
+| **Alternatives** | Keep Ring 2 open despite passing publication; waive IV&V and move toward release; open bounded Ring 3 IV&V. The decision selects bounded IV&V. |
+| **Consequences** | Ring 2 is closed. Ring 3 may independently validate the executable candidate. Ring 4, release, deployment, production, provider, broker, public-ingress, durable-handoff, and SQL Server work remain unauthorized. |
+| **Invalidation** | Evidence mismatch, hidden Sev 1/2, failed Ring 3 validation, or publication drift returns the affected control to remediation and blocks Ring 3 completion. |
+| **Linked Artifacts** | `docs/Planning/ring-status.md`; `docs/Quality/ring-2-artifact-compliance.md`; REV-201; CI run 36167208385; issue #92 |
+| **Status** | Active; Ring 3 IV&V authorized |
+
+---
 
 ### DEC-091: Remediate Node 20 Coverage Publication
 

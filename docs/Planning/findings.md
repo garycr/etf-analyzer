@@ -4,13 +4,13 @@
 
 **Project:** ETF Analyzer  
 **Last Updated:** 2026-09-25
-**Current Ring:** Ring 2 completion approved; final Plaid action passed; publication verification pending
+**Current Ring:** Ring 3 IV&V active under DEC-092 and issue #92
 
 ---
 
 ## 1. Executive Overview
 
-Ring 2 delivered WP-1 through WP-8 as an executable greenfield PostgreSQL integration candidate. Exact PostgreSQL A-L, the fixture-to-analysis-to-confirmed-paper-order workflow, 16-route API behavior, coverage, accessibility, bounded operations, dependency/secret/CodeQL/redaction gates, and commit-bound evidence provenance pass. DP-33 accepted the absent supported launcher as deferred productization tracked by #88, and DEC-089 records owner approval. The mandatory 15-day Plaid analysis passed on 2026-09-25. Ring 3 remains unopened until this closure bundle is committed, pushed, and verified by post-push CI; release, deployment, and production remain unauthorized.
+Ring 2 delivered WP-1 through WP-8 as an executable greenfield PostgreSQL integration candidate. Exact PostgreSQL A-L, the fixture-to-analysis-to-confirmed-paper-order workflow, 16-route API behavior, coverage, accessibility, bounded operations, dependency/secret/CodeQL/redaction gates, and commit-bound evidence provenance pass. The final 15-day Plaid analysis and published CI run 36167208385 passed on 2026-09-25. DEC-092 closes Ring 2 and opens Ring 3 for independent validation only; release, deployment, and production remain unauthorized.
 
 ---
 
@@ -71,7 +71,7 @@ The implemented-state architecture is published in `docs/Architecture/wp-8-imple
 ## 6. Recommendation
 
 **Production Readiness:** Not Ready - executable local candidate only
-**Ring Recommendation:** Commit and push the Plaid-complete Ring 2 closure bundle, verify post-push CI, then open Ring 3 IV&V under issue #92. Do not infer release, deployment, or production authority from the transition.
+**Ring Recommendation:** Execute the complete Ring 3 IV&V checklist under issue #92, including DP-32 Security Reviewer findings and token-estimate reconciliation. Do not infer Ring 4, release, deployment, or production authority from Ring 3 activity.
 
 Do not activate a product baseline, execute Ring 3, connect a live provider or broker, widen ingress, deploy, release, or take production action from this recommendation.
 

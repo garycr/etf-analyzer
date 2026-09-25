@@ -3,7 +3,7 @@
 **Date:** 2026-09-23  
 **Decision authority:** Workspace Owner  
 **Owner direction:** Approve WP-8 and Ring 2 completion, subject to mandatory exit controls  
-**Status:** PASS under REV-196, REV-197, and REV-198; owner approval recorded in DEC-089; final Plaid action blocked
+**Status:** PASS under REV-196, REV-197, and REV-198; owner approval recorded in DEC-089; Ring 2 closed under DEC-092
 
 ## Implemented Model
 

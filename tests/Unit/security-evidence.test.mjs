@@ -6,7 +6,10 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { buildSecurityEvidenceManifest } from "../../scripts/security-evidence-lib.mjs";
-import { runSecurityEvidence } from "../../scripts/security-evidence-runner-lib.mjs";
+import {
+  runSecurityEvidence,
+  securityEvidenceCheckTimeoutMs,
+} from "../../scripts/security-evidence-runner-lib.mjs";
 
 const identity = {
   commitSha: "a".repeat(40),
@@ -17,6 +20,10 @@ const identity = {
   job: "security-audit",
   ref: "refs/heads/main",
 };
+
+test("security evidence allows history-aware checks to complete", () => {
+  assert.equal(securityEvidenceCheckTimeoutMs, 300_000);
+});
 
 test("security evidence manifest binds raw command output to CI identity", () => {
   const manifest = buildSecurityEvidenceManifest(identity, [{

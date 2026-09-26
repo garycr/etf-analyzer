@@ -4,10 +4,12 @@ import { join } from "node:path";
 
 import { buildSecurityEvidenceManifest } from "./security-evidence-lib.mjs";
 
+export const securityEvidenceCheckTimeoutMs = 300_000;
+
 const defaultExecute = (script) => spawnSync("npm", ["run", script], {
   encoding: "utf8",
   maxBuffer: 64 * 1024 * 1024,
-  timeout: 120_000,
+  timeout: securityEvidenceCheckTimeoutMs,
 });
 
 export const runSecurityEvidence = ({ identity, outputDirectory, checks, execute = defaultExecute }) => {

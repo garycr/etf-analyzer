@@ -228,6 +228,7 @@ test(
     const client = new pg.Client({ connectionString });
     const fixture = fixtureArtifact();
     const fixtureEvidenceId = "81000000-0000-4000-8000-000000000002";
+    const analyticsJobId = "81000000-0000-4000-8000-000000000003";
     const analytics = analyticsArtifact(fixtureEvidenceId);
     const portfolioId = "81000000-0000-4000-8000-000000000010";
     const orderId = "81000000-0000-4000-8000-000000000020";
@@ -377,7 +378,7 @@ test(
         requestedAt: "2026-09-24T10:01:00.000Z",
         commandId: "81000000-0000-4000-8000-000000000106",
         body: {
-          jobId: "81000000-0000-4000-8000-000000000003",
+          jobId: analyticsJobId,
           evidenceCommandId: analytics.databasePayload.evidenceCommitCommandId,
           asOfDate: "2026-01-31",
           configurationHash: analytics.configurationHash,
@@ -428,7 +429,7 @@ test(
       const runtimeQueries = [
         ["/api/v1/readiness", (data) => assert.equal(data.readiness.state, "Ready")],
         ["/api/v1/watchlist", (data) => assert.deepEqual(data.orderedItems, [])],
-        [`/api/v1/jobs/${analytics.databasePayload.jobId}`, (data) => assert.equal(data.job.status, "Succeeded")],
+        [`/api/v1/jobs/${analyticsJobId}`, (data) => assert.equal(data.job.status, "Succeeded")],
         [`/api/v1/analytics/results/${analytics.databasePayload.publicationTargetId}`, (data) => assert.equal(data.result.domain, "etf.analytics.result.v1")],
         [`/api/v1/evidence?evidenceId=${analytics.databasePayload.evidenceId}`, (data) => assert.equal(data.evidence.evidenceId, analytics.databasePayload.evidenceId)],
         [`/api/v1/paper-orders/${orderId}`, (data) => assert.equal(data.order.state, "Submitted")],

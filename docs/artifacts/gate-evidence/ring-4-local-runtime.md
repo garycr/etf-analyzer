@@ -3,7 +3,7 @@
 **Date:** 2026-09-25
 **Issue:** #88
 **Decision:** DEC-096
-**Status:** Reviewed; publication CI pending
+**Status:** Complete; publication CI verified
 
 ## Delivered Boundary
 
@@ -28,7 +28,18 @@
 - REV-205 Security: PASS.
 - REV-206 Architecture: PASS after fail-closed startup and documentation remediation.
 
-The local shell has no reachable PostgreSQL service. Pinned PostgreSQL 16.15 execution, exact final test counts, and closure remain publication-CI conditions.
+## Publication Verification
+
+- Final commit: `9ca9afeabb74785a1fdcdeeb9a73dd4fede9f9b6`.
+- GitHub Actions run: `36260497399` (`https://github.com/garycr/etf-analyzer/actions/runs/36260497399`).
+- Jobs: build-and-test PASS; browser-accessibility PASS; security-audit PASS; CodeQL PASS.
+- Main suite: 584 tests, 583 passed, zero failed, one intentional coverage skip.
+- Pinned PostgreSQL WP-8 parents: 12 passed, zero failed, zero skipped.
+- WP-8 coverage execution: 434 passed, zero failed, zero skipped; coverage gate 2/2 PASS.
+- `PT-E2E-001`: PASS through fixture ingestion, analytics publication/read, paper order, and reconciliation.
+- Commit-bound dependency audit, secret-pattern scan, and SAST guardrail: exit code 0.
+
+Issue #88 is eligible for closure. The local shell remains without a reachable PostgreSQL service; CI provides the authoritative PostgreSQL execution evidence.
 
 ## Authorization Boundary
 

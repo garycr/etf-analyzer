@@ -54,7 +54,7 @@
 | DEC-093 | 2026-09-25 | Ring gate review | Accept DP-32 findings and approve complete Ring 3 evidence for publication | Agent (Fully Agentic) | Solo Orchestrator | Approved; Ring 3 closure pending post-push CI |
 | DEC-094 | 2026-09-25 | Ring gate closure | Close Ring 3 after its exact evidence publication passed every CI job and step | Agent (Fully Agentic) | Solo Orchestrator | Approved; Ring 3 closed; Ring 4 unopened |
 | DEC-095 | 2026-09-25 | Release activation | Activate bounded Ring 4 release management and require productization before promotion | Agent (Fully Agentic) | Solo Orchestrator | Active; no release candidate or promotion yet |
-| DEC-096 | 2026-09-25 | Release productization | Accept the supported local runtime design and require publication CI before closing #88 | Agent (Fully Agentic) | Solo Orchestrator | Reviewed; publication CI pending |
+| DEC-096 | 2026-09-25 | Release productization | Accept the supported local runtime design and require publication CI before closing #88 | Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `9ca9afea`; #88 closure authorized |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -111,7 +111,7 @@
 | **Assumptions** | Operator-reviewed artifact root; control identity has bounded catalog-read capability; request identity is least-privilege `app_runtime`; persisted readiness exists; local single-user host and literal loopback remain authoritative. |
 | **Invalidation** | Failed publication CI, writable/untrusted artifact root, shared/multi-user host, public ingress, missing identity separation, migration drift, NotReady startup, durable handoff, provider/broker activation, or production use reopens review and blocks promotion. |
 | **Linked Artifacts** | `docs/artifacts/gate-evidence/ring-4-local-runtime.md`; REV-204; REV-205; REV-206; issue #88 |
-| **Status** | Reviewed; publication CI pending; no promotion authority |
+| **Status** | Verified by CI run `36260497399` at commit `9ca9afea`; #88 closure authorized; no promotion authority |
 
 ---
 

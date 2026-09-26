@@ -6,6 +6,19 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-26 | Supported local runtime publication verified | Ring-4 | @solo-orchestrator
+
+**Type:** WORK
+**agentic:** true
+**Decision:** Close issue #88 after the supported local runtime and its publication remediations passed the complete CI gate
+**Policy:** DEC-095; DEC-096; Ring 4 release plan; test-first remediation; independent code review; commit-bound security evidence
+**Authority:** Agent (Fully Agentic) after alternate-model reviews and successful CI run `36260497399`
+**Accountability:** Record commit `9ca9afeabb74785a1fdcdeeb9a73dd4fede9f9b6`, close #88, continue to #89, and preserve the unchanged promotion boundary
+**Result:** All four jobs passed; the main suite passed 583/584 with one intentional coverage skip, WP-8 passed 12/12 with zero skips, coverage passed 434/434, PT-E2E-001 passed, and dependency audit, secret scan, SAST, browser accessibility, and CodeQL passed
+**authorization-boundary:** No DEV/SMOKE promotion, immutable release candidate, staging, deployment, release, production, provider, broker, public ingress, durable handoff, or SQL Server authority
+
+---
+
 ## 2026-09-25 | Supported local runtime reviewed for publication | Ring-4 | @solo-orchestrator
 
 **Type:** WORK

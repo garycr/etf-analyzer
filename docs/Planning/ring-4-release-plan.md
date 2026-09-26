@@ -27,7 +27,7 @@ No Ring 4 artifact or promotion authorizes production. DP-25 remains human-owned
 
 | Order | Work | Issue | Status | Promotion impact |
 | ---: | --- | --- | --- | --- |
-| 1 | Supported local composition root, six missing authoritative query owners plus the existing portfolio owner (seven total), fixture artifact-loading policy, launch/shutdown tests | #88 | Reviewed; publication CI pending | Required for truthful DEV and SMOKE gates |
+| 1 | Supported local composition root, six missing authoritative query owners plus the existing portfolio owner (seven total), fixture artifact-loading policy, launch/shutdown tests | #88 | Complete; CI `36260497399` passed | Required for truthful DEV and SMOKE gates |
 | 2 | Per-launch token and explicit request concurrency/rate controls | #89 | Pending | Required before promoting the supported launcher |
 | 3 | Exact release-grade runner and Node identities | #90 | Pending | Required for reproducible release evidence |
 | 4 | Dependency compatibility, advisory, changelog, and lifecycle disposition | #93 | Pending | Required before freezing the release manifest |

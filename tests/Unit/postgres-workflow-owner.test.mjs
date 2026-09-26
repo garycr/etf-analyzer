@@ -261,14 +261,17 @@ test("workflow owner dispatches every supported runtime query through controlled
         return { rows: [{ result: queryCase.result }] };
       },
     };
-    assert.deepEqual(await dispatchPostgresWorkflowOperation(
+    const result = await dispatchPostgresWorkflowOperation(
       client,
       { resolveFixture: () => undefined, resolveAnalytics: () => undefined },
       () => assert.fail("queries must not use the completion clock"),
       definition(queryCase.operation, "query"),
       queryCase.payload,
       undefined,
-    ), queryCase.result, queryCase.operation);
+    );
+    assert.deepEqual(result, queryCase.result, queryCase.operation);
+    assert.equal(Object.isFrozen(result), true, queryCase.operation);
+    assert.equal(Object.isFrozen(Object.values(result)[0]), true, queryCase.operation);
   }
 });
 

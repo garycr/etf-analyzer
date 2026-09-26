@@ -280,7 +280,19 @@ async function dispatchQuery(
   if (result === null || typeof result !== "object" || Array.isArray(result)) {
     return ownerError("APPLICATION_RESULT_INVALID");
   }
-  return Object.freeze(result as Readonly<Record<string, unknown>>);
+  return freezeJson(result) as Readonly<Record<string, unknown>>;
+}
+
+function freezeJson(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return Object.freeze(value.map(freezeJson));
+  }
+  if (value !== null && typeof value === "object") {
+    const frozen: Record<string, unknown> = {};
+    for (const [key, entry] of Object.entries(value)) frozen[key] = freezeJson(entry);
+    return Object.freeze(frozen);
+  }
+  return value;
 }
 
 export async function dispatchPostgresWorkflowOperation(

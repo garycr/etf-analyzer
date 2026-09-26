@@ -306,7 +306,6 @@ test(
           }
         },
       };
-      await client.query("SET SESSION AUTHORIZATION app_runtime");
       await client.query("SELECT etf.readiness_append($1::jsonb)", [JSON.stringify({
         readinessId: "81000000-0000-4000-8000-000000000014",
         state: "Ready",
@@ -323,6 +322,7 @@ test(
         })),
         controllingError: null,
       })]);
+      await client.query("SET SESSION AUTHORIZATION app_runtime");
       server = await startLoopbackApiServer(
         { allowedOrigins: ["http://127.0.0.1:5173"], bodyLimitBytes: 1_048_576, port: 0 },
         (requestJson) => executeApplicationRequestAsync(requestJson, {

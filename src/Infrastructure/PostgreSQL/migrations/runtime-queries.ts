@@ -101,8 +101,8 @@ REVOKE ALL ON FUNCTION etf.analytics_result_get(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION etf.analytics_result_get(uuid) TO app_runtime;
 
 SET LOCAL ROLE schema_owner;
-REVOKE USAGE, CREATE ON SCHEMA etf FROM application_writer_owner;
-REVOKE USAGE, CREATE ON SCHEMA etf FROM evidence_writer_owner;
+REVOKE CREATE ON SCHEMA etf FROM application_writer_owner;
+REVOKE CREATE ON SCHEMA etf FROM evidence_writer_owner;
 SET LOCAL ROLE migration_owner;
 `;
 

@@ -501,7 +501,7 @@ test(
           objectType,
           catalog.rows.filter(({ object_type }) => object_type === objectType).length,
         ])),
-        { table: 45, function: 23, trigger: 105, index: 71 },
+        { table: 45, function: 26, trigger: 105, index: 71 },
       );
 
       assert.deepEqual(
@@ -554,8 +554,8 @@ test(
 
       const replay = await applyMigration(
         client,
-        denialBackendVerifierMigration,
-        "2026-09-14T00:07:00.000Z",
+        runtimeQueriesMigration,
+        "2026-09-14T00:08:00.000Z",
         projectPostgresSchemaManifest,
       );
       assert.equal(replay.applied, false);
@@ -726,6 +726,7 @@ test(
                WHEN 5 THEN pg_catalog.to_regprocedure('etf.analytics_evidence_commit(jsonb)') IS NOT NULL
                WHEN 6 THEN pg_catalog.to_regprocedure('etf.job_get(uuid)') IS NOT NULL
                WHEN 7 THEN pg_catalog.to_regprocedure('etf.denial_backend_matches(integer,timestamp with time zone,text,text)') IS NOT NULL
+               WHEN 8 THEN pg_catalog.to_regprocedure('etf.readiness_get()') IS NOT NULL
              END AS target_exists`,
             [migration.sequence],
           );

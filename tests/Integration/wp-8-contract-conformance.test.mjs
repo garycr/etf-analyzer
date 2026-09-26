@@ -151,7 +151,7 @@ test(
   async () => {
     await runOwnerTests(
       [
-        "CT-DB-001K migration readiness accepts only the canonical seven-row ledger",
+        "CT-DB-001K migration readiness accepts only the canonical eight-row ledger",
         "CT-DB-001K migration readiness rejects PUBLIC function execution",
         "CT-DB-001K schema readiness rejects manifest drift and projector failure",
         "CT-DB-001K denial-audit probe uses the authenticated audit role and always rolls back",

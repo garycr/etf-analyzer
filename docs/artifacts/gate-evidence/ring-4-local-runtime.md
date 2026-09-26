@@ -10,6 +10,7 @@
 - Supported `Infrastructure/Local` composition root and operator launcher.
 - Separate control and least-privilege runtime PostgreSQL identities.
 - Fail-closed baseline, eight-migration ledger, schema-manifest, and persisted-readiness startup attestation.
+- Control-plane setup owns readiness persistence; `app_runtime` receives only the controlled readiness read surface.
 - Six previously missing PostgreSQL query owners; seven authoritative query operations total including the existing portfolio owner.
 - Migration `0008-runtime-queries` with PUBLIC denial and `app_runtime` execution grants.
 - Reviewed fixture/analytics loading beneath one canonical root with traversal and symlink-escape rejection.

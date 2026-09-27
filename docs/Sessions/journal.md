@@ -6,6 +6,19 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-27 | Structured scenario extraction deferred | Ring-4 | @solo-orchestrator
+
+**Type:** DECISION
+**agentic:** true
+**Decision:** Keep #87 open as post-release maintenance and proceed to bounded release-artifact preparation under #97
+**Policy:** DEC-095; DEC-101; RH-017; REV-202 TR-5; proportional Sev 3 disposition; verified zero-skip A-L evidence
+**Authority:** Agent (Fully Agentic) with alternate-model REV-217 PASS disposition
+**Accountability:** Preserve current A-L parent names and gates, retain #87 ownership, reopen it on evidence unreliability, and record promotions only when actually executed
+**Result:** Current wrapper and owner suites remain unchanged; repeated Node 20/PostgreSQL CI is reliable; pre-release refactor churn is avoided
+**authorization-boundary:** Release-artifact preparation only; no promotion, staging, release, deployment, production, provider, broker, public ingress, or durable handoff authority
+
+---
+
 ## 2026-09-27 | Release test-gate publication verified | Ring-4 | @solo-orchestrator
 
 **Type:** WORK

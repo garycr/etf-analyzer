@@ -32,7 +32,7 @@ No Ring 4 artifact or promotion authorizes production. DP-25 remains human-owned
 | 3 | Exact release-grade runner and Node identities | #90 | Complete; CI `36326805089` passed | Required for reproducible release evidence |
 | 4 | Dependency compatibility, advisory, changelog, and lifecycle disposition | #93 | Complete; CI `36330071820` passed; pins retained | Required before freezing the release manifest |
 | 5 | Branch coverage, local skip enforcement, and timing determinism | #94 | Complete; CI `36355866056` passed | Required before final TEST promotion |
-| 6 | Structured scenario extraction | #87 | Pending if needed | Maintenance work; include only if needed for release evidence reliability |
+| 6 | Structured scenario extraction | #87 | Deferred under DEC-101; open post-release maintenance | Current release evidence is reliable; reopen on invalidation criteria |
 
 ## Release Outputs
 

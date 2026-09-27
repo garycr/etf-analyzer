@@ -59,6 +59,7 @@
 | DEC-098 | 2026-09-26 | Release reproducibility | Govern Ubuntu 24.04 and Node 20.20.2 identities with fail-fast CI assertions | Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `42bc4f43`; #90 closure authorized |
 | DEC-099 | 2026-09-27 | Dependency lifecycle | Retain reviewed exact dependency pins for the bounded candidate after freshness assessment | Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `8199a960`; #93 closure authorized |
 | DEC-100 | 2026-09-27 | Test gate hardening | Enforce 80% aggregate branch coverage, generic zero-skip execution, and deadline-test determinism | Workspace Owner / Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `44764613`; #94 closure authorized |
+| DEC-101 | 2026-09-27 | Maintenance scope | Defer structured WP-8 scenario extraction to owned post-release maintenance | Agent (Fully Agentic) | Solo Orchestrator | Accepted under REV-217; proceed to #97 release artifacts |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -97,6 +98,27 @@
 ---
 
 ## Decision Records
+
+### DEC-101: Defer Structured Scenario Extraction
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-101 |
+| **Date** | 2026-09-27 |
+| **Category** | Maintenance scope |
+| **Decision** | Keep issue #87 open and owned as post-release maintenance; do not refactor the WP-8 TAP wrapper or large owner suites before candidate packaging; proceed to bounded release-artifact preparation under #97 |
+| **Policy** | DEC-095; Ring 4 release plan; issue #87; RH-017; REV-202 TR-5; preserve verified release evidence; proportional response to Sev 3 debt |
+| **Authority** | Agent under Fully Agentic mode with alternate-model REV-217 PASS disposition |
+| **Accountability** | Solo Orchestrator retains #87 in the quality backlog and risk register, preserves exact A-L names and zero-skip controls, reopens release scope only if evidence reliability degrades, and records every actual promotion separately |
+| **Context** | The wrapper launches exact A-L owner scenarios and has passed repeated Node 20.20.2/PostgreSQL publication CI. Owner suites are large, including a 4,990-line ledger suite, so pre-packaging extraction would add substantial refactor risk without changing behavioral coverage or release evidence. |
+| **Alternatives** | Implement #87 before packaging; partially extract only the wrapper; defer the complete maintainability refactor. Deferral is selected because no current failure, skip, ambiguity, or gate weakness requires the change. |
+| **Consequences** | Release-artifact preparation may proceed without test-suite restructuring. Maintainability debt remains visible and owned; exact parent names, zero-skip behavior, and current test gates remain mandatory. |
+| **Assumptions** | CI continues to execute all A-L parents with zero skips; no release-evidence parsing defect emerges; #87 remains nonblocking Sev 3 debt; candidate scope stays local and fixture-only. |
+| **Invalidation** | Flaky wrapper parsing, hidden owner-test failure, ambiguous parent evidence, skipped canonical parent, maintenance work required for a release artifact, or a raised severity reopens #87 before further promotion. |
+| **Linked Artifacts** | REV-217; `docs/Planning/ring-4-release-plan.md`; `docs/Quality/test-improvement-backlog.md`; issue #87; issue #97 |
+| **Status** | Accepted; #87 remains open for post-release maintenance; #97 release-artifact preparation is next; no promotion authority |
+
+---
 
 ### DEC-100: Harden Release Test Gates
 

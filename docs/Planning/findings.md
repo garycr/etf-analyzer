@@ -10,7 +10,7 @@
 
 ## 1. Executive Overview
 
-Ring 2 delivered WP-1 through WP-8 as an executable greenfield PostgreSQL integration candidate, and Ring 3 closed with independent quality/security acceptance and verified publication. DEC-095 activates bounded Ring 4 release management. Issues #88, #89, #90, #93, and #94 are independently reviewed and publication-verified under DEC-096 through DEC-100; the exact dependency graph and hardened test gates are retained. Optional #87 scope must be assessed before release-artifact preparation; no DEV/SMOKE promotion exists.
+Ring 2 delivered WP-1 through WP-8 as an executable greenfield PostgreSQL integration candidate, and Ring 3 closed with independent quality/security acceptance and verified publication. DEC-095 activates bounded Ring 4 release management. Issues #88, #89, #90, #93, and #94 are independently reviewed and publication-verified under DEC-096 through DEC-100; the exact dependency graph and hardened test gates are retained. DEC-101 defers #87 to owned post-release maintenance because current release evidence is reliable. Bounded release-artifact preparation under #97 is next; no DEV/SMOKE promotion exists.
 
 ---
 
@@ -71,7 +71,7 @@ The implemented-state architecture is published in `docs/Architecture/wp-8-imple
 ## 6. Recommendation
 
 **Production Readiness:** Not Ready - executable local candidate only
-**Ring Recommendation:** Assess whether #87 is required for release-evidence reliability, then continue bounded release-artifact preparation under #97 and record each actual promotion in `docs/Operations/promotion-log.md`. Do not infer staging, release, deployment, or production authority from completed release-hardening work.
+**Ring Recommendation:** Continue bounded release-artifact preparation under #97 and record each actual promotion in `docs/Operations/promotion-log.md`. Keep #87 open for post-release maintenance and reopen its release scope only on DEC-101 invalidation criteria. Do not infer staging, release, deployment, or production authority from completed release-hardening work.
 
 Do not connect a live provider or broker, widen ingress, introduce durable handoff, change database platform, stage, deploy, release, or take production action from this recommendation.
 

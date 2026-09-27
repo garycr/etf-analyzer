@@ -6,7 +6,7 @@
 | Priority | Improvement | Issue | Trigger |
 | --- | --- | --- | --- |
 | Medium | Add branch-gate policy, strengthen generic skip enforcement, and remove deadline timing sensitivity | #94 | Completed under DEC-100; CI `36355866056` passed |
-| Medium | Extract structured scenario results and reduce large-test maintenance cost | #87 | Normal maintenance |
+| Medium | Extract structured scenario results and reduce large-test maintenance cost | #87 | Post-release maintenance under DEC-101; reopen earlier only on evidence unreliability |
 | Medium | Add launch token and concurrency/rate controls | #89 | Completed under DEC-097 |
 | Medium | Publish exact tool/runtime identity | #90 | Completed under DEC-098 |
 | Low | Review exact-pinned dependency updates | #93 | Completed under DEC-099; exact pins retained |

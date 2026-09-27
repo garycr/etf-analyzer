@@ -290,10 +290,44 @@ export function launchTokenHeaderFromFragment(
     : Object.freeze({ "x-launch-token": match[1]! });
 }
 
+export function launchTokenHeaderFromSources(
+  fragment: string,
+  storedToken: string | null,
+): Readonly<Record<string, string>> {
+  const fragmentHeader = launchTokenHeaderFromFragment(fragment);
+  if (fragmentHeader["x-launch-token"] !== undefined) return fragmentHeader;
+  return storedToken !== null && /^[0-9a-f]{64}$/.test(storedToken)
+    ? Object.freeze({ "x-launch-token": storedToken })
+    : Object.freeze({});
+}
+
+const launchTokenStorageKey = "workbench:launch-token";
+
+function initializeLaunchTokenHeader(): Readonly<Record<string, string>> {
+  let storedToken: string | null = null;
+  try {
+    storedToken = window.sessionStorage.getItem(launchTokenStorageKey);
+  } catch {
+  }
+  const fragmentHeader = launchTokenHeaderFromFragment(window.location.hash);
+  const fragmentToken = fragmentHeader["x-launch-token"];
+  if (fragmentToken !== undefined) {
+    try {
+      window.sessionStorage.setItem(launchTokenStorageKey, fragmentToken);
+    } catch {
+    }
+  }
+  return launchTokenHeaderFromSources(window.location.hash, storedToken);
+}
+
+const launchTokenHeader = typeof window === "undefined"
+  ? Object.freeze({})
+  : initializeLaunchTokenHeader();
+
 function requestHeaders(command: boolean): Record<string, string> {
   return {
     accept: "application/json",
-    ...launchTokenHeaderFromFragment(window.location.hash),
+    ...launchTokenHeader,
     "x-request-id": crypto.randomUUID(),
     "x-correlation-id": crypto.randomUUID(),
     "x-requested-at": new Date().toISOString(),

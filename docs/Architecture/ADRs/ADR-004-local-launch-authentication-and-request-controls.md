@@ -13,7 +13,7 @@ The supported workbench binds only to literal IPv4 loopback, but another process
 ## Decision
 
 - Generate a fresh 256-bit token with `randomBytes(32)` for every launcher process.
-- Keep the token out of disk configuration and HTTP request targets. Print it only in the launch URL fragment and send it from the browser as `X-Launch-Token`.
+- Keep the token out of disk configuration and HTTP request targets. Print it only in the launch URL fragment, retain a strictly validated copy in tab-scoped `sessionStorage` across anchor navigation and reload, and send it from the browser as `X-Launch-Token`.
 - Require exact lowercase hexadecimal token syntax and compare fixed SHA-256 digests with `timingSafeEqual`.
 - Apply Host, Origin, and token guards before request-body buffering. Return one fixed, redacted `401` for absent, malformed, or incorrect tokens.
 - Exempt only `GET /`, `GET /workbench.js`, and valid CORS preflight from token and capacity admission so the browser can bootstrap.
@@ -25,7 +25,7 @@ The supported workbench binds only to literal IPv4 loopback, but another process
 
 The supported local runtime resists unauthorized same-host requests and bounds authenticated request work without new dependencies or durable handoff. A fixed window can permit a bounded burst across a window boundary; the concurrency cap remains authoritative during that burst. Direct adapter test harnesses may omit authentication, but `LocalRuntimeConfig` requires a launch token and the launcher always generates one.
 
-The fragment remains visible to the local operator and same-page script. This is acceptable only for the current single-user, trusted-host boundary.
+The fragment and tab-scoped copy remain visible to the local operator and same-page script. The copy is replaced only by another canonical launch fragment and is rejected after a server restart changes the token. This is acceptable only for the current single-user, trusted-host boundary and current restrictive CSP.
 
 ## Invalidation
 

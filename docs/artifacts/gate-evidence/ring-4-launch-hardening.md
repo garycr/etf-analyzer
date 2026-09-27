@@ -9,7 +9,7 @@
 ## Implemented Evidence
 
 - A fresh 256-bit launch token is generated in memory and printed only in the URL fragment.
-- The browser accepts only the exact fragment form and sends the token as `X-Launch-Token` on API requests.
+- The browser accepts only the exact fragment form, retains the validated token in tab-scoped storage across anchor navigation and reload, and sends it as `X-Launch-Token` on API requests.
 - Host, Origin, and token checks run before request-body buffering; missing and incorrect tokens share one redacted `401`.
 - Authenticated API work uses explicit zero-queue concurrency and fixed-window rate limits; both exhaustion paths share one redacted `429`.
 - Static root, workbench script, and valid CORS preflight remain available without consuming API capacity.
@@ -17,12 +17,14 @@
 
 ## Validation
 
-- Full repository suite: 551 tests, 458 passed, 0 failed, 93 environment-gated skips.
+- Full repository suite after browser remediation: 552 tests, 459 passed, 0 failed, 93 environment-gated skips.
 - Coverage gate: 2/2 PASS; 85.76% statements, 86.16% branches, 81.07% functions.
 - TypeScript lint: PASS.
 - Dependency audit, SAST, secret scan, and commit-identified security evidence: PASS.
 - Focused adapter unit and integration suites: PASS.
 - Local Playwright execution was unavailable because Chromium could not load host library `libnspr4.so`; publication CI remains the browser gate.
+
+Initial publication run `36292178660` failed both browser tests because native skip-link navigation replaced the launch-token fragment and later requests lost authentication. The tab-scoped retention fix is covered by deterministic unit tests and focused code/security re-review; replacement publication CI remains required.
 
 ## Publication Condition
 

@@ -11,6 +11,7 @@ import {
   moveWatchlistItem,
   targetAfterWatchlistRemoval,
   launchTokenHeaderFromFragment,
+  launchTokenHeaderFromSources,
 } from "../../dist/Infrastructure/Web/workbench-client.js";
 
 test("PT-UI-004AUTH sends only one canonical fragment token as a request header", () => {
@@ -28,6 +29,19 @@ test("PT-UI-004AUTH sends only one canonical fragment token as a request header"
   ]) {
     assert.deepEqual(launchTokenHeaderFromFragment(fragment), {}, fragment);
   }
+});
+
+test("PT-UI-004AUTH retains a tab-scoped token after accessible fragment navigation", () => {
+  const launchToken = "a".repeat(64);
+  assert.deepEqual(
+    launchTokenHeaderFromSources("#main-content", launchToken),
+    { "x-launch-token": launchToken },
+  );
+  assert.deepEqual(launchTokenHeaderFromSources("#main-content", "invalid"), {});
+  assert.deepEqual(
+    launchTokenHeaderFromSources(`#launch-token=${launchToken}`, "invalid"),
+    { "x-launch-token": launchToken },
+  );
 });
 
 test("PT-UI-004 builds exact version-bound watchlist mutations", () => {

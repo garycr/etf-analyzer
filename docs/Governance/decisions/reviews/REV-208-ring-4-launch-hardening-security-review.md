@@ -12,4 +12,6 @@ No Sev 1 or Sev 2 vulnerability was found. The review verified 256-bit CSPRNG to
 
 Two informational residuals remain accepted for the current boundary: fixed-window counters permit a bounded boundary burst, and direct adapter test harnesses may omit `launchToken` while the supported `LocalRuntimeConfig` requires it. Either public ingress or a shared/multi-user host invalidates this acceptance.
 
+After publication CI exposed launch-fragment loss during native anchor navigation, focused re-review accepted tab-scoped `sessionStorage` retention. The token was already available to same-page JavaScript; strict syntax, fragment precedence, tab/origin scope, the restrictive CSP, and deterministic stale-token rejection keep the change within the accepted single-user boundary. Stale values remain until tab close or replacement by a new canonical launch fragment.
+
 This review does not authorize promotion, staging, deployment, release, production, or boundary widening.

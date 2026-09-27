@@ -5,7 +5,7 @@
 
 | Priority | Improvement | Issue | Trigger |
 | --- | --- | --- | --- |
-| Medium | Add branch-gate policy, strengthen generic skip enforcement, and monitor deadline timing | #94 | Before release planning or on observed flake |
+| Medium | Add branch-gate policy, strengthen generic skip enforcement, and remove deadline timing sensitivity | #94 | Implemented under DEC-100; publication CI pending |
 | Medium | Extract structured scenario results and reduce large-test maintenance cost | #87 | Normal maintenance |
 | Medium | Add launch token and concurrency/rate controls | #89 | Completed under DEC-097 |
 | Medium | Publish exact tool/runtime identity | #90 | Completed under DEC-098 |

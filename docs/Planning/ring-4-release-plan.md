@@ -31,7 +31,7 @@ No Ring 4 artifact or promotion authorizes production. DP-25 remains human-owned
 | 2 | Per-launch token and explicit request concurrency/rate controls | #89 | Complete; CI `36293666091` passed | Required before promoting the supported launcher |
 | 3 | Exact release-grade runner and Node identities | #90 | Complete; CI `36326805089` passed | Required for reproducible release evidence |
 | 4 | Dependency compatibility, advisory, changelog, and lifecycle disposition | #93 | Complete; CI `36330071820` passed; pins retained | Required before freezing the release manifest |
-| 5 | Branch coverage, local skip enforcement, and timing determinism | #94 | In progress; next | Required before final TEST promotion |
+| 5 | Branch coverage, local skip enforcement, and timing determinism | #94 | Implemented and reviewed; publication CI pending | Required before final TEST promotion |
 | 6 | Structured scenario extraction | #87 | Pending if needed | Maintenance work; include only if needed for release evidence reliability |
 
 ## Release Outputs

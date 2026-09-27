@@ -58,6 +58,7 @@
 | DEC-097 | 2026-09-26 | Release hardening | Accept per-launch loopback authentication and zero-queue request limits for publication | Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `6b1b0303`; #89 closure authorized |
 | DEC-098 | 2026-09-26 | Release reproducibility | Govern Ubuntu 24.04 and Node 20.20.2 identities with fail-fast CI assertions | Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `42bc4f43`; #90 closure authorized |
 | DEC-099 | 2026-09-27 | Dependency lifecycle | Retain reviewed exact dependency pins for the bounded candidate after freshness assessment | Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `8199a960`; #93 closure authorized |
+| DEC-100 | 2026-09-27 | Test gate hardening | Enforce 80% aggregate branch coverage, generic zero-skip execution, and deadline-test determinism | Workspace Owner / Agent (Fully Agentic) | Solo Orchestrator | REV-215/216 PASS; publication CI pending |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -96,6 +97,27 @@
 ---
 
 ## Decision Records
+
+### DEC-100: Harden Release Test Gates
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-100 |
+| **Date** | 2026-09-27 |
+| **Category** | Test gate hardening |
+| **Decision** | Retain the 80% per-business-file line gate, add an owner-approved 80% aggregate branch gate, route every generic local test batch through zero-skip enforcement, keep the generated-report coverage parent in its dedicated zero-skip command, and replace the API deadline elapsed-time assertion with deterministic delay-boundary and protocol assertions |
+| **Policy** | DEC-095; issue #94; Workspace Owner approval of 80% aggregate coverage; test-first development; test-quality determinism and coverage controls; exact-commit CI |
+| **Authority** | Workspace Owner approved the aggregate threshold; Agent under Fully Agentic mode implemented the remaining approved issue scope with alternate-model REV-215 and REV-216 PASS dispositions |
+| **Accountability** | Solo Orchestrator preserves complete environment-gated integration discovery, documents the PostgreSQL prerequisite, verifies Node 20.20.2 and live PostgreSQL through publication CI, and reopens the decision if aggregate branch coverage falls below 80% or a test can silently skip |
+| **Context** | Ring 3 identified no explicit branch threshold, local generic runs that could pass with environment skips, and a scheduler-sensitive elapsed-time assertion. Current aggregate branch coverage is 86.18%; a per-file branch rule would create broader domain-test scope not required by #94. |
+| **Alternatives** | Keep branch coverage diagnostic; require 80% per-file branch coverage; require 80% aggregate branch coverage. The owner selected aggregate coverage while retaining the existing per-file line gate. |
+| **Consequences** | Coverage regression below 80% aggregate branches fails the dedicated gate. Generic `npm test` now fails when PostgreSQL tests skip. The generated-report parent remains exclusively in `test:coverage:wp8`, and deadline behavior no longer depends on measured wall-clock latency. |
+| **Assumptions** | Node coverage retains its `all files` summary; CI supplies Node 20.20.2 and PostgreSQL 16.15; browser tests remain in their pinned dedicated job; issue #87 owns broader test-file maintainability. |
+| **Invalidation** | Missing or changed coverage summary format, aggregate branch coverage below 80%, any generic-run skip passing green, observed deadline flake, failed exact-commit CI, or release-boundary change reopens review. |
+| **Linked Artifacts** | `docs/artifacts/gate-evidence/ring-4-test-gate-hardening.md`; REV-215; REV-216; issue #94 |
+| **Status** | Accepted for publication; exact-commit Node 20/PostgreSQL CI pending; no promotion authority |
+
+---
 
 ### DEC-099: Retain Reviewed Dependency Pins For The Candidate
 

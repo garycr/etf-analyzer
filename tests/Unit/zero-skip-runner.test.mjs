@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { assertZeroSkipSummary, parseTestSummary } from "../../scripts/zero-skip-runner-lib.mjs";
@@ -39,4 +40,11 @@ test("zero-skip runner rejects skipped incomplete duplicate and inconsistent sum
   ]) {
     assert.throws(() => assertZeroSkipSummary(report), Error, name);
   }
+});
+
+test("generic local test runner delegates every selected test run to zero-skip enforcement", async () => {
+  const source = await readFile("scripts/test-runner.mjs", "utf8");
+  assert.match(source, /zero-skip-runner\.mjs/u);
+  assert.match(source, /wp-8-coverage\.test\.mjs/u);
+  assert.doesNotMatch(source, /process\.execPath, \["--test"/u);
 });

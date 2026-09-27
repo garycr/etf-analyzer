@@ -17,13 +17,13 @@ export const discoverBusinessFiles = (root = "dist") => ["Application", "Domain"
   .map((path) => normalizePath(relative(".", path)))
   .sort();
 
-export const parseLineCoverage = (report) => {
+const parseCoverage = (report, metricIndex) => {
   const paths = [];
   const coverage = new Map();
 
   for (const rawLine of report.split("\n")) {
     const line = stripAnsi(rawLine);
-    const match = line.match(/^(?:ℹ |# )?( *)([^|]+?)\s+\|\s*([^|]*)\|/u);
+    const match = line.match(/^(?:ℹ |# )?( *)([^|]+?)\s+\|(.*)$/u);
     if (match === null) {
       continue;
     }
@@ -32,7 +32,7 @@ export const parseLineCoverage = (report) => {
     const name = match[2].trim();
     paths.length = depth;
     paths[depth] = name;
-    const percentageText = match[3].trim();
+    const percentageText = match[3].split("|")[metricIndex]?.trim() ?? "";
     const percentage = Number(percentageText);
     if (percentageText !== "" && Number.isFinite(percentage)) {
       const coveragePath = paths.join("/");
@@ -45,6 +45,9 @@ export const parseLineCoverage = (report) => {
 
   return coverage;
 };
+
+export const parseLineCoverage = (report) => parseCoverage(report, 0);
+export const parseBranchCoverage = (report) => parseCoverage(report, 1);
 
 export const parseTestCount = (report, expectedName) => {
   if (!["pass", "fail", "skipped"].includes(expectedName)) {
@@ -72,14 +75,24 @@ export const assertBusinessCoverage = (report, businessFiles, threshold = 80) =>
     throw new Error("No compiled Domain or Application JavaScript files were discovered");
   }
 
-  const coverage = parseLineCoverage(report);
+  const lineCoverage = parseLineCoverage(report);
+  const branchCoverage = parseBranchCoverage(report);
+  const aggregateBranchPercentage = branchCoverage.get("all files");
+  if (aggregateBranchPercentage === undefined) {
+    throw new Error("Aggregate branch coverage must appear in the Node coverage report");
+  }
+  if (aggregateBranchPercentage < threshold) {
+    throw new Error(
+      `Aggregate branch coverage ${aggregateBranchPercentage}% must be at least ${threshold}%`,
+    );
+  }
   for (const file of businessFiles) {
-    const percentage = coverage.get(file);
-    if (percentage === undefined) {
+    const linePercentage = lineCoverage.get(file);
+    if (linePercentage === undefined) {
       throw new Error(`${file} must appear in the Node coverage report`);
     }
-    if (percentage < threshold) {
-      throw new Error(`${file} line coverage ${percentage}% must be at least ${threshold}%`);
+    if (linePercentage < threshold) {
+      throw new Error(`${file} line coverage ${linePercentage}% must be at least ${threshold}%`);
     }
   }
 };

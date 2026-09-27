@@ -6,6 +6,7 @@ import {
   adaptApiRequest,
   apiRoutes,
   applicationHttpStatusByCode,
+  requestDeadlineDelay,
   httpStatusForApplicationResult,
   resolveApiRoute,
 } from "../../dist/Infrastructure/Http/api-adapter.js";
@@ -28,6 +29,12 @@ const expectedRoutes = [
   ["GET", "/api/v1/paper-orders/10000000-0000-4000-8000-000000000006", "PaperOrderGet"],
   ["GET", "/api/v1/portfolios/10000000-0000-4000-8000-000000000007?asOf=2026-09-17", "PortfolioGet"],
 ];
+
+test("CT-API-001M derives a deterministic nonnegative request deadline delay", () => {
+  assert.equal(requestDeadlineDelay(1_100, 1_000), 100);
+  assert.equal(requestDeadlineDelay(1_100, 1_100), 0);
+  assert.equal(requestDeadlineDelay(1_100, 1_200), 0);
+});
 
 test("CT-API-001A maps exactly 16 reviewed routes to application operations", () => {
   assert.equal(apiRoutes.length, 16);

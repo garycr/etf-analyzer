@@ -6,6 +6,7 @@ import { apiRoutes, resolveApiRoute } from "../../dist/Infrastructure/Http/api-a
 import {
   assertBusinessCoverage,
   discoverBusinessFiles,
+  parseBranchCoverage,
   parseLineCoverage,
   parseTestCount,
 } from "../../scripts/wp-8-coverage-lib.mjs";
@@ -57,6 +58,7 @@ test(
 
 test("PT-COVERAGE-001 parses complete paths and rejects missing or sub-threshold files", () => {
   const report = [
+    "ℹ all files | 80.00 | 80.00 | 80.00 |",
     "ℹ dist | | | |",
     "ℹ  Application | | | |",
     "ℹ   foundation.js | 80.00 | 80.00 | 80.00 |",
@@ -66,13 +68,26 @@ test("PT-COVERAGE-001 parses complete paths and rejects missing or sub-threshold
   ].join("\n");
 
   assert.deepEqual([...parseLineCoverage(report)], [
+    ["all files", 80],
     ["dist/Application/foundation.js", 80],
     ["dist/Domain/Nested/foundation.js", 79.99],
+  ]);
+  assert.deepEqual([...parseBranchCoverage(report)], [
+    ["all files", 80],
+    ["dist/Application/foundation.js", 80],
+    ["dist/Domain/Nested/foundation.js", 80],
   ]);
   assert.doesNotThrow(() => assertBusinessCoverage(report, ["dist/Application/foundation.js"]));
   assert.throws(
     () => assertBusinessCoverage(report, ["dist/Domain/Nested/foundation.js"]),
     /79\.99% must be at least 80%/u,
+  );
+  assert.throws(
+    () => assertBusinessCoverage(
+      report.replace("all files | 80.00 | 80.00", "all files | 80.00 | 79.99"),
+      ["dist/Application/foundation.js"],
+    ),
+    /Aggregate branch coverage 79\.99% must be at least 80%/u,
   );
   assert.throws(
     () => assertBusinessCoverage(report, ["dist/Domain/missing.js"]),

@@ -94,6 +94,9 @@ export type ApiApplicationExecutor = (
   requestJson: string,
 ) => Readonly<Record<string, unknown>>;
 
+export const requestDeadlineDelay = (expiresAt: number, now: number): number =>
+  Math.max(0, expiresAt - now);
+
 type LoopbackApiApplicationExecutor = (
   requestJson: string,
 ) => Readonly<Record<string, unknown>> | Promise<Readonly<Record<string, unknown>>>;
@@ -568,7 +571,7 @@ export function startLoopbackApiServer(
       } else {
         request.socket.destroy();
       }
-    }, Math.max(0, expiresAt - Date.now()));
+    }, requestDeadlineDelay(expiresAt, Date.now()));
     const terminateWithoutDispatch = () => {
       if (terminal) return false;
       terminal = true;

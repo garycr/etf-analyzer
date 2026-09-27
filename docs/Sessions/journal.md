@@ -6,6 +6,19 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-27 | Release test gates hardened for publication | Ring-4 | @solo-orchestrator
+
+**Type:** WORK
+**agentic:** true
+**Decision:** Accept issue #94 implementation for publication under DEC-100, conditional on exact-commit Node 20.20.2 and PostgreSQL CI
+**Policy:** DEC-095; owner-approved 80% aggregate branch threshold; test-first development; zero-skip enforcement; independent code and test review
+**Authority:** Workspace Owner approved aggregate coverage; Agent (Fully Agentic) with REV-215 and REV-216 PASS dispositions
+**Accountability:** Publish task-related files only, verify all CI jobs, close #94 only after success, and preserve the unchanged promotion boundary
+**Result:** Aggregate branch coverage passes at 86.18%; per-business-file line coverage remains enforced; generic testing fails closed on absent PostgreSQL; deadline elapsed-time assertion removed; local governed-runtime database execution deferred to CI because only Node 24.20.0 is installed
+**authorization-boundary:** Test-gate hardening only; no DEV/SMOKE promotion, staging, release, deployment, production, provider, broker, public ingress, or durable handoff authority
+
+---
+
 ## 2026-09-26 | Supported local runtime publication verified | Ring-4 | @solo-orchestrator
 
 **Type:** WORK

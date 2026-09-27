@@ -2,6 +2,7 @@ import { readdir } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 
 const readinessTest = "tests/Integration/postgres-readiness.test.mjs";
+const excludedUnitTests = new Set(["wp-8-coverage.test.mjs"]);
 const excludedIntegrationTests = new Set([
   "postgres-readiness.test.mjs",
   "workbench-accessibility.test.mjs",
@@ -15,8 +16,7 @@ async function testFiles(directory, excluded = new Set()) {
 }
 
 function runTests(files) {
-  const result = spawnSync(process.execPath, ["--test", ...files], {
-    encoding: "utf8",
+  const result = spawnSync(process.execPath, ["scripts/zero-skip-runner.mjs", ...files], {
     stdio: "inherit",
   });
   if (result.error !== undefined) throw result.error;
@@ -25,6 +25,6 @@ function runTests(files) {
 
 runTests([readinessTest]);
 runTests([
-  ...await testFiles("tests/Unit"),
+  ...await testFiles("tests/Unit", excludedUnitTests),
   ...await testFiles("tests/Integration", excludedIntegrationTests),
 ]);

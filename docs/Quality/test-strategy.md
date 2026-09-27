@@ -23,7 +23,7 @@ The strategy validates functional suitability, reliability, security, maintainab
 ## Gates
 
 - Every compiled `dist/Domain` and `dist/Application` file must independently meet 80% line coverage.
-- The line-only threshold is intentional for this candidate. Branch and function percentages remain diagnostic; branch gating is deferred as nonblocking hardening.
+- Aggregate branch coverage must meet 80%. Function coverage remains diagnostic.
 - The 16 reviewed public method/target pairs must resolve behaviorally to 16 unique Application operations.
 - WP-8 PostgreSQL parents and the dedicated coverage gate must report zero failures, skips, todos, and cancellations.
 - Browser parents must pass at 1280x720, 768x1024, and 320x568 with zero axe violations and complete keyboard access.
@@ -32,12 +32,12 @@ The strategy validates functional suitability, reliability, security, maintainab
 
 ## Environment And Determinism
 
-CI uses Node 20 and digest-pinned PostgreSQL 16.15 with a health-gated service. Generic local `npm test` may skip environment-gated PostgreSQL tests when `ETF_TEST_POSTGRES_URL` is absent; that command is not standalone integration acceptance. The canonical CI supplies the database and separately runs the 12 zero-skip WP-8 parents. The PT-COVERAGE-001 parent intentionally skips during generic `npm test` because it requires a generated coverage report; the dedicated command executes it and its adversarial parser controls.
+CI uses Node 20 and digest-pinned PostgreSQL 16.15 with a health-gated service. Generic local `npm test` requires `ETF_TEST_POSTGRES_URL` and fails closed if readiness or any selected integration test skips. The generated-report PT-COVERAGE-001 parent runs only through the dedicated zero-skip `npm run test:coverage:wp8` command; browser parents remain in their pinned dedicated job.
 
-Tests use isolated loopback servers on ephemeral ports, fresh browser contexts, transactional database setup, controlled fixture time, and explicit teardown. The API deadline elapsed-time assertion is retained as a determinism watch item; a demonstrated flake requires an injectable clock or revised bound.
+Tests use isolated loopback servers on ephemeral ports, fresh browser contexts, transactional database setup, controlled fixture time, and explicit teardown. API deadline validation uses pure remaining-delay boundaries and observable timeout protocol behavior rather than measured wall-clock latency.
 
 ## Exit Criteria
 
 Exit requires green published CI, no open Sev 1/2 quality defect, per-file business line coverage at or above 80%, zero-skip canonical PostgreSQL/browser/coverage parents, complete OSS and security review, WCAG 2.1 AA evidence, an independent score at or above Good, and traceable disposition of every Sev 3 finding.
 
-Residual maintainability is tracked by #87, dependency freshness by #93, and coverage/skip/timing hardening by the Ring 3 test-improvement issue. None authorizes later-ring scope.
+Residual maintainability is tracked by #87. Dependency and test-gate lifecycle findings are resolved by #93 and #94 respectively. None authorizes later-ring scope.

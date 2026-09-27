@@ -27,6 +27,18 @@ npm run start:local -- /path/to/local-runtime.json
 
 The launcher prints a loopback URL containing a fresh per-launch token in its fragment after PostgreSQL, artifacts, and HTTP startup succeed. Open that exact URL; the browser sends the token only in `X-Launch-Token` API headers. The configuration requires explicit `maxConcurrentRequests`, `requestRateLimit`, and `requestRateWindowMs` bounds; exhausted requests fail immediately without queuing. `SIGINT` or `SIGTERM` closes the HTTP server and then the database connection. Artifact paths must be relative to the canonical `artifactRoot`; traversal and symlink escapes are rejected.
 
+## Testing
+
+Use Node 20.20.2. The generic suite requires a reachable PostgreSQL 16 test database and fails if any selected test skips:
+
+```bash
+ETF_TEST_POSTGRES_URL='postgresql://postgres@127.0.0.1:5432/etf_analyzer' npm test
+npm run test:coverage:wp8
+npm run test:browser
+```
+
+The coverage command enforces 80% per-file line coverage for compiled Domain and Application code and 80% aggregate branch coverage. Browser tests run separately because they require the pinned Playwright environment.
+
 ## Structure
 
 ```

@@ -12,7 +12,7 @@ An **agent-enabled workspace** with built-in governance, ring lifecycle, and mul
 
 ## Local Runtime
 
-The supported runtime is local, fixture-only, and bound to `127.0.0.1`. PostgreSQL 16 must already contain the canonical eight migrations and a persisted readiness snapshot. Use a control connection with catalog-read access for startup attestation and a separate least-privilege `app_runtime` connection for requests.
+The supported runtime uses Node 20.20.2, is local, fixture-only, and bound to `127.0.0.1`. PostgreSQL 16 must already contain the canonical eight migrations and a persisted readiness snapshot. Use a control connection with catalog-read access for startup attestation and a separate least-privilege `app_runtime` connection for requests.
 
 1. Copy [config/local-runtime.example.json](config/local-runtime.example.json) to an operator-owned location and set `artifactRoot` to an absolute reviewed-artifact directory.
 2. Place the approved fixture package under `fixturePackageDirectory`. It must contain `manifest.json` and every file declared by that manifest.

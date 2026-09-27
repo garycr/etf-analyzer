@@ -56,6 +56,7 @@
 | DEC-095 | 2026-09-25 | Release activation | Activate bounded Ring 4 release management and require productization before promotion | Agent (Fully Agentic) | Solo Orchestrator | Active; no release candidate or promotion yet |
 | DEC-096 | 2026-09-25 | Release productization | Accept the supported local runtime design and require publication CI before closing #88 | Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `9ca9afea`; #88 closure authorized |
 | DEC-097 | 2026-09-26 | Release hardening | Accept per-launch loopback authentication and zero-queue request limits for publication | Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `6b1b0303`; #89 closure authorized |
+| DEC-098 | 2026-09-26 | Release reproducibility | Govern Ubuntu 24.04 and Node 20.20.2 identities with fail-fast CI assertions | Agent (Fully Agentic) | Solo Orchestrator | Accepted under REV-210/211/212; publication CI pending |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -94,6 +95,27 @@
 ---
 
 ## Decision Records
+
+### DEC-098: Govern CI Runtime Identities
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-098 |
+| **Date** | 2026-09-26 |
+| **Category** | Release reproducibility |
+| **Decision** | Replace mutable `ubuntu-latest` and Node major selectors with the governed `ubuntu-24.04` runner generation, exact Node 20.20.2 project runtime, and fail-fast observed-identity assertions; close #90 only after publication CI passes |
+| **Policy** | DEC-095; ADR-005; RH-015; test-first development; pinned actions and containers; exact-commit CI; architecture, code, and security review |
+| **Authority** | Agent under Fully Agentic mode, with alternate-model REV-210, REV-211, and REV-212 PASS dispositions |
+| **Accountability** | Solo Orchestrator preserves immutable action/container pins, publishes only task-related paths, verifies every CI job at the exact commit, remediates identity drift before closure, and keeps the promotion log unchanged |
+| **Context** | Candidate CI used mutable hosted-runner and Node major selectors. GitHub-hosted virtual machines are not digest-addressable, while project runtimes, actions, and service containers can be independently governed. |
+| **Alternatives** | Retain mutable selectors; move all jobs into custom digest-pinned containers; govern the hosted-runner generation and assert observed identities while preserving existing immutable dependencies. The decision selects the last option for the current hosted CI boundary. |
+| **Consequences** | Runner-generation and Node-patch changes require reviewed repository edits. Identity drift fails before project commands. GitHub-managed package revisions within Ubuntu 24.04 remain an accepted residual until policy requires a fully digest-addressed build environment. |
+| **Assumptions** | GitHub preserves documented runner-label semantics; Node 20.20.2 remains available to the pinned setup action; CodeQL executes only its SHA-pinned action runtime; publication remains exact-commit and candidate-only. |
+| **Invalidation** | Runtime assertion failure, label-semantics change, project execution under an ungoverned Node runtime, exact VM revision requirement, failed publication CI, release/deployment request, or any Sev 1/2 review finding reopens the decision. |
+| **Linked Artifacts** | ADR-005; `docs/artifacts/gate-evidence/ring-4-ci-runtime-identities.md`; REV-210; REV-211; REV-212; issue #90 |
+| **Status** | Accepted for publication; exact-commit CI pending; no promotion authority |
+
+---
 
 ### DEC-097: Accept Loopback Launch Hardening For Publication
 

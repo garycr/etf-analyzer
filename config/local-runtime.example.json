@@ -7,6 +7,9 @@
   "bodyLimitBytes": 1048576,
   "fixtureEvaluationAt": "2026-01-31T00:00:00.000Z",
   "fixturePackageDirectory": "fixture",
+  "maxConcurrentRequests": 8,
   "port": 43123,
+  "requestRateLimit": 120,
+  "requestRateWindowMs": 60000,
   "requestTimeoutMs": 5000
 }

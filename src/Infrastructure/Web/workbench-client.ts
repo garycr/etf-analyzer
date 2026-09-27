@@ -281,9 +281,19 @@ export function targetAfterWatchlistRemoval(
   return identities[index + 1] ?? identities[index - 1] ?? null;
 }
 
+export function launchTokenHeaderFromFragment(
+  fragment: string,
+): Readonly<Record<string, string>> {
+  const match = /^#launch-token=([0-9a-f]{64})$/.exec(fragment);
+  return match === null
+    ? Object.freeze({})
+    : Object.freeze({ "x-launch-token": match[1]! });
+}
+
 function requestHeaders(command: boolean): Record<string, string> {
   return {
     accept: "application/json",
+    ...launchTokenHeaderFromFragment(window.location.hash),
     "x-request-id": crypto.randomUUID(),
     "x-correlation-id": crypto.randomUUID(),
     "x-requested-at": new Date().toISOString(),

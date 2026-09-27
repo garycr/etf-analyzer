@@ -27,6 +27,10 @@ export interface LocalRuntimeConfig extends LocalArtifactConfig {
   readonly port: number;
   readonly allowedOrigins: readonly string[];
   readonly bodyLimitBytes: number;
+  readonly launchToken: string;
+  readonly maxConcurrentRequests: number;
+  readonly requestRateLimit: number;
+  readonly requestRateWindowMs: number;
   readonly requestTimeoutMs?: number;
 }
 
@@ -141,7 +145,11 @@ export async function startLocalRuntime(
     server = await dependencies.startServer({
       allowedOrigins: config.allowedOrigins,
       bodyLimitBytes: config.bodyLimitBytes,
+      launchToken: config.launchToken,
+      maxConcurrentRequests: config.maxConcurrentRequests,
       port: config.port,
+      requestRateLimit: config.requestRateLimit,
+      requestRateWindowMs: config.requestRateWindowMs,
       ...(config.requestTimeoutMs === undefined ? {} : { requestTimeoutMs: config.requestTimeoutMs }),
     }, execute);
   } catch (error) {

@@ -10,7 +10,25 @@ import {
   admitWatchlistState,
   moveWatchlistItem,
   targetAfterWatchlistRemoval,
+  launchTokenHeaderFromFragment,
 } from "../../dist/Infrastructure/Web/workbench-client.js";
+
+test("PT-UI-004AUTH sends only one canonical fragment token as a request header", () => {
+  const launchToken = "a".repeat(64);
+  assert.deepEqual(
+    launchTokenHeaderFromFragment(`#launch-token=${launchToken}`),
+    { "x-launch-token": launchToken },
+  );
+  for (const fragment of [
+    "",
+    "#launch-token=short",
+    `#launch-token=${launchToken.toUpperCase()}`,
+    `#launch-token=${launchToken}&launch-token=${launchToken}`,
+    `#launch-token=${launchToken}&other=value`,
+  ]) {
+    assert.deepEqual(launchTokenHeaderFromFragment(fragment), {}, fragment);
+  }
+});
 
 test("PT-UI-004 builds exact version-bound watchlist mutations", () => {
   assert.deepEqual(buildWatchlistPut("ETF/A", "Alpha ETF", "7"), {

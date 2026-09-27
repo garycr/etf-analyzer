@@ -68,12 +68,14 @@ function blockedState(state, role = "alert") {
 }
 
 async function browserWorkbench(context, initialModel) {
+  const launchToken = "a".repeat(64);
   let model = initialModel;
   const requests = [];
   const server = await startLoopbackApiServer(
     {
       allowedOrigins: ["http://127.0.0.1:0"],
       bodyLimitBytes: 1_048_576,
+      launchToken,
       port: 0,
     },
     (requestJson) => {
@@ -171,7 +173,7 @@ async function browserWorkbench(context, initialModel) {
       contexts.add(browserContext);
       return browserContext.newPage();
     },
-    origin: `http://127.0.0.1:${address.port}`,
+    origin: `http://127.0.0.1:${address.port}/#launch-token=${launchToken}`,
     requests,
     setModel: (value) => { model = value; },
   };

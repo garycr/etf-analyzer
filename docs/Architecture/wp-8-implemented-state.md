@@ -35,9 +35,9 @@ flowchart LR
 
 | Component | Implemented behavior | Current limitation |
 | --- | --- | --- |
-| Browser workbench | Accessible local watchlist and paper-order workflow | Not an authenticated multi-user client |
+| Browser workbench | Accessible local watchlist and paper-order workflow; strict fragment-to-header launch token propagation | Not an authenticated multi-user client |
 | Local composition root | Strict operator configuration, reviewed artifact loading, separate control/runtime database identities, fail-closed startup attestation, and idempotent signal shutdown | Local single-user process only; no service manager packaging |
-| Loopback HTTP adapter | Literal loopback binding, closed routes, bounded body/deadline, fixed public errors | Same-user processes can connect; no per-launch token or rate limit |
+| Loopback HTTP adapter | Literal loopback binding, closed routes, pre-body launch authentication, bounded body/deadline, zero-queue concurrency and fixed-window rate controls, fixed public errors | Local in-memory controls only; no distributed or multi-user admission |
 | Application boundary | Typed operation envelopes, command idempotency, replay, redaction | Commands remain research-only and fixture-only |
 | Synchronous owners | Fixture ingestion, analytics publication, paper-order transition, controlled reads | No independent worker process, scheduler, or provider adapter |
 | PostgreSQL | Eight exact greenfield migrations, least-privilege roles, seven authoritative query operations, controlled functions, immutable evidence and replay | No backup/restore or production operations implementation |

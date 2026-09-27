@@ -260,12 +260,13 @@ test("CT-API-001A/K serves only loopback HTTP and keeps preflight side-effect fr
     headers: {
       origin,
       "access-control-request-method": "GET",
-      "access-control-request-headers": "Accept,X-Request-ID",
+      "access-control-request-headers": "Accept,X-Request-ID,X-Launch-Token",
     },
   });
   assert.equal(preflight.status, 204);
   assert.equal(preflight.headers["access-control-allow-origin"], origin);
   assert.match(preflight.headers["access-control-allow-methods"], /GET/);
+  assert.match(preflight.headers["access-control-allow-headers"], /X-Launch-Token/);
   assert.equal(executed.length, 2);
 
   const invalidPreflight = await send({
@@ -491,4 +492,232 @@ test("CT-API-001E/K contains unexpected application and serialization failures",
       detail: "The request could not be completed.",
     });
   }
+});
+
+test("CT-API-001LIMIT rejects excess concurrency and rate without dispatch or queued work", async (context) => {
+  const origin = "http://127.0.0.1:5173";
+  const baseHeaders = {
+    accept: "application/json",
+    origin,
+    "x-request-id": "40000000-0000-4000-8000-000000000011",
+    "x-correlation-id": "40000000-0000-4000-8000-000000000012",
+    "x-requested-at": "2026-09-17T12:00:00.000Z",
+  };
+  let bodyDispatches = 0;
+  const bodyServer = await startLoopbackApiServer({
+    allowedOrigins: [origin],
+    bodyLimitBytes: 1_048_576,
+    maxConcurrentRequests: 1,
+    port: 0,
+    requestRateLimit: 10,
+    requestRateWindowMs: 60_000,
+  }, (requestJson) => {
+    bodyDispatches += 1;
+    const request = JSON.parse(requestJson);
+    return { operation: request.operation, outcome: "Succeeded" };
+  });
+  context.after(() => new Promise((resolve, reject) => {
+    bodyServer.close((error) => error ? reject(error) : resolve());
+  }));
+  const bodyAddress = bodyServer.address();
+  assert.equal(typeof bodyAddress, "object");
+  const stalledBody = net.createConnection({ host: "127.0.0.1", port: bodyAddress.port });
+  await new Promise((resolve, reject) => {
+    stalledBody.once("connect", resolve);
+    stalledBody.once("error", reject);
+  });
+  stalledBody.write([
+    "PUT /api/v1/watchlist/order HTTP/1.1",
+    `Host: 127.0.0.1:${bodyAddress.port}`,
+    `Origin: ${origin}`,
+    "Accept: application/json",
+    "Content-Type: application/json",
+    "Content-Length: 100",
+    "X-Request-ID: 40000000-0000-4000-8000-000000000001",
+    "X-Correlation-ID: 40000000-0000-4000-8000-000000000002",
+    "X-Requested-At: 2026-09-17T12:00:00.000Z",
+    "Idempotency-Key: 40000000-0000-4000-8000-000000000003",
+    "",
+    "{",
+  ].join("\r\n"));
+  const bodyRejection = await send({
+    port: bodyAddress.port,
+    method: "GET",
+    path: "/api/v1/readiness",
+    headers: baseHeaders,
+  });
+  assert.equal(bodyRejection.status, 429);
+  assert.equal(bodyDispatches, 0);
+  const stalledBodyClosed = new Promise((resolve) => stalledBody.once("close", resolve));
+  stalledBody.destroy();
+  await stalledBodyClosed;
+  await new Promise((resolve) => setImmediate(resolve));
+  const afterAbort = await send({
+    port: bodyAddress.port,
+    method: "GET",
+    path: "/api/v1/readiness",
+    headers: { ...baseHeaders, "x-request-id": "40000000-0000-4000-8000-000000000014" },
+  });
+  assert.equal(afterAbort.status, 200);
+  assert.equal(bodyDispatches, 1);
+
+  let releaseFirst;
+  let firstDispatched;
+  const firstStarted = new Promise((resolve) => { firstDispatched = resolve; });
+  let concurrentDispatches = 0;
+  const concurrencyServer = await startLoopbackApiServer({
+    allowedOrigins: [origin],
+    bodyLimitBytes: 1_048_576,
+    maxConcurrentRequests: 1,
+    port: 0,
+    requestRateLimit: 10,
+    requestRateWindowMs: 60_000,
+  }, async () => {
+    concurrentDispatches += 1;
+    firstDispatched();
+    await new Promise((resolve) => { releaseFirst = resolve; });
+    return { operation: "ReadinessGet", outcome: "Succeeded" };
+  });
+  context.after(() => new Promise((resolve, reject) => {
+    concurrencyServer.close((error) => error ? reject(error) : resolve());
+  }));
+  const concurrencyAddress = concurrencyServer.address();
+  assert.equal(typeof concurrencyAddress, "object");
+  const first = send({
+    port: concurrencyAddress.port,
+    method: "GET",
+    path: "/api/v1/readiness",
+    headers: baseHeaders,
+  });
+  await firstStarted;
+  const concurrentRejection = await send({
+    port: concurrencyAddress.port,
+    method: "GET",
+    path: "/api/v1/readiness",
+    headers: { ...baseHeaders, "x-request-id": "40000000-0000-4000-8000-000000000013" },
+  });
+  releaseFirst();
+  assert.equal((await first).status, 200);
+  assert.equal(concurrentRejection.status, 429);
+  assert.equal(concurrentDispatches, 1);
+
+  let rateDispatches = 0;
+  const rateServer = await startLoopbackApiServer({
+    allowedOrigins: [origin],
+    bodyLimitBytes: 1_048_576,
+    maxConcurrentRequests: 2,
+    port: 0,
+    requestRateLimit: 2,
+    requestRateWindowMs: 60_000,
+  }, () => {
+    rateDispatches += 1;
+    return { operation: "ReadinessGet", outcome: "Succeeded" };
+  });
+  context.after(() => new Promise((resolve, reject) => {
+    rateServer.close((error) => error ? reject(error) : resolve());
+  }));
+  const rateAddress = rateServer.address();
+  assert.equal(typeof rateAddress, "object");
+  const statuses = [];
+  let rateRejection;
+  for (let index = 0; index < 3; index += 1) {
+    const response = await send({
+      port: rateAddress.port,
+      method: "GET",
+      path: "/api/v1/readiness",
+      headers: { ...baseHeaders, "x-request-id": `40000000-0000-4000-8000-00000000002${index}` },
+    });
+    statuses.push(response.status);
+    if (response.status === 429) rateRejection = response;
+  }
+  assert.deepEqual(statuses, [200, 200, 429]);
+  assert.equal(rateDispatches, 2);
+  assert.equal(rateRejection.body, concurrentRejection.body);
+  assert.deepEqual(JSON.parse(rateRejection.body), {
+    type: "request-capacity-exhausted",
+    title: "Too Many Requests",
+    status: 429,
+    detail: "The local request capacity is temporarily exhausted. Retry later.",
+  });
+});
+
+test("CT-API-001AUTH keeps launch assets accessible and budgets only authenticated API work", async (context) => {
+  const origin = "http://127.0.0.1:5173";
+  const launchToken = "a".repeat(64);
+  let dispatches = 0;
+  const server = await startLoopbackApiServer({
+    allowedOrigins: [origin],
+    bodyLimitBytes: 1_048_576,
+    launchToken,
+    maxConcurrentRequests: 1,
+    port: 0,
+    requestRateLimit: 1,
+    requestRateWindowMs: 60_000,
+  }, () => {
+    dispatches += 1;
+    return { operation: "ReadinessGet", outcome: "Succeeded" };
+  });
+  context.after(() => new Promise((resolve, reject) => {
+    server.close((error) => error ? reject(error) : resolve());
+  }));
+  const address = server.address();
+  assert.equal(typeof address, "object");
+  const port = address.port;
+  const unauthenticatedUpload = await sendIncomplete({
+    port,
+    requestText: [
+      "PUT /api/v1/watchlist/order HTTP/1.1",
+      `Host: 127.0.0.1:${port}`,
+      `Origin: ${origin}`,
+      "Content-Length: 100",
+      `X-Launch-Token: ${"b".repeat(64)}`,
+      "Connection: close",
+      "",
+      "{",
+    ].join("\r\n"),
+  });
+  assert.match(unauthenticatedUpload, /^HTTP\/1\.1 401 Unauthorized\r\n/);
+  assert.equal((await send({ port, method: "GET", path: "/", headers: { accept: "text/html" } })).status, 200);
+  assert.equal((await send({ port, method: "GET", path: "/workbench.js", headers: {} })).status, 200);
+  assert.equal((await send({
+    port,
+    method: "OPTIONS",
+    path: "/api/v1/readiness",
+    headers: {
+      origin,
+      "access-control-request-method": "GET",
+      "access-control-request-headers": "X-Launch-Token",
+    },
+  })).status, 204);
+
+  const headers = {
+    accept: "application/json",
+    origin,
+    "x-request-id": "40000000-0000-4000-8000-000000000031",
+    "x-correlation-id": "40000000-0000-4000-8000-000000000032",
+    "x-requested-at": "2026-09-17T12:00:00.000Z",
+  };
+  assert.equal((await send({
+    port,
+    method: "GET",
+    path: "/api/v1/readiness",
+    headers,
+  })).status, 401);
+  assert.equal((await send({
+    port,
+    method: "GET",
+    path: "/api/v1/readiness",
+    headers: { ...headers, "x-launch-token": launchToken },
+  })).status, 200);
+  assert.equal((await send({
+    port,
+    method: "GET",
+    path: "/api/v1/readiness",
+    headers: {
+      ...headers,
+      "x-launch-token": launchToken,
+      "x-request-id": "40000000-0000-4000-8000-000000000033",
+    },
+  })).status, 429);
+  assert.equal(dispatches, 1);
 });

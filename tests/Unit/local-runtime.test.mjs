@@ -9,6 +9,10 @@ const config = {
   port: 0,
   allowedOrigins: ["http://127.0.0.1:5173"],
   bodyLimitBytes: 1_048_576,
+  launchToken: "a".repeat(64),
+  maxConcurrentRequests: 8,
+  requestRateLimit: 120,
+  requestRateWindowMs: 60_000,
   requestTimeoutMs: 5_000,
   artifactRoot: "/tmp/etf-reviewed-artifacts",
   fixturePackageDirectory: "fixture",
@@ -65,7 +69,11 @@ test("local runtime owns startup query dispatch and idempotent shutdown", async 
       assert.deepEqual(apiConfig, {
         allowedOrigins: config.allowedOrigins,
         bodyLimitBytes: config.bodyLimitBytes,
+        launchToken: config.launchToken,
+        maxConcurrentRequests: config.maxConcurrentRequests,
         port: config.port,
+        requestRateLimit: config.requestRateLimit,
+        requestRateWindowMs: config.requestRateWindowMs,
         requestTimeoutMs: config.requestTimeoutMs,
       });
       execute = executor;

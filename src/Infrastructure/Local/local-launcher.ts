@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 
@@ -8,6 +9,7 @@ import {
 } from "./local-runtime.js";
 
 interface LocalLauncherDependencies {
+  readonly generateLaunchToken?: () => string;
   readonly readConfig: (configPath: string) => Promise<string>;
   readonly startRuntime: (config: LocalRuntimeConfig) => Promise<LocalRuntime>;
   readonly once: (signal: "SIGINT" | "SIGTERM", handler: () => Promise<void>) => void;
@@ -25,7 +27,10 @@ const requiredFields = [
   "bodyLimitBytes",
   "fixtureEvaluationAt",
   "fixturePackageDirectory",
+  "maxConcurrentRequests",
   "port",
+  "requestRateLimit",
+  "requestRateWindowMs",
 ] as const;
 
 function invalidConfiguration(): never {
@@ -36,7 +41,7 @@ function parseConfig(
   configJson: string,
   connectionString: string | undefined,
   controlConnectionString: string | undefined,
-): LocalRuntimeConfig {
+): Omit<LocalRuntimeConfig, "launchToken"> {
   if (
     connectionString === undefined ||
     connectionString.length === 0 ||
@@ -62,6 +67,9 @@ function parseConfig(
   if (
     !Number.isSafeInteger(config.port) ||
     !Number.isSafeInteger(config.bodyLimitBytes) ||
+    !Number.isSafeInteger(config.maxConcurrentRequests) ||
+    !Number.isSafeInteger(config.requestRateLimit) ||
+    !Number.isSafeInteger(config.requestRateWindowMs) ||
     (config.requestTimeoutMs !== undefined && !Number.isSafeInteger(config.requestTimeoutMs)) ||
     !Array.isArray(config.allowedOrigins) ||
     config.allowedOrigins.some((origin) => typeof origin !== "string") ||
@@ -76,6 +84,9 @@ function parseConfig(
     port: config.port as number,
     allowedOrigins: Object.freeze([...(config.allowedOrigins as string[])]),
     bodyLimitBytes: config.bodyLimitBytes as number,
+    maxConcurrentRequests: config.maxConcurrentRequests as number,
+    requestRateLimit: config.requestRateLimit as number,
+    requestRateWindowMs: config.requestRateWindowMs as number,
     ...(config.requestTimeoutMs === undefined ? {} : { requestTimeoutMs: config.requestTimeoutMs as number }),
     artifactRoot: config.artifactRoot,
     fixturePackageDirectory: config.fixturePackageDirectory,
@@ -85,6 +96,7 @@ function parseConfig(
 }
 
 const defaultDependencies: LocalLauncherDependencies = {
+  generateLaunchToken: () => randomBytes(32).toString("hex"),
   readConfig: (configPath) => readFile(configPath, "utf8"),
   startRuntime: startLocalRuntime,
   once: (signal, handler) => process.once(signal, () => void handler()),
@@ -102,8 +114,11 @@ export async function launchLocalRuntimeProcess(
     environment.ETF_POSTGRES_URL,
     environment.ETF_POSTGRES_CONTROL_URL,
   );
-  const runtime = await dependencies.startRuntime(config);
-  dependencies.writeLine(`ETF Analyzer listening at http://${runtime.address.host}:${runtime.address.port}/`);
+  const launchToken = (dependencies.generateLaunchToken ?? defaultDependencies.generateLaunchToken!)();
+  const runtime = await dependencies.startRuntime(Object.freeze({ ...config, launchToken }));
+  dependencies.writeLine(
+    `ETF Analyzer listening at http://${runtime.address.host}:${runtime.address.port}/#launch-token=${launchToken}`,
+  );
   let shutdownPromise: Promise<void> | undefined;
   const shutdown = () => {
     shutdownPromise ??= runtime.close();

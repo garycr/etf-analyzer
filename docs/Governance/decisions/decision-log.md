@@ -55,6 +55,7 @@
 | DEC-094 | 2026-09-25 | Ring gate closure | Close Ring 3 after its exact evidence publication passed every CI job and step | Agent (Fully Agentic) | Solo Orchestrator | Approved; Ring 3 closed; Ring 4 unopened |
 | DEC-095 | 2026-09-25 | Release activation | Activate bounded Ring 4 release management and require productization before promotion | Agent (Fully Agentic) | Solo Orchestrator | Active; no release candidate or promotion yet |
 | DEC-096 | 2026-09-25 | Release productization | Accept the supported local runtime design and require publication CI before closing #88 | Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `9ca9afea`; #88 closure authorized |
+| DEC-097 | 2026-09-26 | Release hardening | Accept per-launch loopback authentication and zero-queue request limits for publication | Agent (Fully Agentic) | Solo Orchestrator | REV-207/208/209 PASS; publication CI pending |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -93,6 +94,27 @@
 ---
 
 ## Decision Records
+
+### DEC-097: Accept Loopback Launch Hardening For Publication
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-097 |
+| **Date** | 2026-09-26 |
+| **Category** | Release hardening |
+| **Decision** | Accept the issue #89 per-launch 256-bit token, fragment-to-header browser flow, pre-body request guard, zero-queue concurrency cap, and fixed-window request budget for publication; close #89 only after publication CI passes |
+| **Policy** | DEC-095; ADR-003; ADR-004; test-first development; loopback-only ingress; fixed public failures; accessibility; architecture, code, and security review |
+| **Authority** | Agent under Fully Agentic mode, with alternate-model REV-207, REV-208, and REV-209 PASS dispositions |
+| **Accountability** | Solo Orchestrator publishes only task-related paths, verifies all CI jobs including browser accessibility and security evidence, remediates failures before closure, and keeps the promotion log unchanged |
+| **Context** | Ring 3 identified same-host request and resource-bound residuals. The supported launcher previously exposed an unauthenticated local API with body and deadline bounds but no per-launch credential, concurrency cap, or request-rate budget. |
+| **Alternatives** | Retain Host/Origin checks only; introduce external identity/rate infrastructure; add an ephemeral launch token and in-process zero-queue controls. The decision selects the last option for the bounded prototype. |
+| **Consequences** | Supported local launches require the exact fragment-bearing URL and explicit request limits. Missing or invalid tokens fail before body buffering; excess authenticated work fails immediately with redacted `429`. Fixed-window boundary bursts remain bounded by concurrency. |
+| **Assumptions** | Single trusted operator, trusted local host, literal IPv4 loopback, fixture-only data, one process, and no public ingress or multi-user identity. |
+| **Invalidation** | Shared or untrusted host, remote/public ingress, multiple users, distributed replicas, durable sessions, deployment, production use, failed publication CI, or any Sev 1/2 finding reopens review and blocks promotion. |
+| **Linked Artifacts** | ADR-004; `docs/artifacts/gate-evidence/ring-4-launch-hardening.md`; REV-207; REV-208; REV-209; issue #89 |
+| **Status** | Accepted for publication; CI verification and issue closure pending; no promotion authority |
+
+---
 
 ### DEC-096: Accept Supported Local Runtime For Publication
 

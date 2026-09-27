@@ -115,6 +115,50 @@ const config = Object.freeze({
   port: 4173,
 });
 
+test("CT-API-001AUTH requires the exact per-launch token without disclosing mismatch details", () => {
+  const launchToken = "a".repeat(64);
+  let dispatches = 0;
+  const request = {
+    method: "GET",
+    target: "/api/v1/readiness",
+    headers: {
+      accept: "application/json",
+      host: "127.0.0.1:4173",
+      origin: "http://127.0.0.1:5173",
+      "x-request-id": requestId,
+      "x-correlation-id": correlationId,
+      "x-requested-at": requestedAt,
+    },
+    body: new Uint8Array(),
+  };
+  const execute = () => {
+    dispatches += 1;
+    return { operation: "ReadinessGet", outcome: "Succeeded" };
+  };
+
+  const missing = adaptApiRequest(request, { ...config, launchToken }, execute);
+  const incorrect = adaptApiRequest({
+    ...request,
+    headers: { ...request.headers, "x-launch-token": "b".repeat(64) },
+  }, { ...config, launchToken }, execute);
+  const accepted = adaptApiRequest({
+    ...request,
+    headers: { ...request.headers, "x-launch-token": launchToken },
+  }, { ...config, launchToken }, execute);
+
+  assert.equal(missing.status, 401);
+  assert.equal(incorrect.status, 401);
+  assert.equal(missing.body, incorrect.body);
+  assert.deepEqual(JSON.parse(missing.body), {
+    type: "launch-authentication-required",
+    title: "Unauthorized",
+    status: 401,
+    detail: "Valid launch authentication is required.",
+  });
+  assert.equal(accepted.status, 200);
+  assert.equal(dispatches, 1);
+});
+
 test("CT-API-001C reconstructs one closed command request", () => {
   const executed = [];
   const response = adaptApiRequest(
@@ -399,6 +443,30 @@ test("CT-API-001L rejects public/wildcard configuration and exposes no forbidden
     assert.throws(
       () => startLoopbackApiServer({ ...config, requestTimeoutMs }, () => ({})),
       /request timeout must be an integer from 100 through 30000 milliseconds/,
+    );
+  }
+  for (const launchToken of ["short", "A".repeat(64), "g".repeat(64)]) {
+    assert.throws(
+      () => startLoopbackApiServer({ ...config, launchToken }, () => ({})),
+      /launch token must be a 256-bit lowercase hexadecimal value/,
+    );
+  }
+  for (const maxConcurrentRequests of [0, 65, 1.5, Number.NaN]) {
+    assert.throws(
+      () => startLoopbackApiServer({ ...config, maxConcurrentRequests }, () => ({})),
+      /concurrency limit must be an integer from 1 through 64/,
+    );
+  }
+  for (const requestRateLimit of [0, 10_001, 1.5, Number.NaN]) {
+    assert.throws(
+      () => startLoopbackApiServer({ ...config, requestRateLimit }, () => ({})),
+      /request rate limit must be an integer from 1 through 10000/,
+    );
+  }
+  for (const requestRateWindowMs of [999, 60_001, 1_000.5, Number.NaN]) {
+    assert.throws(
+      () => startLoopbackApiServer({ ...config, requestRateWindowMs }, () => ({})),
+      /request rate window must be an integer from 1000 through 60000 milliseconds/,
     );
   }
   const server = await startLoopbackApiServer({ ...config, port: 0 }, () => ({}));

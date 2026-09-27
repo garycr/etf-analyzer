@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from "node:crypto";
 import {
   createServer,
   type IncomingHttpHeaders,
@@ -60,7 +61,11 @@ export interface ApiAdapterConfig {
   readonly allowedOrigins: readonly string[];
   readonly audit?: (event: ApiAuditEvent) => void;
   readonly bodyLimitBytes: number;
+  readonly launchToken?: string;
+  readonly maxConcurrentRequests?: number;
   readonly port: number;
+  readonly requestRateLimit?: number;
+  readonly requestRateWindowMs?: number;
   readonly requestTimeoutMs?: number;
 }
 
@@ -103,6 +108,7 @@ const corsHeaders = Object.freeze([
   "X-Correlation-ID",
   "X-Requested-At",
   "Idempotency-Key",
+  "X-Launch-Token",
 ] as const);
 
 const commands = new Set<ApplicationOperation>(applicationCommandOperations);
@@ -132,6 +138,9 @@ const workbenchSecurityHeaders = Object.freeze({
   "x-content-type-options": "nosniff",
 });
 const defaultRequestTimeoutMs = 5_000;
+const defaultMaxConcurrentRequests = 8;
+const defaultRequestRateLimit = 120;
+const defaultRequestRateWindowMs = 60_000;
 const minimumRequestTimeoutMs = 100;
 const maximumRequestTimeoutMs = 30_000;
 
@@ -243,6 +252,33 @@ function validateConfig(config: ApiAdapterConfig): void {
   if (!Number.isSafeInteger(config.bodyLimitBytes) || config.bodyLimitBytes <= 0) {
     throw new TypeError("API body limit must be a positive safe integer");
   }
+  if (config.launchToken !== undefined && !/^[0-9a-f]{64}$/.test(config.launchToken)) {
+    throw new TypeError("API launch token must be a 256-bit lowercase hexadecimal value");
+  }
+  if (
+    config.maxConcurrentRequests !== undefined &&
+    (!Number.isSafeInteger(config.maxConcurrentRequests) ||
+      config.maxConcurrentRequests < 1 ||
+      config.maxConcurrentRequests > 64)
+  ) {
+    throw new TypeError("API concurrency limit must be an integer from 1 through 64");
+  }
+  if (
+    config.requestRateLimit !== undefined &&
+    (!Number.isSafeInteger(config.requestRateLimit) ||
+      config.requestRateLimit < 1 ||
+      config.requestRateLimit > 10_000)
+  ) {
+    throw new TypeError("API request rate limit must be an integer from 1 through 10000");
+  }
+  if (
+    config.requestRateWindowMs !== undefined &&
+    (!Number.isSafeInteger(config.requestRateWindowMs) ||
+      config.requestRateWindowMs < 1_000 ||
+      config.requestRateWindowMs > 60_000)
+  ) {
+    throw new TypeError("API request rate window must be an integer from 1000 through 60000 milliseconds");
+  }
   if (
     config.requestTimeoutMs !== undefined &&
     (!Number.isSafeInteger(config.requestTimeoutMs) ||
@@ -261,6 +297,48 @@ function validateConfig(config: ApiAdapterConfig): void {
   ) {
     throw new TypeError("API origins must be unique 127.0.0.1 HTTP origins");
   }
+}
+
+function capacityExhausted(allowedOrigin?: string): ApiResponse {
+  return problem(
+    429,
+    "request-capacity-exhausted",
+    "Too Many Requests",
+    "The local request capacity is temporarily exhausted. Retry later.",
+    allowedOrigin,
+  );
+}
+
+function hasValidLaunchToken(request: ApiRequest, config: ApiAdapterConfig): boolean {
+  if (config.launchToken === undefined) return true;
+  const supplied = header(request.headers, "x-launch-token");
+  if (supplied === undefined || !/^[0-9a-f]{64}$/.test(supplied)) return false;
+  const expectedDigest = createHash("sha256").update(config.launchToken).digest();
+  const suppliedDigest = createHash("sha256").update(supplied).digest();
+  return timingSafeEqual(expectedDigest, suppliedDigest);
+}
+
+function apiRequestGuard(
+  request: ApiRequest,
+  config: ApiAdapterConfig,
+): ApiResponse | undefined {
+  if (header(request.headers, "host") !== `127.0.0.1:${config.port}`) {
+    return problem(400, "invalid-host", "Invalid Host", "The request Host is not the configured loopback API.");
+  }
+  const origin = header(request.headers, "origin");
+  if (origin !== undefined && !isAllowedRequestOrigin(origin, config)) {
+    return problem(403, "disallowed-origin", "Disallowed Origin", "The request Origin is not an allowed local workbench origin.");
+  }
+  if (!hasValidLaunchToken(request, config)) {
+    return problem(
+      401,
+      "launch-authentication-required",
+      "Unauthorized",
+      "Valid launch authentication is required.",
+      origin,
+    );
+  }
+  return undefined;
 }
 
 function allowedOriginForHeaders(
@@ -408,7 +486,35 @@ export function startLoopbackApiServer(
 ): Promise<Server> {
   validateConfig(config);
   const requestTimeoutMs = config.requestTimeoutMs ?? defaultRequestTimeoutMs;
-  const effectiveConfig = Object.freeze({ ...config, requestTimeoutMs });
+  const effectiveConfig = Object.freeze({
+    ...config,
+    maxConcurrentRequests: config.maxConcurrentRequests ?? defaultMaxConcurrentRequests,
+    requestRateLimit: config.requestRateLimit ?? defaultRequestRateLimit,
+    requestRateWindowMs: config.requestRateWindowMs ?? defaultRequestRateWindowMs,
+    requestTimeoutMs,
+  });
+  let activeRequests = 0;
+  let rateWindowStartedAt = Date.now();
+  let requestsInRateWindow = 0;
+  const admitRequest = (): (() => void) | undefined => {
+    const now = Date.now();
+    if (now < rateWindowStartedAt || now - rateWindowStartedAt >= effectiveConfig.requestRateWindowMs) {
+      rateWindowStartedAt = now;
+      requestsInRateWindow = 0;
+    }
+    if (
+      activeRequests >= effectiveConfig.maxConcurrentRequests ||
+      requestsInRateWindow >= effectiveConfig.requestRateLimit
+    ) return undefined;
+    activeRequests += 1;
+    requestsInRateWindow += 1;
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      activeRequests -= 1;
+    };
+  };
   const socketDeadlines = new WeakMap<object, Readonly<{
     expiresAt: number;
     timer: NodeJS.Timeout;
@@ -435,9 +541,11 @@ export function startLoopbackApiServer(
       : effectiveConfig.port;
     const requestConfig = Object.freeze({ ...effectiveConfig, port: localPort });
     let terminal = false;
+    let releaseRequestCapacity: () => void = () => undefined;
     const requestDeadline = setTimeout(() => {
       if (terminal) return;
       terminal = true;
+      releaseRequestCapacity();
       try {
         requestConfig.audit?.(Object.freeze({
           code: "API_REQUEST_TIMEOUT",
@@ -506,15 +614,47 @@ export function startLoopbackApiServer(
       return;
     }
 
+    const admissionRequest: ApiRequest = {
+      method: request.method ?? "",
+      target: request.url ?? "",
+      headers: request.headers,
+      body: new Uint8Array(),
+    };
+    const guardRejection = apiRequestGuard(admissionRequest, requestConfig);
+    if (guardRejection !== undefined) {
+      terminateWithoutDispatch();
+      request.resume();
+      writeApiResponse(response, guardRejection);
+      return;
+    }
+    const release = admitRequest();
+    if (release === undefined) {
+      terminateWithoutDispatch();
+      request.resume();
+      writeApiResponse(response, capacityExhausted(
+        allowedOriginForHeaders(request.headers, requestConfig),
+      ));
+      return;
+    }
+    releaseRequestCapacity = release;
+
     const chunks: Uint8Array[] = [];
     let length = 0;
     let tooLarge = false;
     request.on("error", () => {
-      if (terminateWithoutDispatch() && !response.headersSent) writeApiResponse(response, internalServerError(
-        allowedOriginForHeaders(request.headers, requestConfig),
-      ));
+      if (terminateWithoutDispatch()) {
+        releaseRequestCapacity();
+        if (!response.headersSent) writeApiResponse(response, internalServerError(
+          allowedOriginForHeaders(request.headers, requestConfig),
+        ));
+      }
     });
-    request.on("aborted", terminateWithoutDispatch);
+    request.on("aborted", () => {
+      if (terminateWithoutDispatch()) releaseRequestCapacity();
+    });
+    request.on("close", () => {
+      if (!request.complete && terminateWithoutDispatch()) releaseRequestCapacity();
+    });
     request.on("data", (chunk: Buffer) => {
       length += chunk.length;
       if (length > config.bodyLimitBytes) {
@@ -525,33 +665,38 @@ export function startLoopbackApiServer(
     });
     request.on("end", async () => {
       if (!terminateWithoutDispatch()) return;
-      if (tooLarge) {
-        writeApiResponse(response, problem(
-          413,
-          "request-too-large",
-          "Request Too Large",
-          "The request exceeds the configured body limit.",
-          allowedOriginForHeaders(request.headers, requestConfig),
-        ));
-        return;
-      }
-      const body = new Uint8Array(length);
-      let offset = 0;
-      for (const chunk of chunks) {
-        body.set(chunk, offset);
-        offset += chunk.length;
-      }
       try {
-        writeApiResponse(response, await adaptApiRequestAsync({
-          method: request.method ?? "",
-          target: request.url ?? "",
-          headers: request.headers,
+        if (tooLarge) {
+          writeApiResponse(response, problem(
+            413,
+            "request-too-large",
+            "Request Too Large",
+            "The request exceeds the configured body limit.",
+            allowedOriginForHeaders(request.headers, requestConfig),
+          ));
+          return;
+        }
+        const body = new Uint8Array(length);
+        let offset = 0;
+        for (const chunk of chunks) {
+          body.set(chunk, offset);
+          offset += chunk.length;
+        }
+        const requestForAdaptation: ApiRequest = {
+          ...admissionRequest,
           body,
-        }, requestConfig, execute));
+        };
+        writeApiResponse(response, await adaptApiRequestAsync(
+          requestForAdaptation,
+          requestConfig,
+          execute,
+        ));
       } catch {
         writeApiResponse(response, internalServerError(
           allowedOriginForHeaders(request.headers, requestConfig),
         ));
+      } finally {
+        releaseRequestCapacity();
       }
     });
   });
@@ -678,13 +823,9 @@ function adaptPreparedApiRequest<Result extends Readonly<Record<string, unknown>
   config: ApiAdapterConfig,
   execute: (requestJson: string) => Result,
 ): Result extends Promise<Readonly<Record<string, unknown>>> ? Promise<ApiResponse> : ApiResponse {
-  if (header(request.headers, "host") !== `127.0.0.1:${config.port}`) {
-    return problem(400, "invalid-host", "Invalid Host", "The request Host is not the configured loopback API.") as never;
-  }
+  const guardRejection = apiRequestGuard(request, config);
+  if (guardRejection !== undefined) return guardRejection as never;
   const origin = header(request.headers, "origin");
-  if (origin !== undefined && !isAllowedRequestOrigin(origin, config)) {
-    return problem(403, "disallowed-origin", "Disallowed Origin", "The request Origin is not an allowed local workbench origin.") as never;
-  }
   const allowedOrigin = origin !== undefined ? origin : undefined;
   const accept = header(request.headers, "accept");
   if (accept !== undefined && accept !== "application/json" && accept !== "*/*") {

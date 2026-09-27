@@ -16,6 +16,9 @@ test("operator launcher reads one config and closes once on termination signals"
     fixturePackageDirectory: "fixture",
     fixtureEvaluationAt: "2026-01-31T00:00:00.000Z",
     analyticsArtifactPath: "analytics.json",
+    maxConcurrentRequests: 8,
+    requestRateLimit: 120,
+    requestRateWindowMs: 60_000,
   };
 
   const processRuntime = await launchLocalRuntimeProcess(
@@ -25,6 +28,7 @@ test("operator launcher reads one config and closes once on termination signals"
       ETF_POSTGRES_URL: "postgresql://operator-configured",
     },
     {
+      generateLaunchToken: () => "a".repeat(64),
       async readConfig(configPath) {
         assert.equal(configPath, "/etc/etf/local-runtime.json");
         return JSON.stringify(runtimeConfig);
@@ -34,6 +38,7 @@ test("operator launcher reads one config and closes once on termination signals"
           ...runtimeConfig,
           controlConnectionString: "postgresql://control-configured",
           connectionString: "postgresql://operator-configured",
+          launchToken: "a".repeat(64),
         });
         return {
           address: { host: "127.0.0.1", port: 43123 },
@@ -45,12 +50,57 @@ test("operator launcher reads one config and closes once on termination signals"
     },
   );
 
-  assert.deepEqual(output, ["ETF Analyzer listening at http://127.0.0.1:43123/"]);
+  assert.deepEqual(output, [
+    `ETF Analyzer listening at http://127.0.0.1:43123/#launch-token=${"a".repeat(64)}`,
+  ]);
   assert.deepEqual([...handlers.keys()], ["SIGINT", "SIGTERM"]);
   await handlers.get("SIGTERM")();
   await handlers.get("SIGINT")();
   await processRuntime.shutdown();
   assert.equal(closeCount, 1);
+});
+
+test("operator launcher injects one generated token and exposes it only in the URL fragment", async () => {
+  const launchToken = "a".repeat(64);
+  const output = [];
+  let capturedConfig;
+  await launchLocalRuntimeProcess(
+    ["node", "local-launcher.js", "/etc/etf/local-runtime.json"],
+    {
+      ETF_POSTGRES_CONTROL_URL: "postgresql://control-configured",
+      ETF_POSTGRES_URL: "postgresql://operator-configured",
+    },
+    {
+      readConfig: async () => JSON.stringify({
+        port: 0,
+        allowedOrigins: ["http://127.0.0.1:5173"],
+        bodyLimitBytes: 1_048_576,
+        artifactRoot: "/srv/etf/reviewed",
+        fixturePackageDirectory: "fixture",
+        fixtureEvaluationAt: "2026-01-31T00:00:00.000Z",
+        analyticsArtifactPath: "analytics.json",
+        maxConcurrentRequests: 8,
+        requestRateLimit: 120,
+        requestRateWindowMs: 60_000,
+      }),
+      generateLaunchToken: () => launchToken,
+      startRuntime: async (config) => {
+        capturedConfig = config;
+        return {
+          address: { host: "127.0.0.1", port: 43123 },
+          async close() {},
+        };
+      },
+      once: () => undefined,
+      writeLine: (line) => output.push(line),
+    },
+  );
+
+  assert.equal(capturedConfig.launchToken, launchToken);
+  assert.deepEqual(output, [
+    `ETF Analyzer listening at http://127.0.0.1:43123/#launch-token=${launchToken}`,
+  ]);
+  assert.equal(output[0].includes(`?launch-token=${launchToken}`), false);
 });
 
 test("operator launcher rejects incomplete malformed and open configuration", async () => {
@@ -62,6 +112,9 @@ test("operator launcher rejects incomplete malformed and open configuration", as
     fixturePackageDirectory: "fixture",
     fixtureEvaluationAt: "2026-01-31T00:00:00.000Z",
     analyticsArtifactPath: "analytics.json",
+    maxConcurrentRequests: 8,
+    requestRateLimit: 120,
+    requestRateWindowMs: 60_000,
   };
   const cases = [
     { name: "missing argv", argv: ["node", "launcher"], environment: { ETF_POSTGRES_URL: "postgresql://configured" }, value: validConfig },

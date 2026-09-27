@@ -25,7 +25,7 @@ ETF_POSTGRES_URL='postgresql://app_runtime@...' \
 npm run start:local -- /path/to/local-runtime.json
 ```
 
-The launcher prints the loopback URL after PostgreSQL, artifacts, and HTTP startup succeed. `SIGINT` or `SIGTERM` closes the HTTP server and then the database connection. Artifact paths must be relative to the canonical `artifactRoot`; traversal and symlink escapes are rejected.
+The launcher prints a loopback URL containing a fresh per-launch token in its fragment after PostgreSQL, artifacts, and HTTP startup succeed. Open that exact URL; the browser sends the token only in `X-Launch-Token` API headers. The configuration requires explicit `maxConcurrentRequests`, `requestRateLimit`, and `requestRateWindowMs` bounds; exhausted requests fail immediately without queuing. `SIGINT` or `SIGTERM` closes the HTTP server and then the database connection. Artifact paths must be relative to the canonical `artifactRoot`; traversal and symlink escapes are rejected.
 
 ## Structure
 

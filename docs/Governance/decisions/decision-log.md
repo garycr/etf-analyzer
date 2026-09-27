@@ -57,6 +57,7 @@
 | DEC-096 | 2026-09-25 | Release productization | Accept the supported local runtime design and require publication CI before closing #88 | Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `9ca9afea`; #88 closure authorized |
 | DEC-097 | 2026-09-26 | Release hardening | Accept per-launch loopback authentication and zero-queue request limits for publication | Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `6b1b0303`; #89 closure authorized |
 | DEC-098 | 2026-09-26 | Release reproducibility | Govern Ubuntu 24.04 and Node 20.20.2 identities with fail-fast CI assertions | Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `42bc4f43`; #90 closure authorized |
+| DEC-099 | 2026-09-27 | Dependency lifecycle | Retain reviewed exact dependency pins for the bounded candidate after freshness assessment | Agent (Fully Agentic) | Solo Orchestrator | Accepted under REV-213/214; publication CI pending |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -95,6 +96,27 @@
 ---
 
 ## Decision Records
+
+### DEC-099: Retain Reviewed Dependency Pins For The Candidate
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-099 |
+| **Date** | 2026-09-27 |
+| **Category** | Dependency lifecycle |
+| **Decision** | Retain `pg` 8.16.0, `@types/pg` 8.11.6, `@types/node` 20.19.14, and TypeScript 5.9.2 for the bounded candidate; require separate compatibility work before any coordinated upgrade |
+| **Policy** | DEC-095; issue #93; exact dependency pins; Node 20.20.2 runtime identity; OSS license and vulnerability review; release reproducibility |
+| **Authority** | Agent under Fully Agentic mode, with alternate-model REV-213 and REV-214 PASS dispositions |
+| **Accountability** | Solo Orchestrator records source-backed compatibility, advisory, changelog, license, provenance, and regression dispositions; changes no dependency; reopens review for a relevant advisory or release-blocking upstream fix |
+| **Context** | Four direct packages have newer releases, but the current 30-package external inventory has zero known vulnerabilities, zero deprecations, accepted licenses, and successful exact-commit security evidence. Newer Node types target Node 26, TypeScript is a major transition with inconsistent inspected tag metadata, and newer pg releases alter connection, authentication, queueing, and type surfaces. |
+| **Alternatives** | Upgrade all four now; update only `pg` and its types; update development tools only; retain the reviewed exact candidate pins. The decision selects retention because no security or release defect requires churn and each upgrade path needs broader compatibility evidence. |
+| **Consequences** | The release manifest can freeze the already-qualified dependency graph. New upstream features are deferred, and exact-version aging remains monitored through CI audit and a future approved compatibility change. |
+| **Assumptions** | Node 20.20.2 remains the governed runtime; current audit remains clean; no undisclosed applicable advisory exists; the candidate remains local, fixture-only, and non-production. |
+| **Invalidation** | Applicable security advisory, deprecation or loss of support, Node 20 incompatibility, release-blocking defect, changed license, failed audit, or approved runtime-major migration reopens review. |
+| **Linked Artifacts** | `docs/Planning/dependency-update-review-ring4.md`; `docs/Planning/oss-review-ring3.md`; `docs/artifacts/gate-evidence/ring-4-dependency-review.md`; REV-213; REV-214; issue #93 |
+| **Status** | Accepted for publication; exact-commit CI pending; no dependency change or promotion authority |
+
+---
 
 ### DEC-098: Govern CI Runtime Identities
 

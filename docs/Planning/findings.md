@@ -3,14 +3,14 @@
 > **Purpose:** CVP briefing artifact. Updated at each Ring completion to reflect what was explored, decided, and delivered. This document does not control ring execution.
 
 **Project:** ETF Analyzer  
-**Last Updated:** 2026-09-26
+**Last Updated:** 2026-09-27
 **Current Ring:** Ring 4 Active under DEC-095 and issue #97
 
 ---
 
 ## 1. Executive Overview
 
-Ring 2 delivered WP-1 through WP-8 as an executable greenfield PostgreSQL integration candidate, and Ring 3 closed with independent quality/security acceptance and verified publication. DEC-095 activates bounded Ring 4 release management. Issue #88 is implemented, independently reviewed, and publication-verified under DEC-096 and CI run `36260497399`. The next release blocker is #89 launch-token and request-control hardening; no DEV/SMOKE promotion exists.
+Ring 2 delivered WP-1 through WP-8 as an executable greenfield PostgreSQL integration candidate, and Ring 3 closed with independent quality/security acceptance and verified publication. DEC-095 activates bounded Ring 4 release management. Issues #88, #89, and #90 are implemented, independently reviewed, and publication-verified under DEC-096 through DEC-098. The next release blocker is #93 dependency compatibility and lifecycle disposition; no DEV/SMOKE promotion exists.
 
 ---
 
@@ -71,7 +71,7 @@ The implemented-state architecture is published in `docs/Architecture/wp-8-imple
 ## 6. Recommendation
 
 **Production Readiness:** Not Ready - executable local candidate only
-**Ring Recommendation:** Close #88 and execute `docs/Planning/ring-4-release-plan.md` sequentially from #89, recording each actual promotion in `docs/Operations/promotion-log.md`. Do not infer staging, release, deployment, or production authority from Ring 4 activation.
+**Ring Recommendation:** Continue `docs/Planning/ring-4-release-plan.md` with #93, then #94, recording each actual promotion in `docs/Operations/promotion-log.md`. Do not infer staging, release, deployment, or production authority from completed release-hardening work.
 
 Do not connect a live provider or broker, widen ingress, introduce durable handoff, change database platform, stage, deploy, release, or take production action from this recommendation.
 

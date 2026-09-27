@@ -4,6 +4,7 @@ import test from "node:test";
 
 const workflowUrl = new URL("../../.github/workflows/ci.yml", import.meta.url);
 const nodeVersionUrl = new URL("../../.node-version", import.meta.url);
+const packageUrl = new URL("../../package.json", import.meta.url);
 
 function jobBlocks(workflow) {
   const jobs = new Map();
@@ -73,4 +74,14 @@ test("PT-CI-002 retains immutable action and container references", async () => 
   for (const [, image] of imageReferences) {
     assert.match(image, /@sha256:[a-f0-9]{64}$/u, `${image} must use a SHA-256 digest`);
   }
+});
+
+test("PT-CI-003 runs the complete browser suite through the zero-skip gate", async () => {
+  const packageJson = JSON.parse(await readFile(packageUrl, "utf8"));
+  const browserScript = packageJson.scripts["test:browser"];
+
+  assert.match(browserScript, /zero-skip-runner\.mjs/u);
+  assert.doesNotMatch(browserScript, /--test-name-pattern/u,
+    "filtering a Node test file reports excluded tests as skips under Node 20");
+  assert.match(browserScript, /tests\/Integration\/workbench-accessibility\.test\.mjs/u);
 });

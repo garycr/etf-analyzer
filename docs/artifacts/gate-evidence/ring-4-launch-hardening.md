@@ -28,6 +28,8 @@ Initial publication run `36292178660` failed both browser tests because native s
 
 Replacement run `36292834208` remained red and prompted exact local container reproduction. The final browser test uses a fresh context for every initial analytics state and reserves the workflow test for fragment replacement and reload retention. Independent test re-review and the offline pinned-container run both PASS; a new exact-commit publication run remains required.
 
+Final implementation commit `6b1b0303fead2c57979aec1a246d6f08593ec551` passed CI run `36293666091`: build-and-test, browser-accessibility, security-audit, and CodeQL all succeeded.
+
 ## Publication Condition
 
-Issue #89 may close only after the exact implementation commit passes publication CI, including the browser accessibility job. No DEV/SMOKE promotion, release, deployment, or production authority follows.
+Issue #89 is authorized to close after exact implementation CI succeeded. No DEV/SMOKE promotion, release, deployment, or production authority follows.

@@ -55,7 +55,7 @@
 | DEC-094 | 2026-09-25 | Ring gate closure | Close Ring 3 after its exact evidence publication passed every CI job and step | Agent (Fully Agentic) | Solo Orchestrator | Approved; Ring 3 closed; Ring 4 unopened |
 | DEC-095 | 2026-09-25 | Release activation | Activate bounded Ring 4 release management and require productization before promotion | Agent (Fully Agentic) | Solo Orchestrator | Active; no release candidate or promotion yet |
 | DEC-096 | 2026-09-25 | Release productization | Accept the supported local runtime design and require publication CI before closing #88 | Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `9ca9afea`; #88 closure authorized |
-| DEC-097 | 2026-09-26 | Release hardening | Accept per-launch loopback authentication and zero-queue request limits for publication | Agent (Fully Agentic) | Solo Orchestrator | REV-207/208/209 PASS; publication CI pending |
+| DEC-097 | 2026-09-26 | Release hardening | Accept per-launch loopback authentication and zero-queue request limits for publication | Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `6b1b0303`; #89 closure authorized |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -112,7 +112,7 @@
 | **Assumptions** | Single trusted operator, trusted local host, literal IPv4 loopback, fixture-only data, one process, and no public ingress or multi-user identity. |
 | **Invalidation** | Shared or untrusted host, remote/public ingress, multiple users, distributed replicas, durable sessions, deployment, production use, failed publication CI, or any Sev 1/2 finding reopens review and blocks promotion. |
 | **Linked Artifacts** | ADR-004; `docs/artifacts/gate-evidence/ring-4-launch-hardening.md`; REV-207; REV-208; REV-209; issue #89 |
-| **Status** | Accepted for publication; CI verification and issue closure pending; no promotion authority |
+| **Status** | Verified by CI run `36293666091` at commit `6b1b0303fead2c57979aec1a246d6f08593ec551`; #89 closure authorized; no promotion authority |
 
 ---
 

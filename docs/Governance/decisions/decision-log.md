@@ -58,7 +58,7 @@
 | DEC-097 | 2026-09-26 | Release hardening | Accept per-launch loopback authentication and zero-queue request limits for publication | Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `6b1b0303`; #89 closure authorized |
 | DEC-098 | 2026-09-26 | Release reproducibility | Govern Ubuntu 24.04 and Node 20.20.2 identities with fail-fast CI assertions | Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `42bc4f43`; #90 closure authorized |
 | DEC-099 | 2026-09-27 | Dependency lifecycle | Retain reviewed exact dependency pins for the bounded candidate after freshness assessment | Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `8199a960`; #93 closure authorized |
-| DEC-100 | 2026-09-27 | Test gate hardening | Enforce 80% aggregate branch coverage, generic zero-skip execution, and deadline-test determinism | Workspace Owner / Agent (Fully Agentic) | Solo Orchestrator | REV-215/216 PASS; publication CI pending |
+| DEC-100 | 2026-09-27 | Test gate hardening | Enforce 80% aggregate branch coverage, generic zero-skip execution, and deadline-test determinism | Workspace Owner / Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `44764613`; #94 closure authorized |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -115,7 +115,7 @@
 | **Assumptions** | Node coverage retains its `all files` summary; CI supplies Node 20.20.2 and PostgreSQL 16.15; browser tests remain in their pinned dedicated job; issue #87 owns broader test-file maintainability. |
 | **Invalidation** | Missing or changed coverage summary format, aggregate branch coverage below 80%, any generic-run skip passing green, observed deadline flake, failed exact-commit CI, or release-boundary change reopens review. |
 | **Linked Artifacts** | `docs/artifacts/gate-evidence/ring-4-test-gate-hardening.md`; REV-215; REV-216; issue #94 |
-| **Status** | Accepted for publication; exact-commit Node 20/PostgreSQL CI pending; no promotion authority |
+| **Status** | Verified by CI run `36355866056` at commit `44764613e5ea7718c6e431ac32bfc3a8745fbdbc`; #94 closure authorized; no promotion authority |
 
 ---
 

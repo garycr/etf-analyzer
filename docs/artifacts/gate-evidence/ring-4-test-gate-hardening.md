@@ -16,7 +16,8 @@
 - Request deadline delay is a pure nonnegative calculation with future, exact, and expired boundary tests. The integration assertion verifies the 408 response and audit contract without measuring elapsed wall-clock time.
 - Lint and 23 focused executable tests pass; the direct focused invocation has one expected coverage-parent skip because no generated report is supplied.
 - Local live PostgreSQL execution correctly rejected host Node 24.20.0 against the governed Node 20 contract. Exact Node 20.20.2 and PostgreSQL 16.15 execution is reserved for publication CI because Node 20.20.2 is not installed locally.
+- Exact implementation commit `44764613e5ea7718c6e431ac32bfc3a8745fbdbc` passed CI run `36355866056`: generic tests, zero-skip PostgreSQL parents, the coverage gate, browser accessibility, security audit/evidence, and CodeQL all succeeded.
 
 ## Disposition
 
-Publish issue #94 implementation and close only after exact-commit CI passes all jobs. No release, promotion, deployment, or production authority follows.
+Issue #94 is authorized to close after exact-commit publication CI passed. No release, promotion, deployment, or production authority follows.

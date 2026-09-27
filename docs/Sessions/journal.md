@@ -6,6 +6,19 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-27 | Scenario extraction deferral owner-approved | Ring-4 | @solo-orchestrator
+
+**Type:** APPROVAL
+**agentic:** false
+**Decision:** Approve DEC-101 and retain #87 as open post-release maintenance
+**Policy:** Workspace Owner authority; REV-217; successful exact-commit CI run `36356533877`
+**Authority:** Workspace Owner
+**Accountability:** Solo Orchestrator proceeds to #97 release-artifact preparation while preserving DEC-101 invalidation criteria and the unchanged promotion boundary
+**Result:** Deferral commit `2ebc515f9e503a363adedc3206ad1973fde29d95` passed build/test, browser accessibility, security audit, and CodeQL; #87 remains open and assigned
+**authorization-boundary:** Release-artifact preparation only; no promotion, staging, release, deployment, production, provider, broker, public ingress, or durable handoff authority
+
+---
+
 ## 2026-09-27 | Structured scenario extraction deferred | Ring-4 | @solo-orchestrator
 
 **Type:** DECISION

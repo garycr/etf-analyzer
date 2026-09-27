@@ -27,10 +27,12 @@
 - TypeScript lint, dependency audit, SAST, and secret scan: PASS.
 - Commit-bound security evidence: fail-closed locally without GitHub identity; exact-commit CI pending.
 - Code, security, and architecture review: REV-210, REV-211, and REV-212 PASS.
-- Exact-commit publication CI: pending.
+- Exact-commit publication CI: PASS.
 
 Initial implementation commit `bb335c0a4da02b4f97185117abcb8cd108527453` passed build-and-test, security-audit, and CodeQL in run `36324909062`. Browser accessibility failed because Node 20.20.2 reported the test excluded by `--test-name-pattern` as skipped and the zero-skip gate rejected it. The root correction removes the filter and executes all three tests in the owned browser file; replacement exact-commit CI is required.
 
+Replacement implementation commit `42bc4f4385ba1eb9c41efb865f2a660b2d057eb8` passed CI run `36326805089`: build-and-test, browser-accessibility, security-audit, and CodeQL all succeeded.
+
 ## Publication Condition
 
-Issue #90 may close only after independent review and exact implementation CI pass all jobs. No release, promotion, deployment, or production authority follows.
+Issue #90 is authorized to close after independent review and exact implementation CI passed all jobs. No release, promotion, deployment, or production authority follows.

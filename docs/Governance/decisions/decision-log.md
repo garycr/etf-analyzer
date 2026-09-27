@@ -56,7 +56,7 @@
 | DEC-095 | 2026-09-25 | Release activation | Activate bounded Ring 4 release management and require productization before promotion | Agent (Fully Agentic) | Solo Orchestrator | Active; no release candidate or promotion yet |
 | DEC-096 | 2026-09-25 | Release productization | Accept the supported local runtime design and require publication CI before closing #88 | Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `9ca9afea`; #88 closure authorized |
 | DEC-097 | 2026-09-26 | Release hardening | Accept per-launch loopback authentication and zero-queue request limits for publication | Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `6b1b0303`; #89 closure authorized |
-| DEC-098 | 2026-09-26 | Release reproducibility | Govern Ubuntu 24.04 and Node 20.20.2 identities with fail-fast CI assertions | Agent (Fully Agentic) | Solo Orchestrator | Accepted under REV-210/211/212; publication CI pending |
+| DEC-098 | 2026-09-26 | Release reproducibility | Govern Ubuntu 24.04 and Node 20.20.2 identities with fail-fast CI assertions | Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `42bc4f43`; #90 closure authorized |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -113,7 +113,7 @@
 | **Assumptions** | GitHub preserves documented runner-label semantics; Node 20.20.2 remains available to the pinned setup action; CodeQL executes only its SHA-pinned action runtime; publication remains exact-commit and candidate-only. |
 | **Invalidation** | Runtime assertion failure, label-semantics change, project execution under an ungoverned Node runtime, exact VM revision requirement, failed publication CI, release/deployment request, or any Sev 1/2 review finding reopens the decision. |
 | **Linked Artifacts** | ADR-005; `docs/artifacts/gate-evidence/ring-4-ci-runtime-identities.md`; REV-210; REV-211; REV-212; issue #90 |
-| **Status** | Accepted for publication; exact-commit CI pending; no promotion authority |
+| **Status** | Verified by CI run `36326805089` at commit `42bc4f4385ba1eb9c41efb865f2a660b2d057eb8`; #90 closure authorized; no promotion authority |
 
 ---
 

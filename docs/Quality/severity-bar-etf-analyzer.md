@@ -25,7 +25,7 @@
 | RH-009 | Sev 2 | Closed: DP-33 packet and Plan/Architecture/Security reviews PASS; final publication remains procedural |
 | RH-013 | Sev 3 | #86 narrows PT-OPS reuse or composes exact counts before broader operational evidence |
 | RH-014 | Sev 3 | #91 completes lockfile-derived license/maintenance inventory during mandatory Ring 3 OSS review |
-| RH-015 | Sev 3 | #90 governs exact tool/runtime identity before release reproducibility is claimed |
+| RH-015 | Sev 3 | Closed by DEC-098 and CI run 36326805089: Ubuntu 24.04 and Node 20.20.2 identities are governed and verified |
 | RH-016 | Sev 3 | #89 requires per-launch token and rate/concurrency control before boundary widening |
 | RH-017 | Sev 3 | #87 tracks structured scenario results and test-maintainability debt |
 

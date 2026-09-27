@@ -36,7 +36,7 @@ No review returned unconditional PASS. Slice-level reviews remain historical inp
 | RH-012 | Major | Security evidence lacks commit-bound raw provenance bundle | Closed under REV-196/198: downloaded run 35902418187 artifact matched commit/run/job identity and every raw stream byte count/SHA-256 |
 | RH-013 | Minor | PT-OPS passes empty workflow-count maps | Open: exact counts exist in PT-E2E but must be composed into PT-OPS evidence or its claim narrowed |
 | RH-014 | Minor | Full transitive OSS inventory incomplete | Open: lockfile-derived license/maintenance/lifecycle inventory required |
-| RH-015 | Minor | CI runner and Node selector remain mutable | Open: pin runner generation/exact Node patch or record owner acceptance |
+| RH-015 | Minor | CI runner and Node selector remain mutable | Closed by DEC-098: Ubuntu 24.04 generation, Node 20.20.2, fail-fast identity assertions, and immutable-reference contracts passed exact-commit CI run 36326805089 |
 | RH-016 | Minor | Same-user process can forge local Host/Origin; no rate limit | Accepted only for current local prototype; per-launch token and concurrency/rate limit required before boundary widening |
 | RH-017 | Minor | A-L wrappers parse child TAP and large owner files reduce maintainability | Open debt; structured owner scenario results preferred |
 

@@ -22,9 +22,11 @@
 - TypeScript lint: PASS.
 - Dependency audit, SAST, secret scan, and commit-identified security evidence: PASS.
 - Focused adapter unit and integration suites: PASS.
-- Local Playwright execution was unavailable because Chromium could not load host library `libnspr4.so`; publication CI remains the browser gate.
+- Exact digest-pinned Playwright container with networking disabled: 2/2 PASS, zero failures and zero skips.
 
 Initial publication run `36292178660` failed both browser tests because native skip-link navigation replaced the launch-token fragment and later requests lost authentication. The tab-scoped retention fix is covered by deterministic unit tests and focused code/security re-review; replacement publication CI remains required.
+
+Replacement run `36292834208` remained red and prompted exact local container reproduction. The final browser test uses a fresh context for every initial analytics state and reserves the workflow test for fragment replacement and reload retention. Independent test re-review and the offline pinned-container run both PASS; a new exact-commit publication run remains required.
 
 ## Publication Condition
 

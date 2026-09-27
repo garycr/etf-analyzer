@@ -14,4 +14,6 @@ Follow-up review found no Sev 1 or Sev 2 issue. It verified idempotent permit re
 
 Publication run `36292178660` then exposed token loss when the accessible skip link replaced the launch fragment with `#main-content`. The client now retains only a canonical token in tab-scoped `sessionStorage` and captures one module-local request header. Focused re-review verified fragment precedence, invalid stored-token rejection, anchor navigation, and reload behavior with no Sev 1 or Sev 2 finding.
 
+A later browser-test correction initially reused one page with reloads for three analytics states. Independent review blocked that asymmetry because it could mask fresh-render defects. The final test creates an isolated browser context and exact launch navigation for every analytics state, while the workflow test separately exercises token retention. Re-review returned PASS with no Sev 1 or Sev 2 finding.
+
 This review does not authorize promotion, staging, deployment, release, production, or boundary widening.

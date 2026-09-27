@@ -322,7 +322,6 @@ test("PT-ANA-A11Y-001 exposes blocked denied quarantined and no-signal analytics
     analytics: { state: "NoSignal", signals: [], metrics: [], warnings: [] },
     evidence: blockedState("AccessDenied"),
   });
-  const page = await harness.newPage({ viewport: { width: 1280, height: 720 } });
   for (const state of ["NoSignal", "AccessDenied", "InputQuarantined", "NoSafeOperation"]) {
     harness.setModel(state === "NoSignal"
       ? {
@@ -331,6 +330,7 @@ test("PT-ANA-A11Y-001 exposes blocked denied quarantined and no-signal analytics
         evidence: blockedState("AccessDenied"),
       }
       : { ...base, analytics: blockedState(state), evidence: blockedState(state) });
+    const page = await harness.newPage({ viewport: { width: 1280, height: 720 } });
     await page.goto(harness.origin);
     const results = await new AxeBuilder({ page }).include("#main-content").withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
     assert.deepEqual(results.violations, [], `${state}: ${JSON.stringify(results.violations)}`);

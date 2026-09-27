@@ -12,6 +12,6 @@
 | Wall-clock deadline assertion | Sev 3 | REV-202 TR-4 | #94 watch item | Open, nonblocking |
 | Test maintainability | Sev 3 | REV-202 TR-5 | #87 | Open, nonblocking |
 | Same-host token/rate controls deferred | Low / Sev 3 | REV-203 SR-3/4 | #89; blocks boundary widening | Open, nonblocking for prototype |
-| Dependency freshness | Info | REV-202/203 | #93 | Open, nonblocking |
+| Dependency freshness | Info | REV-202/203 | #93 | Closed under DEC-099; exact pins retained after source-backed review |
 
 Open Sev 1: 0. Open Sev 2: 0. Every open finding has an owner issue and bounded disposition.

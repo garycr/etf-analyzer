@@ -57,7 +57,7 @@
 | DEC-096 | 2026-09-25 | Release productization | Accept the supported local runtime design and require publication CI before closing #88 | Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `9ca9afea`; #88 closure authorized |
 | DEC-097 | 2026-09-26 | Release hardening | Accept per-launch loopback authentication and zero-queue request limits for publication | Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `6b1b0303`; #89 closure authorized |
 | DEC-098 | 2026-09-26 | Release reproducibility | Govern Ubuntu 24.04 and Node 20.20.2 identities with fail-fast CI assertions | Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `42bc4f43`; #90 closure authorized |
-| DEC-099 | 2026-09-27 | Dependency lifecycle | Retain reviewed exact dependency pins for the bounded candidate after freshness assessment | Agent (Fully Agentic) | Solo Orchestrator | Accepted under REV-213/214; publication CI pending |
+| DEC-099 | 2026-09-27 | Dependency lifecycle | Retain reviewed exact dependency pins for the bounded candidate after freshness assessment | Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `8199a960`; #93 closure authorized |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -114,7 +114,7 @@
 | **Assumptions** | Node 20.20.2 remains the governed runtime; current audit remains clean; no undisclosed applicable advisory exists; the candidate remains local, fixture-only, and non-production. |
 | **Invalidation** | Applicable security advisory, deprecation or loss of support, Node 20 incompatibility, release-blocking defect, changed license, failed audit, or approved runtime-major migration reopens review. |
 | **Linked Artifacts** | `docs/Planning/dependency-update-review-ring4.md`; `docs/Planning/oss-review-ring3.md`; `docs/artifacts/gate-evidence/ring-4-dependency-review.md`; REV-213; REV-214; issue #93 |
-| **Status** | Accepted for publication; exact-commit CI pending; no dependency change or promotion authority |
+| **Status** | Verified by CI run `36330071820` at commit `8199a96056355a9997c91a1ecaa3bb3d10217dfc`; #93 closure authorized; no dependency change or promotion authority |
 
 ---
 

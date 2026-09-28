@@ -91,7 +91,7 @@ test("PT-CI-004 builds and uploads one commit-bound release candidate", async ()
   const packageJson = JSON.parse(await readFile(packageUrl, "utf8"));
 
   assert.match(packageJson.scripts["release:package"], /scripts\/release-package\.mjs/u);
-  assert.match(workflow, /name:\s*Build immutable release candidate[\s\S]*?ETF_RELEASE_CANDIDATE:\s*v0\.1\.0-rc\.1[\s\S]*?npm run release:package/u);
-  assert.match(workflow, /name:\s*Upload immutable release candidate[\s\S]*?name:\s*etf-analyzer-v0\.1\.0-rc\.1-\$\{\{ github\.sha \}\}[\s\S]*?path:\s*release\//u);
+  assert.match(workflow, /name:\s*Build immutable release candidate[\s\S]*?ETF_RELEASE_CANDIDATE:\s*v0\.1\.0-rc\.2[\s\S]*?npm run release:package/u);
+  assert.match(workflow, /name:\s*Upload immutable release candidate[\s\S]*?name:\s*etf-analyzer-v0\.1\.0-rc\.2-\$\{\{ github\.sha \}\}[\s\S]*?path:\s*release\//u);
   assert.match(workflow, /name:\s*Upload immutable release candidate[\s\S]*?if-no-files-found:\s*error[\s\S]*?retention-days:\s*90/u);
 });

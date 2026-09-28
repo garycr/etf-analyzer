@@ -10,6 +10,10 @@ export function assertSourceCommit(sourceCommit) {
   }
 }
 
+export function assertCleanReleaseWorktree(status) {
+  if (status.length > 0) throw new Error("Release packaging requires a clean working tree");
+}
+
 function assertReleasePath(path) {
   if (
     path.length === 0 ||

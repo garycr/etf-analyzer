@@ -6,6 +6,19 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-28 | Deployable rc.2 candidate approved for publication | Ring-4 | @solo-orchestrator
+
+**Type:** DECISION
+**agentic:** true
+**Decision:** Accept ADR-006 and publish `v0.1.0-rc.2` under DEC-103 after final independent review and focused remediation
+**Policy:** DEC-095; DEC-101; DEC-102; issue #97; test-first delivery; immutable artifact identity; loopback-only least privilege
+**Authority:** Agent (Fully Agentic) with REV-221, REV-222, and REV-223 PASS dispositions
+**Accountability:** Commit and publish the reviewed slice, require every exact-commit CI job to pass, verify the downloaded archive and manifest before assignment, then execute bounded DEV/SMOKE only from that assigned artifact
+**Result:** Artifact verification now preserves its diagnostic cause while remaining fail-closed before PostgreSQL connection; focused typecheck and seven provisioner unit tests pass; ADR-006 is Accepted
+**authorization-boundary:** Exact-commit publication only; rc.2 remains unassigned with no DEV/SMOKE/TEST promotion, staging, production, provider, broker, public ingress, real-order, or durable-handoff authority
+
+---
+
 ## 2026-09-27 | Immutable candidate package reviewed for publication | Ring-4 | @solo-orchestrator
 
 **Type:** WORK

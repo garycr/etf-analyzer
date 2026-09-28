@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
 import {
+  assertCleanReleaseWorktree,
   assertSourceCommit,
   createReleaseManifest,
   verifyReleaseManifest,
@@ -54,6 +55,8 @@ test("release manifest is canonical and independent of payload discovery order",
 });
 
 test("release manifest rejects invalid identities and unsafe or duplicate paths", () => {
+  assert.doesNotThrow(() => assertCleanReleaseWorktree(""));
+  assert.throws(() => assertCleanReleaseWorktree(" M package.json\n"), /clean working tree/u);
   assert.throws(() => assertSourceCommit("main"), /40 lowercase hexadecimal/u);
   assert.throws(
     () => createReleaseManifest({
@@ -85,9 +88,10 @@ test("release manifest rejects invalid identities and unsafe or duplicate paths"
 });
 
 test("release package is byte-deterministic and its extracted manifest verifies", () => {
-  const candidate = "v0.1.0-rc.1";
+  const candidate = "v0.1.0-rc.2";
   const archiveName = `etf-analyzer-${candidate}-${sourceCommit.slice(0, 12)}.tar.gz`;
   const archivePath = join("release", archiveName);
+  const operatorArtifactPath = join("release", "operator-owned-artifact.txt");
   const extractionDirectory = mkdtempSync(join(tmpdir(), "etf-release-test-"));
   const environment = {
     ...process.env,
@@ -96,6 +100,8 @@ test("release package is byte-deterministic and its extracted manifest verifies"
   };
 
   try {
+    mkdirSync("release", { recursive: true });
+    writeFileSync(operatorArtifactPath, "preserve\n", "utf8");
     execFileSync(process.execPath, ["scripts/release-package.mjs"], { env: environment });
     const firstArchive = readFileSync(archivePath);
     execFileSync(process.execPath, ["scripts/release-package.mjs"], { env: environment });
@@ -115,12 +121,25 @@ test("release package is byte-deterministic and its extracted manifest verifies"
     );
     assert.equal(manifest.files.some(({ path }) => path.endsWith("/release-notes.md")), true);
     assert.equal(manifest.files.some(({ path }) => path.endsWith("/rollback-plan.md")), true);
+    assert.equal(manifest.files.some(({ path }) => path.endsWith("/deployment-guide.md")), true);
+    assert.equal(
+      manifest.files.some(({ path }) => path === "dist/Infrastructure/Local/local-evaluation-cli.js"),
+      true,
+    );
+    assert.match(
+      JSON.parse(readFileSync(join(packageDirectory, "package.json"), "utf8"))
+        .scripts["release:prepare-evaluation"],
+      /local-evaluation-cli\.js/u,
+    );
 
     const sidecar = readFileSync(`${archivePath}.sha256`, "utf8");
     const archiveDigest = createHash("sha256").update(secondArchive).digest("hex");
     assert.equal(sidecar, `${archiveDigest}  ${archiveName}\n`);
+    assert.equal(readFileSync(operatorArtifactPath, "utf8"), "preserve\n");
   } finally {
     rmSync(extractionDirectory, { force: true, recursive: true });
-    rmSync("release", { force: true, recursive: true });
+    rmSync(archivePath, { force: true });
+    rmSync(`${archivePath}.sha256`, { force: true });
+    rmSync(operatorArtifactPath, { force: true });
   }
 });

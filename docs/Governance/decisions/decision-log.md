@@ -61,6 +61,7 @@
 | DEC-100 | 2026-09-27 | Test gate hardening | Enforce 80% aggregate branch coverage, generic zero-skip execution, and deadline-test determinism | Workspace Owner / Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `44764613`; #94 closure authorized |
 | DEC-101 | 2026-09-27 | Maintenance scope | Defer structured WP-8 scenario extraction to owned post-release maintenance | Workspace Owner | Solo Orchestrator | Owner approved after REV-217 and CI `36356533877`; proceed to #97 release artifacts |
 | DEC-102 | 2026-09-27 | Release packaging | Build one deterministic commit-bound `v0.1.0-rc.1` archive with manifest, checksum, and operational documents | Agent (Fully Agentic) | Solo Orchestrator | Assigned at `a0dcf3ba`; CI `36363283790`; SHA-256 `68be9f33...87a2`; no promotion |
+| DEC-103 | 2026-09-28 | Release preparation | Publish deployable `v0.1.0-rc.2` with reviewed local preparation, truthful readiness, and operator guidance | Agent (Fully Agentic) | Solo Orchestrator | Approved for exact-commit publication; unassigned; no promotion |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -99,6 +100,27 @@
 ---
 
 ## Decision Records
+
+### DEC-103: Publish A Deployable Local Evaluation Candidate
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-103 |
+| **Date** | 2026-09-28 |
+| **Category** | Release preparation |
+| **Decision** | Publish `v0.1.0-rc.2` from one exact clean commit with an operator-supported local preparation command, reviewed synthetic artifacts, fresh evaluation key material, actual runtime-role readiness probes, Application-owned readiness evaluation, fail-closed packaging identity, and a candidate-specific deployment guide |
+| **Policy** | DEC-095; DEC-101; DEC-102; issue #97; ADR-006; immutable build-once artifacts; test-first delivery; least privilege; loopback-only evaluation; no promotion by publication alone |
+| **Authority** | Agent under Fully Agentic mode after REV-221 Code, REV-222 Architecture, and REV-223 Security PASS dispositions |
+| **Accountability** | Solo Orchestrator publishes only the reviewed clean commit, requires all exact-commit CI jobs to pass, downloads and verifies the CI artifact and every manifest hash before assignment, records assignment separately, and executes DEV/SMOKE only from that assigned artifact |
+| **Context** | Assigned rc.1 is deterministic but cannot be prepared from a pristine operator environment because provisioning and artifact materialization are test-only. rc.2 closes that operational gap without widening the accepted local, single-user, synthetic-only boundary. |
+| **Alternatives** | Evaluate rc.1 with test helpers; add static credentials or key material; provide a reviewed one-shot local preparation command. The decision selects the reviewed command because it is operator-supported, fail-closed, and preserves runtime identity and artifact integrity. |
+| **Consequences** | A clean local operator can prepare a disposable PostgreSQL 16.15 evaluation environment. Administrator credentials remain environment-only, generated key material remains database-confined, readiness is asserted only after owning probes pass, and failed evaluation stops without a fallback candidate. |
+| **Assumptions** | Evaluation remains loopback-only and synthetic; PostgreSQL trust or peer authentication is scoped only to local socket or exact loopback ranges; the database is pristine and disposable; exact-commit CI remains the publication authority. |
+| **Invalidation** | Any CI job fails, downloaded artifact or manifest verification fails, preparation requires shared-network trust or persisted administrator credentials, readiness bypasses owning probes, the package is rebuilt between environments, or scope widens beyond the accepted local boundary. |
+| **Linked Artifacts** | ADR-006; `docs/Operations/releases/v0.1.0-rc.2/`; REV-221; REV-222; REV-223; issue #97 |
+| **Status** | Approved for exact-commit publication only; rc.2 remains unassigned and has no DEV/SMOKE/TEST promotion authority pending successful CI and downloaded-artifact verification |
+
+---
 
 ### DEC-102: Build The First Immutable Candidate Package
 

@@ -9,6 +9,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "lint": "tsc -p tsconfig.json --noEmit",
+    "release:prepare-evaluation": "node dist/Infrastructure/Local/local-evaluation-cli.js",
     "release:package": "npm run build && node scripts/release-package.mjs",
     "start:local": "npm run build && node dist/Infrastructure/Local/local-launcher.js",
     "start:release": "node dist/Infrastructure/Local/local-launcher.js",

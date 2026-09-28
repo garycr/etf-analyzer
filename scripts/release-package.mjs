@@ -12,10 +12,20 @@ import {
 import { tmpdir } from "node:os";
 import { basename, join, relative, sep } from "node:path";
 
-import { assertSourceCommit, createReleaseManifest } from "./release-package-lib.mjs";
+import {
+  assertCleanReleaseWorktree,
+  assertSourceCommit,
+  createReleaseManifest,
+} from "./release-package-lib.mjs";
 
-const candidate = process.env.ETF_RELEASE_CANDIDATE ?? "v0.1.0-rc.1";
-const sourceCommit = process.env.GITHUB_SHA ?? execFileSync(
+const candidate = process.env.ETF_RELEASE_CANDIDATE ?? "v0.1.0-rc.2";
+const runningInActions = process.env.GITHUB_ACTIONS === "true";
+const runningUnderTests = process.env.NODE_TEST_CONTEXT !== undefined;
+if (!runningInActions && !runningUnderTests) {
+  const worktreeStatus = execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" });
+  assertCleanReleaseWorktree(worktreeStatus);
+}
+const sourceCommit = (runningInActions || runningUnderTests ? process.env.GITHUB_SHA : undefined) ?? execFileSync(
   "git",
   ["rev-parse", "HEAD"],
   { encoding: "utf8" },
@@ -34,6 +44,7 @@ const payloadPaths = [
   "dist",
   `docs/Operations/releases/${candidate}/release-notes.md`,
   `docs/Operations/releases/${candidate}/rollback-plan.md`,
+  `docs/Operations/releases/${candidate}/deployment-guide.md`,
   "package-lock.json",
   "package.json",
 ];

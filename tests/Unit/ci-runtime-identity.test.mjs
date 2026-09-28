@@ -65,7 +65,7 @@ test("PT-CI-002 retains immutable action and container references", async () => 
   const actionReferences = [...workflow.matchAll(/^\s+-?\s*uses:\s*([^@\s]+)@([^\s]+)\s*$/gmu)];
   const imageReferences = [...workflow.matchAll(/^\s+image:\s*([^\s]+)\s*$/gmu)];
 
-  assert.equal(actionReferences.length, 10, "every expected action reference must remain covered");
+  assert.equal(actionReferences.length, 11, "every expected action reference must remain covered");
   for (const [, action, identity] of actionReferences) {
     assert.match(identity, /^[a-f0-9]{40}$/u, `${action} must use a full commit SHA`);
   }
@@ -84,4 +84,14 @@ test("PT-CI-003 runs the complete browser suite through the zero-skip gate", asy
   assert.doesNotMatch(browserScript, /--test-name-pattern/u,
     "filtering a Node test file reports excluded tests as skips under Node 20");
   assert.match(browserScript, /tests\/Integration\/workbench-accessibility\.test\.mjs/u);
+});
+
+test("PT-CI-004 builds and uploads one commit-bound release candidate", async () => {
+  const workflow = await readFile(workflowUrl, "utf8");
+  const packageJson = JSON.parse(await readFile(packageUrl, "utf8"));
+
+  assert.match(packageJson.scripts["release:package"], /scripts\/release-package\.mjs/u);
+  assert.match(workflow, /name:\s*Build immutable release candidate[\s\S]*?ETF_RELEASE_CANDIDATE:\s*v0\.1\.0-rc\.1[\s\S]*?npm run release:package/u);
+  assert.match(workflow, /name:\s*Upload immutable release candidate[\s\S]*?name:\s*etf-analyzer-v0\.1\.0-rc\.1-\$\{\{ github\.sha \}\}[\s\S]*?path:\s*release\//u);
+  assert.match(workflow, /name:\s*Upload immutable release candidate[\s\S]*?if-no-files-found:\s*error[\s\S]*?retention-days:\s*90/u);
 });

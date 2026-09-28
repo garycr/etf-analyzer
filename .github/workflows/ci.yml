@@ -70,6 +70,19 @@ jobs:
       - name: WP-8 coverage gate
         run: npm run test:coverage:wp8
 
+      - name: Build immutable release candidate
+        env:
+          ETF_RELEASE_CANDIDATE: v0.1.0-rc.1
+        run: npm run release:package
+
+      - name: Upload immutable release candidate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: etf-analyzer-v0.1.0-rc.1-${{ github.sha }}
+          path: release/
+          if-no-files-found: error
+          retention-days: 90
+
   browser-accessibility:
     runs-on: ubuntu-24.04
     container:

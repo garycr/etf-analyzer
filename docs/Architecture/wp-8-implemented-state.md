@@ -1,7 +1,7 @@
 # WP-8 Implemented-State Architecture
 
 **Date:** 2026-09-25
-**Status:** Ring 3 verified; supported local runtime implemented in Ring 4 under issue #88
+**Status:** Ring 3 verified; Ring 4 runtime and release hardening implemented under issues #88, #89, #90, #93, and #94
 
 ## Scope
 
@@ -37,7 +37,7 @@ flowchart LR
 | --- | --- | --- |
 | Browser workbench | Accessible local watchlist and paper-order workflow; strict fragment-to-header launch token propagation | Not an authenticated multi-user client |
 | Local composition root | Strict operator configuration, reviewed artifact loading, separate control/runtime database identities, fail-closed startup attestation, and idempotent signal shutdown | Local single-user process only; no service manager packaging |
-| Loopback HTTP adapter | Literal loopback binding, closed routes, pre-body launch authentication, bounded body/deadline, zero-queue concurrency and fixed-window rate controls, fixed public errors | Local in-memory controls only; no distributed or multi-user admission |
+| Loopback HTTP adapter | Literal loopback binding, closed routes, per-launch pre-body authentication, bounded body/deadline, zero-queue concurrency and fixed-window rate controls, fixed public errors | Local in-memory controls only; no distributed or multi-user admission |
 | Application boundary | Typed operation envelopes, command idempotency, replay, redaction | Commands remain research-only and fixture-only |
 | Synchronous owners | Fixture ingestion, analytics publication, paper-order transition, controlled reads | No independent worker process, scheduler, or provider adapter |
 | PostgreSQL | Eight exact greenfield migrations, least-privilege roles, seven authoritative query operations, controlled functions, immutable evidence and replay | No backup/restore or production operations implementation |
@@ -69,4 +69,4 @@ The proposed views remain design options only and must not be used as implementa
 
 ## Candidate Classification
 
-WP-8 and Ring 4 issue #88 now provide an executable local integration candidate and a supported operator-driven composition root. The launcher remains bounded to a fixture-only, research-only, single-user loopback runtime and does not authorize promotion, staging, deployment, or production.
+WP-8 and Ring 4 issues #88 through #94 provide an executable local integration candidate, supported operator-driven composition root, exact runtime identities, reviewed dependency graph, and hardened release test gates. Candidate packaging produces one commit-bound deterministic archive with a per-file manifest and SHA-256 sidecar. The launcher remains bounded to a fixture-only, research-only, single-user loopback runtime and does not authorize promotion, staging, deployment, or production.

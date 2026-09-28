@@ -9,7 +9,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "lint": "tsc -p tsconfig.json --noEmit",
+    "release:package": "npm run build && node scripts/release-package.mjs",
     "start:local": "npm run build && node dist/Infrastructure/Local/local-launcher.js",
+    "start:release": "node dist/Infrastructure/Local/local-launcher.js",
     "test": "npm run build && node scripts/test-runner.mjs",
     "test:postgres:wp8": "npm run build && node scripts/zero-skip-runner.mjs --test-name-pattern='^CT-DB-001[A-L] ' tests/Integration/wp-8-contract-conformance.test.mjs",
     "test:browser": "npm run build && node scripts/zero-skip-runner.mjs tests/Integration/workbench-accessibility.test.mjs",

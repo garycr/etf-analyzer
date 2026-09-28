@@ -20,6 +20,7 @@ logs/
 .agent-workspace/
 .copilot/
 security-evidence/
+release/
 
 # MCP config (may contain env var references — generate from .example)
 .vscode/mcp.json

@@ -60,6 +60,7 @@
 | DEC-099 | 2026-09-27 | Dependency lifecycle | Retain reviewed exact dependency pins for the bounded candidate after freshness assessment | Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `8199a960`; #93 closure authorized |
 | DEC-100 | 2026-09-27 | Test gate hardening | Enforce 80% aggregate branch coverage, generic zero-skip execution, and deadline-test determinism | Workspace Owner / Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `44764613`; #94 closure authorized |
 | DEC-101 | 2026-09-27 | Maintenance scope | Defer structured WP-8 scenario extraction to owned post-release maintenance | Workspace Owner | Solo Orchestrator | Owner approved after REV-217 and CI `36356533877`; proceed to #97 release artifacts |
+| DEC-102 | 2026-09-27 | Release packaging | Build one deterministic commit-bound `v0.1.0-rc.1` archive with manifest, checksum, and operational documents | Agent (Fully Agentic) | Solo Orchestrator | REV-218/219/220 PASS; publication CI pending; no promotion |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -98,6 +99,27 @@
 ---
 
 ## Decision Records
+
+### DEC-102: Build The First Immutable Candidate Package
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-102 |
+| **Date** | 2026-09-27 |
+| **Category** | Release packaging |
+| **Decision** | Build `v0.1.0-rc.1` once from the exact CI commit as a deterministic normalized archive containing precompiled runtime files, exact package metadata, operator configuration example, release notes, rollback plan, per-file SHA-256 manifest, and archive checksum sidecar; upload it as a commit-bound CI artifact |
+| **Policy** | DEC-095; issue #97; immutable build-once release artifacts; Node 20.20.2; exact dependency lock; SHA-pinned actions; release-management audit trail; no promotion by packaging alone |
+| **Authority** | Agent under Fully Agentic mode with alternate-model REV-218, REV-219, and REV-220 PASS dispositions |
+| **Accountability** | Solo Orchestrator verifies exact-commit CI and downloaded artifact digests before assigning the candidate, records each actual promotion separately, preserves rollback and FinOps boundaries, and never rebuilds between environments |
+| **Context** | Ring 4 hardening is complete, but no immutable package, release notes, rollback plan, or populated FinOps configuration existed. A normalized source/runtime archive fits the supported local boundary without implying a container or Kubernetes deployment. |
+| **Alternatives** | Promote a mutable source checkout; create an unsupported container image; create a deterministic precompiled local archive. The decision selects the archive because it is verifiable, minimal, and consistent with the implemented runtime. |
+| **Consequences** | CI will publish one 90-day commit-bound candidate artifact after all build/test gates. The artifact can enter DEV/SMOKE/TEST only after its exact digest is recorded; package creation itself is not promotion, release, deployment, or production authorization. |
+| **Assumptions** | GNU tar 1.35-compatible normalization remains available on Ubuntu 24.04; Node 20.20.2 builds deterministic JavaScript; `npm ci --omit=dev` resolves the exact runtime graph; candidate docs exist under the matching version path. |
+| **Invalidation** | Archive digest changes across identical inputs, manifest verification fails, CI artifact custody changes, runtime install or launch requires dev dependencies, release boundary widens, or any review/CI gate fails. |
+| **Linked Artifacts** | `docs/Operations/releases/v0.1.0-rc.1/`; `docs/Operations/finops-config.md`; `docs/Architecture/wp-8-implemented-state.md`; REV-218; REV-219; REV-220; issue #97 |
+| **Status** | Accepted for publication; exact-commit CI and artifact verification pending; no candidate assignment or promotion yet |
+
+---
 
 ### DEC-101: Defer Structured Scenario Extraction
 

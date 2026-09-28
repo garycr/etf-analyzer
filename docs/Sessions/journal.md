@@ -6,6 +6,19 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-27 | Immutable candidate package reviewed for publication | Ring-4 | @solo-orchestrator
+
+**Type:** WORK
+**agentic:** true
+**Decision:** Accept deterministic `v0.1.0-rc.1` packaging for publication under DEC-102, conditional on exact-commit CI and downloaded-artifact verification
+**Policy:** DEC-095; issue #97; immutable artifact and build-once rules; independent code, security, and architecture review
+**Authority:** Agent (Fully Agentic) with REV-218, REV-219, and REV-220 PASS dispositions
+**Accountability:** Publish only the reviewed package slice, verify the CI artifact and digest, assign no candidate or promotion before verification, and preserve local-only boundaries
+**Result:** Repeated local package builds are byte-identical; archive round-trip, per-file manifest, sidecar, gzip timestamp, lint, and seven focused tests pass
+**authorization-boundary:** Package publication only; no DEV/SMOKE/TEST promotion, staging, release, deployment, production, provider, broker, public ingress, or durable handoff authority
+
+---
+
 ## 2026-09-27 | Scenario extraction deferral owner-approved | Ring-4 | @solo-orchestrator
 
 **Type:** APPROVAL

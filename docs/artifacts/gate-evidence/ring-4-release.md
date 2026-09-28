@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-28
 **Decision:** DEC-103
-**Status:** Active checkpoint; Ring 4 exit not yet requested
+**Status:** Active checkpoint; TEST evidence complete; Ring 4 exit not yet requested
 
 ## Verified Evidence
 
@@ -15,7 +15,7 @@
 
 ## Open Exit Items
 
-- TEST remains pending as a separately named promotion disposition; existing CI evidence is authoritative test evidence but has not been relabeled as a TEST environment promotion.
+- TEST evidence is PASS through authoritative exact-commit CI run `36442957057`; no separate TEST environment was created or promoted.
 - Ring 4 lessons learned and this checkpoint are now present; a final Ring 4 gate review remains.
 - Ring 5 and production are not authorized.
 

@@ -6,6 +6,19 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-28 | TEST evidence disposition passed | Ring-4 | @solo-orchestrator
+
+**Type:** PROMOTION
+**agentic:** true
+**Decision:** Accept authoritative exact-commit CI as the rc.2 TEST evidence disposition without creating a separate TEST environment
+**Policy:** DEC-103; immutable candidate identity; CI as hosted browser/security/test authority; no implicit environment promotion
+**Authority:** Agent (Fully Agentic) under the approved continuation directive
+**Accountability:** Preserve the assigned rc.2 artifact, keep staging and production closed, and present the final Ring 4 exit review separately
+**Result:** CI run `36442957057` passed build/test, zero-skip PostgreSQL parents, coverage, browser accessibility, security audit, and CodeQL for source commit `1e7605f72722b6f59e63e5a168548b1aac69415e`
+**authorization-boundary:** TEST evidence only; no separate TEST environment, staging, production, remote database, public ingress, provider, broker, real-order, or durable-handoff authority
+
+---
+
 ## 2026-09-28 | Ring 4 checkpoint synchronized | Ring-4 | @solo-orchestrator
 
 **Type:** CHECKPOINT

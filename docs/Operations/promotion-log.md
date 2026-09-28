@@ -58,3 +58,15 @@
 - **Cleanup:** Launcher exited with empty stderr; disposable container, volume, socket, listener, extracted archive, dependency tree, and temporary Node runtime were removed
 - **Path:** DEV and SMOKE complete; TEST, staging, production, and deployment release remain unexecuted and unauthorized
 - **Boundary:** Local single-user synthetic loopback evaluation only; no remote database, public ingress, live provider, brokerage, real order, or durable handoff authority
+
+## 2026-09-28 - TEST Evidence Disposition
+
+- **Decision:** DEC-103
+- **Tracking:** GitHub #97
+- **Candidate:** `v0.1.0-rc.2`
+- **Source commit:** `1e7605f72722b6f59e63e5a168548b1aac69415e`
+- **CI run:** `36442957057`; build-and-test, browser-accessibility, security-audit, and CodeQL passed
+- **Evidence:** Exact Node 20.20.2 build, complete zero-skip tests, PostgreSQL parent suite, coverage gate, browser accessibility, security evidence, and CodeQL passed for the assigned candidate commit
+- **Disposition:** TEST evidence PASS by authoritative CI; no separate TEST environment was created or promoted
+- **Path:** Ring 4 TEST evidence complete; final Ring 4 exit review remains; no staging, production, or deployment release promotion executed
+- **Boundary:** Local single-user synthetic loopback candidate only; no remote database, public ingress, live provider, brokerage, real order, or durable handoff authority

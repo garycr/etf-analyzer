@@ -621,6 +621,9 @@ function orderedInstrumentIds(): string[] {
 
 function startWorkbenchClient(): void {
   restorePaperOrderOutcome();
+  void loadWatchlist("Watchlist loaded.").catch(() => {
+    announce("The watchlist could not be loaded. Retry the request or review local diagnostics.", true);
+  });
 
   const form = document.querySelector<HTMLFormElement>("#watchlist-form");
   form?.addEventListener("submit", (event) => {

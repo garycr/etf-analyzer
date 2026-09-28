@@ -1,12 +1,12 @@
 # ETF Analyzer v0.1.0-rc.2 Local Evaluation Guide
 
-**Status:** Procedure prepared; candidate identity remains unassigned until exact-commit CI artifact verification
+**Status:** Assigned under DEC-103; exact-commit CI, downloaded-artifact verification, and bounded DEV/SMOKE passed; TEST pending
 
 **Boundary:** Single user, synthetic fixture only, PostgreSQL 16.15, and loopback access only. This procedure does not authorize staging, production, public ingress, live providers, brokerage, real orders, or durable handoff.
 
 ## 1. Verify Assigned Identity
 
-Do not use this guide until `docs/Operations/promotion-log.md` records the assigned rc.2 source commit, CI run, artifact name, archive name, and SHA-256 digest. Download that exact CI artifact and do not rebuild or substitute it.
+Use only the assigned identity recorded in `docs/Operations/promotion-log.md`: source commit `1e7605f72722b6f59e63e5a168548b1aac69415e`, CI run `36442957057`, and artifact `etf-analyzer-v0.1.0-rc.2-1e7605f72722b6f59e63e5a168548b1aac69415e`. Download that exact CI artifact and do not rebuild or substitute it.
 
 Verify Node before proceeding:
 
@@ -21,11 +21,11 @@ Use the organization-approved npm version. Do not disable TLS, change registries
 From a new operator-owned evaluation directory, verify both the promotion-log digest and the downloaded sidecar:
 
 ```bash
-printf '%s  %s\n' '<RECORDED_SHA256>' '<ASSIGNED_ARCHIVE>.tar.gz' | sha256sum -c -
-sha256sum -c '<ASSIGNED_ARCHIVE>.tar.gz.sha256'
+printf '%s  %s\n' 'a5895c5fa378b362c84104c914be738a4d053ccc44a9913bf93c3bea9061a846' 'etf-analyzer-v0.1.0-rc.2-1e7605f72722.tar.gz' | sha256sum -c -
+sha256sum -c 'etf-analyzer-v0.1.0-rc.2-1e7605f72722.tar.gz.sha256'
 mkdir -p extracted
-tar -xzf '<ASSIGNED_ARCHIVE>.tar.gz' -C extracted
-cd 'extracted/<ASSIGNED_PACKAGE_DIRECTORY>'
+tar -xzf 'etf-analyzer-v0.1.0-rc.2-1e7605f72722.tar.gz' -C extracted
+cd 'extracted/etf-analyzer-v0.1.0-rc.2-1e7605f72722'
 ```
 
 Inspect `release-manifest.json`. Its `candidate` must be `v0.1.0-rc.2`, its `sourceCommit` must match the promotion log, and every listed byte length and SHA-256 must match the extracted payload. Stop on any mismatch.

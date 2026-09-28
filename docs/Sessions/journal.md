@@ -6,6 +6,32 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-28 | Assigned rc.2 passed bounded DEV and SMOKE | Ring-4 | @solo-orchestrator
+
+**Type:** PROMOTION
+**agentic:** true
+**Decision:** Promote the exact assigned `v0.1.0-rc.2` artifact through disposable local DEV and SMOKE after successful clean-environment preparation and deterministic workflow checks
+**Policy:** DEC-095; DEC-103; immutable build-once artifact; loopback-only synthetic evaluation; no promotion by assertion alone
+**Authority:** Agent (Fully Agentic) after exact CI, artifact verification, live PostgreSQL preparation, API workflow evidence, and cleanup verification
+**Accountability:** Preserve exact candidate identity and evidence, keep TEST and higher environments closed, retain #87 deferral, and require a separate governed decision for any later stage
+**Result:** Node 20.20.2 and PostgreSQL 16.15 preparation PASS; readiness and all six dependencies Ready; fixture, analytics, evidence, jobs, paper draft, and confirmed OT-02 submission PASS; auth denial and malformed-input redaction PASS; empty portfolio returned bounded recovery as expected; zero unresolved intents; all temporary runtime resources removed
+**authorization-boundary:** DEV and SMOKE only; no TEST, staging, production, remote database, public ingress, provider, broker, real-order, or durable-handoff authority
+
+---
+
+## 2026-09-28 | Immutable rc.2 candidate assigned | Ring-4 | @solo-orchestrator
+
+**Type:** ASSIGNMENT
+**agentic:** true
+**Decision:** Assign the exact downloaded `v0.1.0-rc.2` artifact under DEC-103 after exact-commit publication and independent verification
+**Policy:** DEC-095; DEC-103; immutable build-once artifact; promotion-log audit trail; no promotion by assignment alone
+**Authority:** Agent (Fully Agentic) after CI run `36442957057` passed all four jobs at source commit `1e7605f72722b6f59e63e5a168548b1aac69415e`
+**Accountability:** Use only the assigned archive for bounded DEV/SMOKE, preserve its digest and manifest identity, record actual evaluation evidence separately, and stop without fallback on failure
+**Result:** Artifact `etf-analyzer-v0.1.0-rc.2-1e7605f72722b6f59e63e5a168548b1aac69415e`; archive SHA-256 `a5895c5fa378b362c84104c914be738a4d053ccc44a9913bf93c3bea9061a846`; sidecar, path-safety, extraction, candidate/source identity, required-payload completeness, and all 82 payload hashes PASS
+**authorization-boundary:** Candidate assignment only; DEV/SMOKE pending; no TEST, staging, production, remote database, public ingress, provider, broker, real-order, or durable-handoff authority
+
+---
+
 ## 2026-09-28 | Deployable rc.2 candidate approved for publication | Ring-4 | @solo-orchestrator
 
 **Type:** DECISION

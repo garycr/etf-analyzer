@@ -61,7 +61,7 @@
 | DEC-100 | 2026-09-27 | Test gate hardening | Enforce 80% aggregate branch coverage, generic zero-skip execution, and deadline-test determinism | Workspace Owner / Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `44764613`; #94 closure authorized |
 | DEC-101 | 2026-09-27 | Maintenance scope | Defer structured WP-8 scenario extraction to owned post-release maintenance | Workspace Owner | Solo Orchestrator | Owner approved after REV-217 and CI `36356533877`; proceed to #97 release artifacts |
 | DEC-102 | 2026-09-27 | Release packaging | Build one deterministic commit-bound `v0.1.0-rc.1` archive with manifest, checksum, and operational documents | Agent (Fully Agentic) | Solo Orchestrator | Assigned at `a0dcf3ba`; CI `36363283790`; SHA-256 `68be9f33...87a2`; no promotion |
-| DEC-103 | 2026-09-28 | Release preparation | Publish deployable `v0.1.0-rc.2` with reviewed local preparation, truthful readiness, and operator guidance | Agent (Fully Agentic) | Solo Orchestrator | Approved for exact-commit publication; unassigned; no promotion |
+| DEC-103 | 2026-09-28 | Release preparation | Publish deployable `v0.1.0-rc.2` with reviewed local preparation, truthful readiness, and operator guidance | Agent (Fully Agentic) | Solo Orchestrator | Assigned at `1e7605f`; CI `36442957057`; SHA-256 `a5895c5f...a846`; DEV/SMOKE PASS; TEST pending |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -118,7 +118,7 @@
 | **Assumptions** | Evaluation remains loopback-only and synthetic; PostgreSQL trust or peer authentication is scoped only to local socket or exact loopback ranges; the database is pristine and disposable; exact-commit CI remains the publication authority. |
 | **Invalidation** | Any CI job fails, downloaded artifact or manifest verification fails, preparation requires shared-network trust or persisted administrator credentials, readiness bypasses owning probes, the package is rebuilt between environments, or scope widens beyond the accepted local boundary. |
 | **Linked Artifacts** | ADR-006; `docs/Operations/releases/v0.1.0-rc.2/`; REV-221; REV-222; REV-223; issue #97 |
-| **Status** | Approved for exact-commit publication only; rc.2 remains unassigned and has no DEV/SMOKE/TEST promotion authority pending successful CI and downloaded-artifact verification |
+| **Status** | Assigned after all four jobs passed in CI run `36442957057` at commit `1e7605f72722b6f59e63e5a168548b1aac69415e`; downloaded artifact `etf-analyzer-v0.1.0-rc.2-1e7605f72722b6f59e63e5a168548b1aac69415e` contains archive `etf-analyzer-v0.1.0-rc.2-1e7605f72722.tar.gz`, which passed sidecar, path-safety, extraction, manifest identity, completeness, and 82 payload-hash checks with SHA-256 `a5895c5fa378b362c84104c914be738a4d053ccc44a9913bf93c3bea9061a846`; bounded clean-environment DEV and SMOKE passed with zero unresolved intents and complete cleanup; TEST and higher promotion remain unauthorized |
 
 ---
 

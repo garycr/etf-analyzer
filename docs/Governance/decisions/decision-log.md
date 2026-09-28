@@ -60,7 +60,7 @@
 | DEC-099 | 2026-09-27 | Dependency lifecycle | Retain reviewed exact dependency pins for the bounded candidate after freshness assessment | Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `8199a960`; #93 closure authorized |
 | DEC-100 | 2026-09-27 | Test gate hardening | Enforce 80% aggregate branch coverage, generic zero-skip execution, and deadline-test determinism | Workspace Owner / Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `44764613`; #94 closure authorized |
 | DEC-101 | 2026-09-27 | Maintenance scope | Defer structured WP-8 scenario extraction to owned post-release maintenance | Workspace Owner | Solo Orchestrator | Owner approved after REV-217 and CI `36356533877`; proceed to #97 release artifacts |
-| DEC-102 | 2026-09-27 | Release packaging | Build one deterministic commit-bound `v0.1.0-rc.1` archive with manifest, checksum, and operational documents | Agent (Fully Agentic) | Solo Orchestrator | REV-218/219/220 PASS; publication CI pending; no promotion |
+| DEC-102 | 2026-09-27 | Release packaging | Build one deterministic commit-bound `v0.1.0-rc.1` archive with manifest, checksum, and operational documents | Agent (Fully Agentic) | Solo Orchestrator | Assigned at `a0dcf3ba`; CI `36363283790`; SHA-256 `df546f02...c02fe`; no promotion |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -117,7 +117,7 @@
 | **Assumptions** | GNU tar 1.35-compatible normalization remains available on Ubuntu 24.04; Node 20.20.2 builds deterministic JavaScript; `npm ci --omit=dev` resolves the exact runtime graph; candidate docs exist under the matching version path. |
 | **Invalidation** | Archive digest changes across identical inputs, manifest verification fails, CI artifact custody changes, runtime install or launch requires dev dependencies, release boundary widens, or any review/CI gate fails. |
 | **Linked Artifacts** | `docs/Operations/releases/v0.1.0-rc.1/`; `docs/Operations/finops-config.md`; `docs/Architecture/wp-8-implemented-state.md`; REV-218; REV-219; REV-220; issue #97 |
-| **Status** | Accepted for publication; exact-commit CI and artifact verification pending; no candidate assignment or promotion yet |
+| **Status** | Assigned after all four jobs passed in CI run `36363283790` at commit `a0dcf3ba5fba94a7c4cc1a6658f0863b0c19ed98`; downloaded artifact `etf-analyzer-v0.1.0-rc.1-a0dcf3ba5fba94a7c4cc1a6658f0863b0c19ed98` passed sidecar, extraction, manifest identity, completeness, and payload-hash verification with archive SHA-256 `df546f0206a4e70281b9a459bd5c1c9338ede2c193987a4851709116823cc254`; no DEV/SMOKE/TEST promotion yet |
 
 ---
 

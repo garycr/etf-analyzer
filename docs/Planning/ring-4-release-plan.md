@@ -3,7 +3,7 @@
 **Date:** 2026-09-25
 **Decision:** DEC-095
 **Tracking:** GitHub #97
-**Status:** Active
+**Status:** Closed under DEC-104; Ring 5 eligible, staging and production unauthorized
 
 ## Release Boundary
 
@@ -50,4 +50,4 @@ No Ring 4 artifact or promotion authorizes production. DP-25 remains human-owned
 
 ## Exit Conditions
 
-Ring 4 remains Active until documentation is synchronized, release artifacts are versioned, architecture is current, periodic structured code review passes, a checkpoint is published, FinOps budgets are populated, and Ring 4 lessons learned are complete. Ring 5 requires a separate gate decision.
+Ring 4 exit conditions are complete under DEC-104: documentation is synchronized, release artifacts are versioned, architecture is current, periodic structured review passed, a checkpoint is published, FinOps budgets are populated, and Ring 4 lessons learned are complete. Ring 5 is eligible but requires a separate gate decision; DP-25 remains human-owned for production.

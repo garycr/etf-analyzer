@@ -61,7 +61,8 @@
 | DEC-100 | 2026-09-27 | Test gate hardening | Enforce 80% aggregate branch coverage, generic zero-skip execution, and deadline-test determinism | Workspace Owner / Agent (Fully Agentic) | Solo Orchestrator | Verified under commit `44764613`; #94 closure authorized |
 | DEC-101 | 2026-09-27 | Maintenance scope | Defer structured WP-8 scenario extraction to owned post-release maintenance | Workspace Owner | Solo Orchestrator | Owner approved after REV-217 and CI `36356533877`; proceed to #97 release artifacts |
 | DEC-102 | 2026-09-27 | Release packaging | Build one deterministic commit-bound `v0.1.0-rc.1` archive with manifest, checksum, and operational documents | Agent (Fully Agentic) | Solo Orchestrator | Assigned at `a0dcf3ba`; CI `36363283790`; SHA-256 `68be9f33...87a2`; no promotion |
-| DEC-103 | 2026-09-28 | Release preparation | Publish deployable `v0.1.0-rc.2` with reviewed local preparation, truthful readiness, and operator guidance | Agent (Fully Agentic) | Solo Orchestrator | Assigned at `1e7605f`; CI `36442957057`; SHA-256 `a5895c5f...a846`; DEV/SMOKE PASS; TEST pending |
+| DEC-103 | 2026-09-28 | Release preparation | Publish deployable `v0.1.0-rc.2` with reviewed local preparation, truthful readiness, and operator guidance | Agent (Fully Agentic) | Solo Orchestrator | Assigned at `1e7605f`; CI `36442957057`; SHA-256 `a5895c5f...a846`; DEV/SMOKE/TEST evidence PASS; Ring 4 closed under DEC-104 |
+| DEC-104 | 2026-09-28 | Ring gate | Close Ring 4 after rc.2 exact CI, artifact, DEV, SMOKE, TEST evidence, checkpoint, FinOps, lessons learned, and independent reviews; make Ring 5 eligible | Workspace Owner | Solo Orchestrator | Approved at DP-20; no staging or production authorization |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -100,6 +101,26 @@
 ---
 
 ## Decision Records
+
+### DEC-104: Close Ring 4 And Make Ring 5 Eligible
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-104 |
+| **Date** | 2026-09-28 |
+| **Category** | Ring gate |
+| **Decision** | Close Ring 4 at 100% after the immutable rc.2 candidate completed exact CI, downloaded-artifact verification, bounded DEV/SMOKE, TEST evidence, checkpoint, FinOps, lessons learned, and independent code/architecture/security review; make Ring 5 eligible for its own gate |
+| **Policy** | DEC-095; DEC-103; DP-20 Ring 4 exit; immutable candidate identity; loopback-only release boundary; DP-25 production authority |
+| **Authority** | Workspace Owner explicit approval: `approve` |
+| **Accountability** | Solo Orchestrator preserves the assigned artifact and all evidence, keeps Ring 5 staging closed until its gate, retains human ownership of production authorization, and does not widen the local boundary |
+| **Context** | The assigned rc.2 artifact passed CI run `36442957057`, SHA-256 `a5895c5fa378b362c84104c914be738a4d053ccc44a9913bf93c3bea9061a846`, clean-environment DEV preparation, bounded SMOKE, and TEST evidence. Ring 4 checkpoint and lessons learned are published; FinOps is populated; REV-221/222/223 are PASS. |
+| **Alternatives** | Keep Ring 4 active pending a separate TEST environment; close Ring 4 and make Ring 5 eligible; promote to staging or production. The decision selects closure with Ring 5 eligibility only. |
+| **Consequences** | Ring 4 is closed and its release evidence is final for this bounded candidate. Ring 5 may prepare a separate staging decision, but no staging or production action is authorized by this decision. |
+| **Invalidation** | CI or artifact identity is disproved, release evidence is materially contradicted, a Sev 1/2 finding appears, or the candidate boundary widens beyond local synthetic loopback evaluation. |
+| **Linked Artifacts** | `docs/Planning/ring-status.md`; `docs/Planning/ring-4-release-plan.md`; `docs/Operations/promotion-log.md`; `docs/artifacts/gate-evidence/ring-4-release.md`; `docs/Quality/lessons-learned-ring-4.md`; DEC-103; issue #97 |
+| **Status** | Ring 4 Closed; Ring 5 Pending gate; staging and production unauthorized |
+
+---
 
 ### DEC-103: Publish A Deployable Local Evaluation Candidate
 

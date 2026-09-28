@@ -70,3 +70,14 @@
 - **Disposition:** TEST evidence PASS by authoritative CI; no separate TEST environment was created or promoted
 - **Path:** Ring 4 TEST evidence complete; final Ring 4 exit review remains; no staging, production, or deployment release promotion executed
 - **Boundary:** Local single-user synthetic loopback candidate only; no remote database, public ingress, live provider, brokerage, real order, or durable handoff authority
+
+## 2026-09-28 - Ring 4 Exit Approval
+
+- **Decision:** DEC-104; DP-20
+- **Tracking:** GitHub #97
+- **Candidate:** `v0.1.0-rc.2`
+- **Evidence:** Exact CI, downloaded-artifact verification, DEV, SMOKE, TEST evidence, checkpoint, FinOps configuration, lessons learned, and independent REV-221/222/223 PASS reviews
+- **Authority:** Workspace Owner explicit approval `approve`
+- **Disposition:** Ring 4 closed at 100%; Ring 5 eligible for a separate gate review
+- **Path:** No staging, production, public ingress, remote database, provider, brokerage, real-order, or durable-handoff promotion executed
+- **Boundary:** Local single-user synthetic loopback candidate only; DP-25 production authorization remains human-owned

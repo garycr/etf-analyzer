@@ -8,5 +8,5 @@
 | Ring-1 | Plan/WBS/Estimate | Workspace Owner approved simplified Tier 1 exit package; DEC-023 | Closed | 100% | Solo Orchestrator | 2026-09-11 |
 | Ring-2 | Dev/ManageDev | Final Plaid and published CI passed; DEC-092 | Closed | 100% | Solo Orchestrator | 2026-09-25 |
 | Ring-3 | IV&V | Verified publication passed under DEC-094 | Closed | 100% | Solo Orchestrator | 2026-09-25 |
-| Ring-4 | Release Mgmt | rc.2 assigned; exact CI, artifact verification, DEV, SMOKE, and TEST evidence passed under DEC-103; final exit review remains | Active | 95% | Solo Orchestrator | 2026-09-28 |
-| Ring-5 | Staged for Prod | — | — | — | — | — |
+| Ring-4 | Release Mgmt | rc.2 exact CI, artifact, DEV, SMOKE, TEST evidence, checkpoint, FinOps, and lessons learned complete; DEC-104 exit approved | Closed | 100% | Solo Orchestrator | 2026-09-28 |
+| Ring-5 | Staged for Prod | Eligible after Ring 4 exit; no staging or production authorization | Pending gate | 0% | Solo Orchestrator | 2026-09-28 |

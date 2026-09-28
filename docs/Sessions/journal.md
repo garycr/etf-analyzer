@@ -6,6 +6,19 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-28 | Ring 4 exit approved | Ring-4 | @solo-orchestrator
+
+**Type:** APPROVAL
+**agentic:** false
+**Decision:** Approve DP-20 Ring 4 exit and close Ring 4 at 100%; make Ring 5 eligible for a separate gate
+**Policy:** DEC-104; DEC-095; Ring 4 exit conditions; DP-25 production boundary
+**Authority:** Workspace Owner explicit directive: `approve`
+**Accountability:** Solo Orchestrator preserves the exact rc.2 artifact and evidence, opens no staging or production path, and presents Ring 5 as a separate decision
+**Result:** Exact CI, artifact verification, DEV, SMOKE, TEST evidence, checkpoint, FinOps, lessons learned, and REV-221/222/223 PASS reviews accepted; Ring 4 closed
+**authorization-boundary:** Ring 5 eligibility only; no staging, production, remote database, public ingress, provider, broker, real-order, or durable-handoff authority
+
+---
+
 ## 2026-09-28 | TEST evidence disposition passed | Ring-4 | @solo-orchestrator
 
 **Type:** PROMOTION

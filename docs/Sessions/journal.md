@@ -6,6 +6,19 @@
 >
 > **Do not edit existing entries.** Corrections are recorded as new entries.
 
+## 2026-09-28 | Ring 4 checkpoint synchronized | Ring-4 | @solo-orchestrator
+
+**Type:** CHECKPOINT
+**agentic:** true
+**Decision:** Keep Ring 4 Active at 85% after publishing the rc.2 release checkpoint and lessons learned
+**Policy:** DEC-095; DEC-103; Ring 4 exit conditions; exact artifact identity; no implicit TEST or Ring 5 promotion
+**Authority:** Agent (Fully Agentic) under the approved bounded release objective
+**Accountability:** Preserve the assigned artifact identity, retain #87 deferral, define and record any separate TEST disposition, and present a final Ring 4 gate before Ring 5
+**Result:** `ring-4-release.md` and `lessons-learned-ring-4.md` published; exact CI, artifact verification, DEV, and SMOKE remain PASS; no production or staging action taken
+**authorization-boundary:** Ring 4 release management only; TEST remains separately pending; no Ring 5, staging, production, remote database, public ingress, provider, broker, real-order, or durable-handoff authority
+
+---
+
 ## 2026-09-28 | Assigned rc.2 passed bounded DEV and SMOKE | Ring-4 | @solo-orchestrator
 
 **Type:** PROMOTION

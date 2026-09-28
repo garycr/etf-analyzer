@@ -20,8 +20,8 @@
 - **Source commit:** `a0dcf3ba5fba94a7c4cc1a6658f0863b0c19ed98`
 - **CI run:** `36363283790`; all four jobs passed
 - **Artifact:** `etf-analyzer-v0.1.0-rc.1-a0dcf3ba5fba94a7c4cc1a6658f0863b0c19ed98`
-- **Archive:** `etf-analyzer-v0.1.0-rc.1.tar.gz`
-- **SHA-256:** `df546f0206a4e70281b9a459bd5c1c9338ede2c193987a4851709116823cc254`
+- **Archive:** `etf-analyzer-v0.1.0-rc.1-a0dcf3ba5fba.tar.gz`
+- **SHA-256:** `68be9f33e788311c856961ce2a0bbe5726a39e4be0a87475b9d027ccd9b187a2`
 - **Verification:** Downloaded CI artifact passed checksum sidecar, extraction, manifest identity, completeness, and every payload hash
 - **Path:** Candidate assignment only; no DEV, SMOKE, TEST, staging, production, or deployment promotion executed
 - **Rollback:** Preserve the immutable archive and stop before environment entry; use the candidate rollback plan after an actual local promotion

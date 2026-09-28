@@ -27,3 +27,5 @@ No public ingress, multi-user identity, live providers, brokerage, real orders, 
 ## Verification
 
 Verify the archive with its `.sha256` sidecar before extraction. Compare every extracted payload entry with `release-manifest.json`, run `npm ci --omit=dev` to install production dependencies from the exact lockfile, and launch the precompiled runtime with `npm run start:release -- /path/to/local-runtime.json` as described in `README.md`.
+
+The repository-side `deployment-guide.md` records the exact assigned CI artifact identity and the complete local DEV evaluation procedure. It is operator guidance published after candidate assignment and is not part of the immutable candidate archive.

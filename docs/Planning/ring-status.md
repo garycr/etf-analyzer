@@ -9,4 +9,4 @@
 | Ring-2 | Dev/ManageDev | Final Plaid and published CI passed; DEC-092 | Closed | 100% | Solo Orchestrator | 2026-09-25 |
 | Ring-3 | IV&V | Verified publication passed under DEC-094 | Closed | 100% | Solo Orchestrator | 2026-09-25 |
 | Ring-4 | Release Mgmt | rc.2 exact CI, artifact, DEV, SMOKE, TEST evidence, checkpoint, FinOps, and lessons learned complete; DEC-104 exit approved | Closed | 100% | Solo Orchestrator | 2026-09-28 |
-| Ring-5 | Staged for Prod | Eligible after Ring 4 exit; no staging or production authorization | Pending gate | 0% | Solo Orchestrator | 2026-09-28 |
+| Ring-5 | Staged for Prod | Local production POC UAT and Go approved; bounded local deployment complete | Closed | 100% | Solo Orchestrator | 2026-09-28 |

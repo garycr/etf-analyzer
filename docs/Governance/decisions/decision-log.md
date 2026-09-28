@@ -63,6 +63,7 @@
 | DEC-102 | 2026-09-27 | Release packaging | Build one deterministic commit-bound `v0.1.0-rc.1` archive with manifest, checksum, and operational documents | Agent (Fully Agentic) | Solo Orchestrator | Assigned at `a0dcf3ba`; CI `36363283790`; SHA-256 `68be9f33...87a2`; no promotion |
 | DEC-103 | 2026-09-28 | Release preparation | Publish deployable `v0.1.0-rc.2` with reviewed local preparation, truthful readiness, and operator guidance | Agent (Fully Agentic) | Solo Orchestrator | Assigned at `1e7605f`; CI `36442957057`; SHA-256 `a5895c5f...a846`; DEV/SMOKE/TEST evidence PASS; Ring 4 closed under DEC-104 |
 | DEC-104 | 2026-09-28 | Ring gate | Close Ring 4 after rc.2 exact CI, artifact, DEV, SMOKE, TEST evidence, checkpoint, FinOps, lessons learned, and independent reviews; make Ring 5 eligible | Workspace Owner | Solo Orchestrator | Approved at DP-20; no staging or production authorization |
+| DEC-105 | 2026-09-28 | Production POC gate | Accept UAT and Go for the bounded local rc.2 production POC; close Ring 5 without widening to cloud, public, provider, brokerage, or real-order operation | Workspace Owner | Solo Orchestrator | Approved; local POC only |
 | DEC-028 | 2026-09-14 | Governance | Enable Fully Agentic mode while retaining human control of tier selection, production deployment, and hotfix approval | Workspace Owner | Solo Orchestrator | Active |
 | DEC-029 | 2026-09-14 | Architecture | Correct analytics retention epochs to UTC instants and add a private PostgreSQL RFC 8785 helper | Solo Orchestrator | Solo Orchestrator | Active |
 | DEC-030 | 2026-09-15 | Planning | Clarify CT-DB-001 behavioral acceptance across sequential Ring 2 packages | Solo Orchestrator | Solo Orchestrator | Active |
@@ -101,6 +102,25 @@
 ---
 
 ## Decision Records
+
+### DEC-105: Approve Bounded Local Production POC
+
+| Field | Value |
+|-------|-------|
+| **ID** | DEC-105 |
+| **Date** | 2026-09-28 |
+| **Category** | Production POC gate |
+| **Decision** | Accept UAT and Go for `v0.1.0-rc.2` as a single-user, fixture-only, research-only local production POC with loopback access and retained PostgreSQL data |
+| **Policy** | DEC-104; DP-21 UAT; DP-22 Go/No-Go; DP-24 Ring 5 exit; DP-25 production authorization; immutable candidate identity; local-only boundary |
+| **Authority** | Workspace Owner explicit approval: UAT approved and Go decision approved |
+| **Accountability** | Solo Orchestrator preserves the exact artifact and local boundary, maintains manual operations, keeps cloud/public/provider/brokerage paths closed, and records any future scope expansion as a new release decision |
+| **Evidence** | Assigned rc.2 archive SHA-256 `a5895c5fa378b362c84104c914be738a4d053ccc44a9913bf93c3bea9061a846`; exact Node 20.20.2; PostgreSQL 16.15; readiness `Ready`; tokenless `401`; authenticated `200`; loopback listener only; retained local database and protected runtime configuration |
+| **Consequences** | Ring 5 closes for this bounded POC. No backup/restore, auto-start, restart policy, uptime SLO, public ingress, Azure/Kubernetes deployment, live provider, brokerage, real order, or durable handoff is implied. |
+| **Invalidation** | Requirement for multi-user access, public ingress, live data, brokerage, real orders, remote/cloud deployment, backup/restore, service management, or formal availability commitments. |
+| **Linked Artifacts** | `docs/Operations/promotion-log.md`; `docs/Operations/releases/v0.1.0-rc.2/dev-smoke-evidence.md`; DEC-103; DEC-104; issue #97 |
+| **Status** | Ring 5 Closed for local production POC; future release required for broader user flows and CSV import |
+
+---
 
 ### DEC-104: Close Ring 4 And Make Ring 5 Eligible
 

@@ -81,3 +81,14 @@
 - **Disposition:** Ring 4 closed at 100%; Ring 5 eligible for a separate gate review
 - **Path:** No staging, production, public ingress, remote database, provider, brokerage, real-order, or durable-handoff promotion executed
 - **Boundary:** Local single-user synthetic loopback candidate only; DP-25 production authorization remains human-owned
+
+## 2026-09-28 - Ring 5 Local Production Go
+
+- **Decision:** DEC-105; DP-21, DP-22, DP-24, DP-25
+- **Tracking:** GitHub #97
+- **Candidate:** `v0.1.0-rc.2`
+- **Evidence:** Immutable artifact verification, exact runtime identities, local preparation, readiness/authentication checks, retained PostgreSQL database, loopback-only binding, and manual UAT
+- **Authority:** Workspace Owner explicit approval: UAT approved and Go decision approved
+- **Disposition:** Ring 5 closed for the bounded local production POC
+- **Path:** Manual local operation only; no Azure/Kubernetes, public ingress, remote database, provider, brokerage, real order, or durable handoff deployment
+- **Boundary:** Single-user, fixture-only, research-only, loopback-only production POC; no backup/restore, auto-start, restart policy, or formal uptime commitment

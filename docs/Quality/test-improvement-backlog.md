@@ -10,5 +10,6 @@
 | Medium | Add launch token and concurrency/rate controls | #89 | Completed under DEC-097 |
 | Medium | Publish exact tool/runtime identity | #90 | Completed under DEC-098 |
 | Low | Review exact-pinned dependency updates | #93 | Completed under DEC-099; exact pins retained |
+| Medium | Implement validated manual CSV price import and versioned raw-source correction workflow | Future release | Requirements recorded in `docs/Planning/future-release-requirements.md`; provider automation remains deferred |
 
 This backlog does not authorize implementation during IV&V and does not open Ring 4.
